@@ -11,6 +11,7 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.view.View
+import android.view.inputmethod.EditorInfo
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
@@ -68,7 +69,7 @@ class MainActivity : AppCompatActivity() {
         llm.bindEmotion(emotion)
         mind = MindEngine(this)
         memory = MemoryEngine(this)
-        weather = WeatherClient()
+        weather = WeatherClient(this, prefs)
 
         tvStatus = findViewById(R.id.tvStatus)
         micHalo = findViewById(R.id.micHalo)
@@ -122,12 +123,16 @@ class MainActivity : AppCompatActivity() {
         val btnSend = findViewById<ImageButton>(R.id.btnSend)
         val btnMic = findViewById<ImageButton>(R.id.btnMic)
 
-        btnSend.setOnClickListener {
+        fun submitInput(): Boolean {
             val text = editInput.text.toString().trim()
-            if (text.isNotEmpty() && !isSending) {
-                editInput.setText("")
-                sendToLlm(text)
-            }
+            if (text.isEmpty() || isSending) return false
+            editInput.setText("")
+            sendToLlm(text)
+            return true
+        }
+        btnSend.setOnClickListener { submitInput() }
+        editInput.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEND) submitInput() else false
         }
         btnMic.setOnClickListener {
             // 语音聆听开关：开 → 关闭；关 → 开启（自动申请权限并持续识别）
@@ -417,7 +422,7 @@ class MainActivity : AppCompatActivity() {
         if (prefs.mindEnabled) mind.record("主人说：" + userText.take(50))
 
         // ③ 人设：台湾腔优先，其次默认系统提示
-        llm.systemPromptOverride = if (prefs.taiwanVoice) prefs.taiwanPrompt else null
+        llm.systemPromptOverride = if (prefs.taiwanVoice) prefs.effectiveTaiwanPrompt() else null
 
         // ④ 拼接“动态提示”：独立思考 + 情绪状态（注入 system prompt，是关键）
         val extra = StringBuilder()
@@ -585,9 +590,9 @@ class MainActivity : AppCompatActivity() {
     /** 发起天气查询，以聊天气泡形式展示并语音播报 */
     private fun requestWeather(city: String) {
         if (isSending) return
-        isSending = true
         val c = city.trim().ifBlank { prefs.lastCity }
         prefs.lastCity = c
+        isSending = true
         tvStatus.text = "🌤 正在查询【" + c + "】天气…"
         lifecycleScope.launch {
             val info = weather.query(c)
@@ -595,12 +600,19 @@ class MainActivity : AppCompatActivity() {
                 runOnUiThread {
                     isSending = false
                     tvStatus.text = getString(R.string.status_idle)
-                    Toast.makeText(this@MainActivity, getString(R.string.weather_fail), Toast.LENGTH_SHORT).show()
+                    val message = if (prefs.hasCaiyunCredential()) getString(R.string.weather_fail)
+                        else getString(R.string.weather_xiaomi_unavailable)
+                    Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
+                    // 打开天气页展示完整处理建议；页面会再尝试一次，便于系统天气刚完成刷新时恢复。
+                    startActivity(Intent(this@MainActivity, WeatherActivity::class.java)
+                        .putExtra(WeatherActivity.EXTRA_CITY, c))
                 }
                 return@launch
             }
             val text = info.toSpeakText()
             runOnUiThread {
+                WeatherActivity.pendingInfo = info
+                startActivity(Intent(this@MainActivity, WeatherActivity::class.java).putExtra(WeatherActivity.EXTRA_CITY, c))
                 adapter.add(ChatMessage("user", c + "\u5929\u6c14", isMe = true))
                 adapter.add(ChatMessage("assistant", text, isMe = false))
                 scrollToBottom()

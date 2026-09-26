@@ -1,234 +1,296 @@
 package com.suze.aivoice
 
+import android.content.Context
+import android.database.Cursor
+import android.net.Uri
+import android.util.Base64
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URLEncoder
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.UUID
 import java.util.concurrent.TimeUnit
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 
-/**
- * 天气客户端：基于 Open-Meteo（开源天气 App 的主流选型）。
- *
- * 特点：完全免费、无需 API Key、无需注册，与项目的「零成本」风格一致。
- * 流程：城市名 --地理编码--> 经纬度 --forecast--> 当前天气 + 未来几天预报。
- *
- * 返回结构见 [WeatherInfo]。
- */
-class WeatherClient {
-
+/** 天气客户端：优先读取小米/澎湃 OS 本机天气，失败后使用彩云天气。 */
+class WeatherClient(context: Context, private val prefs: Prefs) {
+    private val appContext = context.applicationContext
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(20, TimeUnit.SECONDS)
+        .readTimeout(22, TimeUnit.SECONDS)
         .build()
 
-    private val geoUrl = "https://geocoding-api.open-meteo.com/v1/search"
-    private val forecastUrl = "https://api.open-meteo.com/v1/forecast"
+    suspend fun query(city: String): WeatherInfo? = withContext(Dispatchers.IO) {
+        runCatching {
+            queryXiaomi(city)?.let { return@withContext it }
+            val location = geocode(city.trim().ifBlank { prefs.lastCity }) ?: return@withContext null
+            val json = requestCaiyun(location.longitude, location.latitude) ?: return@withContext null
+            parse(location, json)
+        }.getOrNull()
+    }
 
     /**
-     * 查询某城市天气。
-     * @param city 城市名（中文或英文均可，如「北京」「上海」「Tokyo」）
-     * @return 成功返回 [WeatherInfo]，失败返回 null
+     * 小米主题官方公开的本机天气 ContentProvider。
+     * URI /1/1 表示：优先本地缓存，超过一小时由系统天气更新；城市名只返回城市级名称。
+     * Provider 不支持指定任意城市，因此仅在请求城市与系统天气城市一致时采用；
+     * “当前位置/本地/当前城市”则直接使用系统天气当前城市。
      */
-    suspend fun query(city: String): WeatherInfo? = withContext(Dispatchers.IO) {
-        try {
-            val keyword = city.trim().ifBlank { return@withContext null }
-            // 1) 地理编码
-            val geoReq = Request.Builder()
-                .url(geoUrl + "?name=" + URLEncoder.encode(keyword, "UTF-8") +
-                    "&count=1&language=zh&format=json")
-                .get()
-                .build()
-            val geoText = client.newCall(geoReq).execute().use { resp ->
-                if (!resp.isSuccessful) return@withContext null
-                resp.body?.string() ?: return@withContext null
-            }
-            val results = JSONObject(geoText).optJSONArray("results") ?: return@withContext null
-            if (results.length() == 0) return@withContext null
-            val first = results.getJSONObject(0)
-            val lat = first.optDouble("latitude", Double.NaN)
-            val lon = first.optDouble("longitude", Double.NaN)
-            if (lat.isNaN() || lon.isNaN()) return@withContext null
-            val name = first.optString("name").ifBlank { keyword }
-            val admin = first.optString("admin1")
-            val country = first.optString("country")
-            val place = listOf(name, admin, country)
-                .filter { it.isNotBlank() && it != "null" }
-                .distinct()
-                .joinToString(" ")
-
-            // 2) 拉取天气
-            val wxUrl = forecastUrl +
-                "?latitude=" + lat + "&longitude=" + lon +
-                "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m" +
-                "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max" +
-                "&timezone=auto&forecast_days=5&language=zh"
-            val wxReq = Request.Builder().url(wxUrl).get().build()
-            val wxText = client.newCall(wxReq).execute().use { resp ->
-                if (!resp.isSuccessful) return@withContext null
-                resp.body?.string() ?: return@withContext null
-            }
-            val root = JSONObject(wxText)
-            val cur = root.optJSONObject("current") ?: return@withContext null
-            val curTemp = cur.optDouble("temperature_2m", Double.NaN)
-            if (curTemp.isNaN()) return@withContext null
-            val curCode = cur.optInt("weather_code", 0)
-            val feels = cur.optDouble("apparent_temperature", Double.NaN)
-            val humidity = cur.optInt("relative_humidity_2m", -1)
-            val wind = cur.optDouble("wind_speed_10m", Double.NaN)
-
-            // 3) 逐日预报
-            val days = ArrayList<DayForecast>()
-            val daily = root.optJSONObject("daily")
-            if (daily != null) {
-                val times = daily.optJSONArray("time")
-                val codes = daily.optJSONArray("weather_code")
-                val maxs = daily.optJSONArray("temperature_2m_max")
-                val mins = daily.optJSONArray("temperature_2m_min")
-                val pops = daily.optJSONArray("precipitation_probability_max")
-                val n = times?.length() ?: 0
-                for (i in 0 until n) {
-                    val dCode = codes?.optInt(i, 0) ?: 0
-                    val dMax = maxs?.optDouble(i, Double.NaN) ?: Double.NaN
-                    val dMin = mins?.optDouble(i, Double.NaN) ?: Double.NaN
-                    val dPop = pops?.optInt(i, -1) ?: -1
-                    days.add(
-                        DayForecast(
-                            date = times?.optString(i) ?: "",
-                            code = dCode,
-                            desc = wmoDesc(dCode),
-                            icon = wmoEmoji(dCode),
-                            tempMax = dMax,
-                            tempMin = dMin,
-                            pop = dPop
-                        )
+    private fun queryXiaomi(requestedCity: String): WeatherInfo? {
+        val projection = arrayOf(
+            "publish_time", "city_name", "description", "temperature", "aqilevel",
+            "weather_type", "humidity", "wind", "day", "tmphighs", "tmplows",
+            "forecast_type", "weathernamesfrom", "weathernamesto", "water"
+        )
+        val uri = Uri.parse("content://weather/actualWeatherData/1/1")
+        return try {
+            appContext.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+                if (!cursor.moveToFirst()) return@use null
+                val cityName = cursor.text("city_name").ifBlank { return@use null }
+                val request = requestedCity.trim()
+                val generic = request.isBlank() || request in listOf("当前位置", "本地", "当前城市", "我的位置")
+                if (!generic && !sameCity(request, cityName)) return@use null
+                val description = cursor.text("description").ifBlank { "天气变化" }
+                val weatherType = cursor.intValue("weather_type", -1)
+                val skycon = xiaomiSkycon(weatherType, description)
+                val currentTemp = number(cursor.text("temperature"))
+                if (currentTemp.isNaN()) return@use null
+                val publishMillis = cursor.longValue("publish_time", 0L)
+                val days = ArrayList<DayForecast>()
+                do {
+                    val index = cursor.intValue("day", days.size + 1).coerceAtLeast(1) - 1
+                    val fromName = cursor.text("weathernamesfrom")
+                    val toName = cursor.text("weathernamesto")
+                    val dayDesc = listOf(fromName, toName).filter { it.isNotBlank() }.distinct()
+                        .joinToString("转").ifBlank { description }
+                    val forecastType = cursor.intValue("forecast_type", weatherType)
+                    val daySky = xiaomiSkycon(forecastType, dayDesc)
+                    days += DayForecast(
+                        date = relativeDate(index), skycon = daySky, desc = dayDesc,
+                        icon = skyconEmoji(daySky), tempMax = number(cursor.text("tmphighs")),
+                        tempMin = number(cursor.text("tmplows")), pop = number(cursor.text("water")).toIntOrMinusOne()
                     )
-                }
+                } while (cursor.moveToNext() && days.size < 5)
+                WeatherInfo(
+                    place = cityName, temp = currentTemp, feelsLike = currentTemp,
+                    humidity = cursor.firstInt("humidity", -1), windSpeed = Double.NaN,
+                    windDirection = Double.NaN, skycon = skycon, desc = description,
+                    icon = skyconEmoji(skycon), aqi = cursor.firstInt("aqilevel", -1),
+                    comfort = cursor.firstText("wind"), minutely = "系统天气数据已同步",
+                    alert = "", hourly = emptyList(), days = days.distinctBy { it.date },
+                    source = "小米天气", updatedAt = if (publishMillis > 0L)
+                        SimpleDateFormat("HH:mm", Locale.CHINA).format(Date(normalizeEpochMillis(publishMillis)))
+                    else SimpleDateFormat("HH:mm", Locale.CHINA).format(Date())
+                )
             }
-
-            WeatherInfo(
-                place = place,
-                temp = curTemp,
-                feelsLike = feels,
-                humidity = humidity,
-                windSpeed = wind,
-                code = curCode,
-                desc = wmoDesc(curCode),
-                icon = wmoEmoji(curCode),
-                days = days
-            )
-        } catch (e: Exception) {
+        } catch (_: SecurityException) {
+            null
+        } catch (_: IllegalArgumentException) {
+            null
+        } catch (_: Exception) {
             null
         }
     }
 
-    companion object {
-        /** WMO 天气码 → 中文描述（对齐 Open-Meteo 官方文档） */
-        fun wmoDesc(code: Int): String = when (code) {
-            0 -> "晴"
-            1 -> "多云转晴"
-            2 -> "多云"
-            3 -> "阴"
-            45, 48 -> "雾"
-            51, 53, 55 -> "毛毛雨"
-            56, 57 -> "冻毛毛雨"
-            61 -> "小雨"
-            63 -> "中雨"
-            65 -> "大雨"
-            66, 67 -> "冻雨"
-            71 -> "小雪"
-            73 -> "中雪"
-            75 -> "大雪"
-            77 -> "雪粒"
-            80 -> "小阵雨"
-            81 -> "中阵雨"
-            82 -> "强阵雨"
-            85, 86 -> "阵雪"
-            95 -> "雷阵雨"
-            96, 99 -> "雷阵雨伴冰雹"
-            else -> "未知"
+    private fun Cursor.column(name: String): Int = getColumnIndex(name)
+    private fun Cursor.text(name: String): String = column(name).takeIf { it >= 0 }?.let { getString(it) }.orEmpty()
+    private fun Cursor.intValue(name: String, fallback: Int): Int = text(name).filter { it == '-' || it.isDigit() }.toIntOrNull() ?: fallback
+    private fun Cursor.longValue(name: String, fallback: Long): Long = text(name).filter(Char::isDigit).toLongOrNull() ?: fallback
+    private fun Cursor.firstText(name: String): String {
+        val originalPosition = this.position
+        return try { moveToFirst(); text(name) } finally { moveToPosition(originalPosition) }
+    }
+    private fun Cursor.firstInt(name: String, fallback: Int): Int {
+        val originalPosition = this.position
+        return try { moveToFirst(); intValue(name, fallback) } finally { moveToPosition(originalPosition) }
+    }
+    private fun number(value: String): Double = Regex("-?\\d+(?:\\.\\d+)?").find(value)?.value?.toDoubleOrNull() ?: Double.NaN
+    private fun Double.toIntOrMinusOne(): Int = if (isNaN()) -1 else toInt().coerceIn(0, 100)
+    /** MIUI 版本间 publish_time 有秒/毫秒两种形式，统一为毫秒。 */
+    private fun normalizeEpochMillis(value: Long): Long = if (value in 1..9_999_999_999L) value * 1000L else value
+    private fun sameCity(request: String, actual: String): Boolean {
+        fun clean(v: String) = v.lowercase(Locale.CHINA).replace(Regex("[市区县省·\\s]"), "")
+        val a = clean(request); val b = clean(actual)
+        return a.isNotBlank() && b.isNotBlank() && (a.contains(b) || b.contains(a))
+    }
+    private fun relativeDate(offset: Int): String {
+        val calendar = java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_YEAR, offset) }
+        return SimpleDateFormat("yyyy-MM-dd", Locale.CHINA).format(calendar.time)
+    }
+    private fun xiaomiSkycon(type: Int, desc: String): String {
+        val text = desc.lowercase(Locale.CHINA)
+        return when {
+            "暴雨" in text || "雷" in text -> "STORM_RAIN"
+            "大雨" in text -> "HEAVY_RAIN"
+            "中雨" in text -> "MODERATE_RAIN"
+            "雨" in text -> "LIGHT_RAIN"
+            "暴雪" in text -> "STORM_SNOW"
+            "大雪" in text -> "HEAVY_SNOW"
+            "中雪" in text -> "MODERATE_SNOW"
+            "雪" in text -> "LIGHT_SNOW"
+            "雾" in text -> "FOG"
+            "霾" in text -> "MODERATE_HAZE"
+            "沙" in text || "尘" in text -> "SAND"
+            "风" in text && type >= 18 -> "WIND"
+            "阴" in text -> "CLOUDY"
+            "多云" in text -> "PARTLY_CLOUDY_DAY"
+            "晴" in text -> "CLEAR_DAY"
+            else -> when (type) {
+                0 -> "CLEAR_DAY"; 1, 2, 3 -> "PARTLY_CLOUDY_DAY"; 4, 5 -> "CLOUDY"
+                in 6..12 -> "LIGHT_RAIN"; in 13..17 -> "LIGHT_SNOW"
+                in 18..21 -> "FOG"; in 22..24 -> "SAND"; else -> "CLEAR_DAY"
+            }
+        }
+    }
+
+    private fun geocode(city: String): GeoPoint? {
+        val url = "https://geocoding-api.open-meteo.com/v1/search?name=" +
+            URLEncoder.encode(city, "UTF-8") + "&count=1&language=zh&format=json"
+        val root = getJson(Request.Builder().url(url).get().build()) ?: return null
+        val first = root.optJSONArray("results")?.optJSONObject(0) ?: return null
+        val lat = first.optDouble("latitude", Double.NaN)
+        val lon = first.optDouble("longitude", Double.NaN)
+        if (lat.isNaN() || lon.isNaN()) return null
+        val place = listOf(first.optString("name", city), first.optString("admin1"))
+            .filter { it.isNotBlank() && it != "null" }.distinct().joinToString(" · ")
+        return GeoPoint(place.ifBlank { city }, lon, lat)
+    }
+
+    private fun requestCaiyun(lon: Double, lat: Double): JSONObject? {
+        val appKey = prefs.caiyunAppKey.trim()
+        val secret = prefs.caiyunAppSecret.trim()
+        val token = prefs.caiyunToken.trim()
+        if (appKey.isBlank() && token.isBlank()) return null
+        val credential = if (appKey.isNotBlank()) appKey else token
+        val coordinate = String.format(Locale.US, "%.4f,%.4f", lon, lat)
+        val path = "/v2.6/$credential/$coordinate/weather"
+        val query = "alert=true&dailysteps=7&hourlysteps=24"
+        val builder = Request.Builder().url("https://api.caiyunapp.com$path?$query").get()
+        if (appKey.isNotBlank() && secret.isNotBlank()) {
+            val nonce = UUID.randomUUID().toString()
+            val timestamp = System.currentTimeMillis() / 1000L
+            val content = "GET:$path:$query:$appKey:$nonce:$timestamp"
+            val mac = Mac.getInstance("HmacSHA256")
+            mac.init(SecretKeySpec(secret.toByteArray(Charsets.UTF_8), "HmacSHA256"))
+            val signature = Base64.encodeToString(mac.doFinal(content.toByteArray(Charsets.UTF_8)), Base64.URL_SAFE or Base64.NO_WRAP)
+            builder.header("x-cy-nonce", nonce)
+                .header("x-cy-timestamp", timestamp.toString())
+                .header("x-cy-signature", signature)
+        }
+        return getJson(builder.build())
+    }
+
+    private fun getJson(request: Request): JSONObject? =
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return@use null
+            response.body?.string()?.let(::JSONObject)
         }
 
-        /** WMO 天气码 → emoji 图标（参考开源天气 App 的直观表达） */
-        fun wmoEmoji(code: Int): String = when (code) {
-            0 -> "☀️"
-            1 -> "🌤️"
-            2 -> "⛅"
-            3 -> "☁️"
-            45, 48 -> "🌫️"
-            51, 53, 55, 56, 57 -> "🌦️"
-            61, 63, 65, 66, 67 -> "🌧️"
-            71, 73, 75, 77 -> "❄️"
-            80, 81, 82 -> "🌧️"
-            85, 86 -> "🌨️"
-            95, 96, 99 -> "⛈️"
-            else -> "🌡️"
+    private fun parse(point: GeoPoint, root: JSONObject): WeatherInfo? {
+        if (root.optString("status") != "ok") return null
+        val result = root.optJSONObject("result") ?: return null
+        val realtime = result.optJSONObject("realtime") ?: return null
+        val skycon = realtime.optString("skycon", "CLEAR_DAY")
+        val temp = realtime.optDouble("temperature", Double.NaN)
+        if (temp.isNaN()) return null
+        val apparent = result.optJSONObject("hourly")?.optJSONArray("apparent_temperature")
+            ?.optJSONObject(0)?.optDouble("value", temp) ?: temp
+        val humidityRaw = realtime.optDouble("humidity", Double.NaN)
+        val humidity = if (humidityRaw.isNaN()) -1 else (humidityRaw * 100).toInt().coerceIn(0, 100)
+        val wind = realtime.optJSONObject("wind")
+        val windSpeed = wind?.optDouble("speed", Double.NaN) ?: Double.NaN
+        val windDirection = wind?.optDouble("direction", Double.NaN) ?: Double.NaN
+        val air = realtime.optJSONObject("air_quality")
+        val aqi = air?.optJSONObject("aqi")?.optInt("chn", -1) ?: -1
+        val comfort = realtime.optJSONObject("life_index")?.optJSONObject("comfort")?.optString("desc", "") ?: ""
+        val minutely = result.optJSONObject("minutely")?.optString("description", "") ?: ""
+        val alert = result.optJSONObject("alert")?.optJSONArray("content")?.optJSONObject(0)?.optString("description", "") ?: ""
+        return WeatherInfo(
+            place = point.name, temp = temp, feelsLike = apparent, humidity = humidity,
+            windSpeed = windSpeed, windDirection = windDirection, skycon = skycon,
+            desc = skyconDesc(skycon), icon = skyconEmoji(skycon), aqi = aqi,
+            comfort = comfort, minutely = minutely, alert = alert,
+            hourly = parseHourly(result.optJSONObject("hourly")), days = parseDaily(result.optJSONObject("daily")),
+            source = "彩云天气", updatedAt = SimpleDateFormat("HH:mm", Locale.CHINA).format(Date())
+        )
+    }
+
+    private fun parseHourly(hourly: JSONObject?): List<HourForecast> {
+        if (hourly == null) return emptyList()
+        val temps = hourly.optJSONArray("temperature") ?: return emptyList()
+        val skies = hourly.optJSONArray("skycon") ?: JSONArray()
+        val rain = hourly.optJSONArray("precipitation") ?: JSONArray()
+        return (0 until minOf(temps.length(), 24)).mapNotNull { i ->
+            val t = temps.optJSONObject(i) ?: return@mapNotNull null
+            val sky = skies.optJSONObject(i)?.optString("value", "CLEAR_DAY") ?: "CLEAR_DAY"
+            val probability = rain.optJSONObject(i)?.optDouble("probability", Double.NaN) ?: Double.NaN
+            HourForecast(hourLabel(t.optString("datetime")), t.optDouble("value", Double.NaN), sky,
+                skyconDesc(sky), skyconEmoji(sky), if (probability.isNaN()) -1 else (probability * 100).toInt().coerceIn(0, 100))
+        }
+    }
+
+    private fun parseDaily(daily: JSONObject?): List<DayForecast> {
+        if (daily == null) return emptyList()
+        val temps = daily.optJSONArray("temperature") ?: return emptyList()
+        val skies = daily.optJSONArray("skycon") ?: JSONArray()
+        val rain = daily.optJSONArray("precipitation") ?: JSONArray()
+        return (0 until minOf(temps.length(), 7)).mapNotNull { i ->
+            val t = temps.optJSONObject(i) ?: return@mapNotNull null
+            val sky = skies.optJSONObject(i)?.optString("value", "CLEAR_DAY") ?: "CLEAR_DAY"
+            val probability = rain.optJSONObject(i)?.optDouble("probability", Double.NaN) ?: Double.NaN
+            DayForecast(t.optString("date"), sky, skyconDesc(sky), skyconEmoji(sky),
+                t.optDouble("max", Double.NaN), t.optDouble("min", Double.NaN),
+                if (probability.isNaN()) -1 else (probability * 100).toInt().coerceIn(0, 100))
+        }
+    }
+
+    companion object {
+        fun skyconDesc(code: String): String = when (code) {
+            "CLEAR_DAY" -> "晴"; "CLEAR_NIGHT" -> "晴夜"; "PARTLY_CLOUDY_DAY" -> "多云"
+            "PARTLY_CLOUDY_NIGHT" -> "夜间多云"; "CLOUDY" -> "阴"; "LIGHT_HAZE" -> "轻度雾霾"
+            "MODERATE_HAZE" -> "中度雾霾"; "HEAVY_HAZE" -> "重度雾霾"; "LIGHT_RAIN" -> "小雨"
+            "MODERATE_RAIN" -> "中雨"; "HEAVY_RAIN" -> "大雨"; "STORM_RAIN" -> "暴雨"
+            "FOG" -> "雾"; "LIGHT_SNOW" -> "小雪"; "MODERATE_SNOW" -> "中雪"
+            "HEAVY_SNOW" -> "大雪"; "STORM_SNOW" -> "暴雪"; "DUST" -> "浮尘"
+            "SAND" -> "沙尘"; "WIND" -> "大风"; else -> "天气变化"
+        }
+        fun skyconEmoji(code: String): String = when (code) {
+            "CLEAR_DAY" -> "☀️"; "CLEAR_NIGHT" -> "🌙"; "PARTLY_CLOUDY_DAY" -> "🌤️"
+            "PARTLY_CLOUDY_NIGHT", "CLOUDY" -> "☁️"
+            "LIGHT_RAIN", "MODERATE_RAIN" -> "🌧️"; "HEAVY_RAIN", "STORM_RAIN" -> "⛈️"
+            "LIGHT_SNOW", "MODERATE_SNOW", "HEAVY_SNOW", "STORM_SNOW" -> "❄️"
+            "FOG", "LIGHT_HAZE", "MODERATE_HAZE", "HEAVY_HAZE" -> "🌫️"
+            "WIND" -> "💨"; "DUST", "SAND" -> "🏜️"; else -> "🌡️"
+        }
+        private fun hourLabel(value: String): String {
+            val match = Regex("T(\\d{2}):(\\d{2})").find(value)
+            return match?.groupValues?.get(1)?.plus(":00") ?: value.takeLast(5)
         }
     }
 }
 
-/** 单日预报 */
-data class DayForecast(
-    val date: String,
-    val code: Int,
-    val desc: String,
-    val icon: String,
-    val tempMax: Double,
-    val tempMin: Double,
-    val pop: Int
-)
-
-/** 一次天气查询的完整结果 */
+private data class GeoPoint(val name: String, val longitude: Double, val latitude: Double)
+data class HourForecast(val time: String, val temp: Double, val skycon: String, val desc: String, val icon: String, val rainProbability: Int)
+data class DayForecast(val date: String, val skycon: String, val desc: String, val icon: String, val tempMax: Double, val tempMin: Double, val pop: Int)
 data class WeatherInfo(
-    val place: String,
-    val temp: Double,
-    val feelsLike: Double,
-    val humidity: Int,
-    val windSpeed: Double,
-    val code: Int,
-    val desc: String,
-    val icon: String,
-    val days: List<DayForecast>
+    val place: String, val temp: Double, val feelsLike: Double, val humidity: Int,
+    val windSpeed: Double, val windDirection: Double, val skycon: String, val desc: String,
+    val icon: String, val aqi: Int, val comfort: String, val minutely: String, val alert: String,
+    val hourly: List<HourForecast>, val days: List<DayForecast>, val source: String, val updatedAt: String
 ) {
-    /** 生成一份适合语音播报 / 聊天气泡的纯文本（带 emoji） */
     fun toSpeakText(): String {
-        val sb = StringBuilder()
-        sb.append(icon).append(" ").append(place).append(" 现在 ").append(fmt(temp)).append("℃")
-        sb.append("（").append(desc).append("）")
-        sb.append("\n")
-        sb.append("体感 ").append(fmt(feelsLike)).append("℃")
-        if (humidity in 0..100) sb.append(" · 湿度 ").append(humidity).append("%")
-        if (!windSpeed.isNaN()) sb.append(" · 风速 ").append(fmt(windSpeed)).append(" m/s")
-        if (days.isNotEmpty()) {
-            sb.append("\n\n未来几天：\n")
-            days.take(5).forEachIndexed { idx, d ->
-                val dayLabel = when (idx) {
-                    0 -> "今天"
-                    1 -> "明天"
-                    2 -> "后天"
-                    else -> shortDate(d.date)
-                }
-                sb.append(dayLabel).append(" ").append(d.icon).append(" ")
-                    .append(fmt(d.tempMin)).append("~").append(fmt(d.tempMax)).append("℃ ")
-                    .append(d.desc)
-                if (d.pop in 0..100) sb.append(" 降水").append(d.pop).append("%")
-                sb.append("\n")
-            }
-        }
-        return sb.toString().trim()
+        val details = mutableListOf("体感 ${fmt(feelsLike)}℃")
+        if (humidity in 0..100) details += "湿度 $humidity%"
+        if (!windSpeed.isNaN()) details += "风速 ${fmt(windSpeed)} km/h"
+        if (aqi >= 0) details += "空气质量 $aqi"
+        val next = days.drop(1).firstOrNull()?.let { "明天${it.desc}，${fmt(it.tempMin)}到${fmt(it.tempMax)}℃。" }.orEmpty()
+        return "$icon $place 现在 ${fmt(temp)}℃，$desc。${details.joinToString("，")}。${minutely.ifBlank { comfort }}。$next"
     }
-
-    private fun fmt(v: Double): String =
-        if (v.isNaN()) "—" else String.format("%.1f", v).removeSuffix(".0")
-
-    private fun shortDate(d: String): String {
-        // "2026-09-30" -> "9/30"
-        val parts = d.split("-")
-        return if (parts.size == 3) {
-            val m = parts[1].trimStart('0').ifBlank { "0" }
-            val day = parts[2].trimStart('0').ifBlank { "0" }
-            m + "/" + day
-        } else d
-    }
+    private fun fmt(v: Double): String = if (v.isNaN()) "—" else String.format(Locale.CHINA, "%.0f", v)
 }

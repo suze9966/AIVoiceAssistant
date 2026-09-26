@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#F5F3FA</color>
+    <color name="gray_bg">#121119</color>
+    <color name="surface_soft">#1A1824</color>
+    <color name="card_white">#211F2B</color>
+    <color name="card_stroke">#373344</color>
+    <color name="divider">#34303F</color>
+    <color name="input_bg">#2A2735</color>
+    <color name="ghost_bg">#292632</color>
+    <color name="text_primary">#F3F0FA</color>
+    <color name="text_secondary">#BBB5C9</color>
+    <color name="text_tertiary">#928CA1</color>
+    <color name="bubble_ai">#24222E</color>
+    <color name="bubble_ai_text">#F4F1FA</color>
+    <color name="halo_idle">#5A526F</color>
+</resources>

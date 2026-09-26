@@ -33,9 +33,30 @@ class LocalChatEngine(private val prefs: Prefs) {
         return options[(Math.random() * options.size).toInt().coerceIn(0, options.size - 1)]
     }
 
-    /** 台湾腔语气词辅助 */
-    private fun tw(s: String): String =
-        if (taiwan()) s.replace("呀", "喔").replace("哦", "喔").replace("吗", "吗").replace("很", "超") else s
+    /** 台湾腔语气辅助：轻微嘴贫、有梗，但不破坏事实内容。 */
+    private fun tw(s: String): String {
+        if (!taiwan()) return s
+        var out = s
+            .replace("软件", "软体")
+            .replace("网络", "网路")
+            .replace("视频", "影片")
+            .replace("信息", "资讯")
+            .replace("质量", "品质")
+            .replace("很", "超")
+            .replace("呀", "啦")
+            .replace("哦", "喔")
+        val alreadyTaiwan = listOf("啦", "喔", "耶", "齁", "欸", "吼", "嘛").any { out.contains(it) }
+        if (!alreadyTaiwan) {
+            val particle = when (turn % 4) {
+                0 -> "啦～"
+                1 -> "喔～"
+                2 -> "耶～"
+                else -> "齁～"
+            }
+            out = out.trimEnd('。', '！', '!', '？', '?', '～') + particle
+        }
+        return out
+    }
 
     /**
      * 主入口：根据用户输入生成一条本地回复。
@@ -95,12 +116,12 @@ class LocalChatEngine(private val prefs: Prefs) {
 
         // ===== 4) 能力 / 身份类问答 =====
         if (matchAny(lower, "你叫什么", "你是谁", "你的名字")) {
-            return tw("我是小沫呀，主人的贴心语音助手～")
+            return tw("欸，我是小沫啦，主人连我的名字都忘记，是在哈啰？")
         }
         if (matchAny(lower, "你会什么", "能做什么", "有什么功能", "能干嘛")) {
             return tw("我能陪你聊天、报时、讲笑话，还能在你设了大模型后变得更聪明喔～")
         }
-        if (matchAny(lower, "谢谢", "多谢", "thank")) return tw(pick("不客气呀～", "嘿嘿，小事一桩！"))
+        if (matchAny(lower, "谢谢", "多谢", "thank")) return tw(pick("不客气啦，主人终于发现我超靠谱了齁～", "这点小事而已，你很会夸耶～"))
         if (matchAny(lower, "再见", "拜拜", "bye", "先走了")) return tw("拜拜～有空再来找我喔！")
 
         // ===== 5) 简单计算（个位数四则运算） =====
@@ -137,8 +158,8 @@ class LocalChatEngine(private val prefs: Prefs) {
         // ===== 9) 通用兜底：重复/肯定/自由闲聊 =====
         return tw(pick(
             "嗯嗯，我在听～你继续说呀。",
-            "这样子呀，然后呢？",
-            "我懂你的意思喔～",
+            "这样子喔，然后咧？不要讲一半啦～",
+            "欸，我懂啦，你很会讲耶～",
             "听起来挺有意思的，多跟我说说嘛。",
             "好的呀，记住啦～"
         )) + moodTail

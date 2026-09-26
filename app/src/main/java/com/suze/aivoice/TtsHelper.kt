@@ -110,7 +110,7 @@ class TtsHelper(private val context: Context) {
     private fun voiceForLocale(locale: Locale): String {
         explicitVoice?.let { return it }
         return when {
-            locale.country == "TW" -> "zh-TW-HsiaoChenNeural"
+            locale.country == "TW" -> "zh-TW-HsiaoYuNeural"
             locale.country == "HK" -> "zh-HK-HiuMaanNeural"
             else -> "zh-CN-XiaoxiaoNeural"
         }
@@ -128,14 +128,16 @@ class TtsHelper(private val context: Context) {
 
     /** 最终语速（映射为 SSML 的 +N%/-N%） */
     private fun edgeRate(): String {
-        val r = (emotionRate * userRate).coerceIn(0.5f, 1.6f)
+        val taiwanCadence = if (isTaiwan()) 0.96f else 1.0f
+        val r = (emotionRate * userRate * taiwanCadence).coerceIn(0.5f, 1.6f)
         val pct = ((r - 1.0f) * 100).toInt()
         return if (pct >= 0) "+" + pct + "%" else "" + pct + "%"
     }
 
     /** 最终音调 */
     private fun edgePitch(): String {
-        val p = (emotionPitch * userPitch).coerceIn(0.5f, 1.6f)
+        val taiwanLift = if (isTaiwan()) 1.04f else 1.0f
+        val p = (emotionPitch * userPitch * taiwanLift).coerceIn(0.5f, 1.6f)
         val pct = ((p - 1.0f) * 100).toInt()
         return if (pct >= 0) "+" + pct + "%" else "" + pct + "%"
     }
@@ -155,7 +157,9 @@ class TtsHelper(private val context: Context) {
         "晓晓（大陆·女）",
         "云希（大陆·男）",
         "晓伊（大陆·童声）",
-        "晓臻（台湾·女）",
+        "曉雨（台湾腔·女·浓）",
+        "曉臻（台湾腔·女·自然）",
+        "雲哲（台湾腔·男）",
         "曉曼（香港·女）"
     )
 
@@ -170,8 +174,17 @@ class TtsHelper(private val context: Context) {
                 explicitVoice = "zh-CN-XiaoyiNeural"
                 currentLocale = Locale.CHINA
             }
-            name.contains("晓臻") || name.contains("曉臻") || name.contains("台湾") -> {
+            name.contains("曉雨") || name.contains("晓雨") || name.contains("台湾腔·女·浓") -> {
+                // 微软将 HsiaoYu 明确标为 Taiwanese Mandarin，口音比 HsiaoChen 更明显。
+                explicitVoice = "zh-TW-HsiaoYuNeural"
+                currentLocale = Locale.TAIWAN
+            }
+            name.contains("晓臻") || name.contains("曉臻") || name.contains("台湾腔·女·自然") -> {
                 explicitVoice = "zh-TW-HsiaoChenNeural"
+                currentLocale = Locale.TAIWAN
+            }
+            name.contains("雲哲") || name.contains("云哲") || name.contains("台湾腔·男") -> {
+                explicitVoice = "zh-TW-YunJheNeural"
                 currentLocale = Locale.TAIWAN
             }
             name.contains("曉曼") || name.contains("晓曼") || name.contains("香港") -> {
@@ -187,8 +200,8 @@ class TtsHelper(private val context: Context) {
 
     fun applyTaiwanVoice(): String? {
         currentLocale = Locale.TAIWAN
-        explicitVoice = "zh-TW-HsiaoChenNeural"
-        return "晓臻（台湾·女）"
+        explicitVoice = "zh-TW-HsiaoYuNeural"
+        return "曉雨（台湾腔·女·浓）"
     }
 
     fun setRate(rate: Float) { userRate = rate }
@@ -209,7 +222,7 @@ class TtsHelper(private val context: Context) {
         if (text.isBlank()) return
         if (taiwan) {
             currentLocale = Locale.TAIWAN
-            explicitVoice = "zh-TW-HsiaoChenNeural"
+            explicitVoice = "zh-TW-HsiaoYuNeural"
         }
 
         stopInternal()
@@ -261,7 +274,13 @@ class TtsHelper(private val context: Context) {
 
                 // 2) 发送 SSML
                 val id = uuidNoDash()
-                val ssml = "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='zh-CN'>" +
+                val speechLocale = when {
+                    voice.startsWith("zh-TW-") -> "zh-TW"
+                    voice.startsWith("zh-HK-") -> "zh-HK"
+                    else -> "zh-CN"
+                }
+                val ssml = "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='" +
+                    speechLocale + "'>" +
                     "<voice name='" + voice + "'>" +
                     "<prosody rate='" + rate + "' pitch='" + pitch + "'>" + escapeXml(text) + "</prosody>" +
                     "</voice></speak>"
@@ -376,8 +395,10 @@ class TtsHelper(private val context: Context) {
             return
         }
         engine.language = currentLocale
-        engine.setSpeechRate((emotionRate * userRate).coerceIn(0.5f, 1.6f))
-        engine.setPitch((emotionPitch * userPitch).coerceIn(0.5f, 1.6f))
+        val taiwanCadence = if (isTaiwan()) 0.96f else 1.0f
+        val taiwanLift = if (isTaiwan()) 1.04f else 1.0f
+        engine.setSpeechRate((emotionRate * userRate * taiwanCadence).coerceIn(0.5f, 1.6f))
+        engine.setPitch((emotionPitch * userPitch * taiwanLift).coerceIn(0.5f, 1.6f))
         isSpeaking = true
         val result = engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "fallback_" + generation)
         if (result == TextToSpeech.ERROR) {

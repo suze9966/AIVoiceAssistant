@@ -10,119 +10,97 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-/**
- * 大模型 API Key 保险箱。
- *
- * 安全设计：
- * 1) 密钥本体由 Android Keystore 生成并保管（默认落在 TEE / StrongBox，无法被导出）。
- * 2) 用该密钥以 AES/GCM/NoPadding 加密用户的 API Key，密文 + IV 一起 Base64 后存入
- *    SharedPreferences。即使有人拿到 /data/data 目录或用备份工具导出，也只能看到密文，
- *    拿不到 Keystore 里的密钥，无法解密。
- * 3) GCM 自带完整性校验，密文被篡改会解密失败（直接当空 Key 处理，不会崩溃）。
- *
- * 兼容性：minSdk 24 起 Keystore AES + GCM 全量可用，无需额外依赖。
- */
+/** Android Keystore + AES-GCM 凭证保险箱；AAD 将密文绑定到具体存储用途，防止跨槽置换。 */
 object KeyVault {
-
     private const val KEYSTORE = "AndroidKeyStore"
     private const val ALIAS = "aivoice_api_key_v1"
     private const val TRANSFORM = "AES/GCM/NoPadding"
     private const val GCM_TAG_BITS = 128
     private const val IV_LEN = 12
+    private const val API_SLOT = "apiKeyEnc"
 
-    private fun getOrCreateKey(): SecretKey? {
-        return try {
-            val ks = KeyStore.getInstance(KEYSTORE).apply { load(null) }
-            val existing = ks.getEntry(ALIAS, null) as? KeyStore.SecretKeyEntry
-            if (existing != null) {
-                existing.secretKey
-            } else {
-                val gen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE)
-                gen.init(
-                    KeyGenParameterSpec.Builder(
-                        ALIAS,
-                        KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-                    )
-                        .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                        .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                        .setKeySize(256)
-                        .setRandomizedEncryptionRequired(true)
-                        .build()
-                )
-                gen.generateKey()
-            }
-    } catch (t: Throwable) {
-        // 极端情况（个别 ROM Keystore 异常）退化为 null，交由上层决定
-        null
-    }
-    }
+    private fun getOrCreateKey(): SecretKey? = try {
+        val ks = KeyStore.getInstance(KEYSTORE).apply { load(null) }
+        (ks.getEntry(ALIAS, null) as? KeyStore.SecretKeyEntry)?.secretKey ?: run {
+            val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE)
+            generator.init(
+                KeyGenParameterSpec.Builder(ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+                    .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                    .setKeySize(256)
+                    .setRandomizedEncryptionRequired(true)
+                    .build()
+            )
+            generator.generateKey()
+        }
+    } catch (_: Throwable) { null }
 
-    /** 加密明文，返回 Base64(IV + 密文)；失败返回 null */
-    fun encrypt(plain: String): String? {
-        return try {
-            if (plain.isEmpty()) return ""
-            val key = getOrCreateKey() ?: return null
-            val cipher = Cipher.getInstance(TRANSFORM)
-            cipher.init(Cipher.ENCRYPT_MODE, key)
-            val iv = cipher.iv
-            val enc = cipher.doFinal(plain.toByteArray(Charsets.UTF_8))
-            val out = ByteArray(iv.size + enc.size)
-            System.arraycopy(iv, 0, out, 0, iv.size)
-            System.arraycopy(enc, 0, out, iv.size, enc.size)
-            Base64.encodeToString(out, Base64.NO_WRAP)
-    } catch (t: Throwable) {
-        null
-    }
-    }
+    private fun encryptFor(slot: String, plain: String): String? = try {
+        if (plain.isEmpty()) return ""
+        val key = getOrCreateKey() ?: return null
+        val cipher = Cipher.getInstance(TRANSFORM)
+        cipher.init(Cipher.ENCRYPT_MODE, key)
+        cipher.updateAAD(slot.toByteArray(Charsets.UTF_8))
+        val encrypted = cipher.doFinal(plain.toByteArray(Charsets.UTF_8))
+        val output = ByteArray(cipher.iv.size + encrypted.size)
+        System.arraycopy(cipher.iv, 0, output, 0, cipher.iv.size)
+        System.arraycopy(encrypted, 0, output, cipher.iv.size, encrypted.size)
+        Base64.encodeToString(output, Base64.NO_WRAP)
+    } catch (_: Throwable) { null }
 
-    /** 解密 Base64(IV + 密文)；失败返回 null（含被篡改、换机后密钥失效等情况） */
-    fun decrypt(stored: String): String? {
-        return try {
-            if (stored.isEmpty()) return ""
-            val raw = Base64.decode(stored, Base64.NO_WRAP)
-            if (raw.size <= IV_LEN) return null
-            val iv = raw.copyOfRange(0, IV_LEN)
-            val enc = raw.copyOfRange(IV_LEN, raw.size)
-            val key = getOrCreateKey() ?: return null
-            val cipher = Cipher.getInstance(TRANSFORM)
-            cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(GCM_TAG_BITS, iv))
-            String(cipher.doFinal(enc), Charsets.UTF_8)
-    } catch (t: Throwable) {
-        null
-    }
-    }
+    private fun decryptFor(slot: String, stored: String): String? = try {
+        if (stored.isEmpty()) return ""
+        val raw = Base64.decode(stored, Base64.NO_WRAP)
+        if (raw.size <= IV_LEN) return null
+        val key = getOrCreateKey() ?: return null
+        val cipher = Cipher.getInstance(TRANSFORM)
+        cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(GCM_TAG_BITS, raw.copyOfRange(0, IV_LEN)))
+        cipher.updateAAD(slot.toByteArray(Charsets.UTF_8))
+        String(cipher.doFinal(raw.copyOfRange(IV_LEN, raw.size)), Charsets.UTF_8)
+    } catch (_: Throwable) { null }
 
-    /**
-     * 读取并（必要时）迁移：把旧版本明文存储的 Key 升级为密文。
-     * @param sp 与加密后存储同一个 SharedPreferences 对象
-     */
+    /** 读取 API Key；可迁移旧版明文，但拒绝用途不明的旧版无 AAD 密文。 */
     fun readMigrated(sp: SharedPreferences): String {
-        val encVal = sp.getString("apiKeyEnc", null)
-        if (!encVal.isNullOrEmpty()) {
-            val dec = decrypt(encVal)
-            if (dec != null) return dec
-            // 解不开（换机/被清）：清掉脏数据
-            sp.edit().remove("apiKeyEnc").apply()
+        val encrypted = sp.getString(API_SLOT, null)
+        if (!encrypted.isNullOrEmpty()) {
+            decryptFor(API_SLOT, encrypted)?.let { return it }
+            // 旧版无 AAD 密文无法证明属于哪个凭证槽：安全优先，删除并要求用户重新填写一次。
+            sp.edit().remove(API_SLOT).remove("apiKey").apply()
             return ""
         }
-        // 尝试迁移旧的明文 apiKey
         val plain = sp.getString("apiKey", null)
         if (!plain.isNullOrEmpty()) {
-            val e = encrypt(plain)
+            val upgraded = encryptFor(API_SLOT, plain)
             sp.edit().apply {
-                if (e != null) putString("apiKeyEnc", e)
-                remove("apiKey") // 无论成功与否，明文必须清除
+                if (upgraded != null) putString(API_SLOT, upgraded) else remove(API_SLOT)
+                remove("apiKey")
             }.apply()
-            return if (e != null) plain else "" // 加密失败则不返回明文，避免再次落盘
+            return if (upgraded != null) plain else ""
         }
         return ""
     }
 
-    /** 写入：加密后存 apiKeyEnc，并确保明文 apiKey 已被清除 */
-    fun writeEncrypted(sp: SharedPreferences, plain: String) {
-        val e = encrypt(plain)
+    /** 命名凭证必须以自身槽名通过 AAD 验证；旧版无 AAD 密文拒绝使用，避免跨槽置换。 */
+    fun readNamed(sp: SharedPreferences, storageKey: String): String {
+        val stored = sp.getString(storageKey, null) ?: return ""
+        return decryptFor(storageKey, stored) ?: run {
+            sp.edit().remove(storageKey).apply()
+            ""
+        }
+    }
+
+    fun writeNamed(sp: SharedPreferences, storageKey: String, plain: String) {
+        val clean = plain.trim()
+        val encrypted = if (clean.isEmpty()) "" else encryptFor(storageKey, clean)
         sp.edit().apply {
-            if (e != null) putString("apiKeyEnc", e) else remove("apiKeyEnc")
+            if (encrypted.isNullOrEmpty()) remove(storageKey) else putString(storageKey, encrypted)
+        }.apply()
+    }
+
+    fun writeEncrypted(sp: SharedPreferences, plain: String) {
+        val encrypted = encryptFor(API_SLOT, plain.trim())
+        sp.edit().apply {
+            if (encrypted.isNullOrEmpty()) remove(API_SLOT) else putString(API_SLOT, encrypted)
             remove("apiKey")
         }.apply()
     }

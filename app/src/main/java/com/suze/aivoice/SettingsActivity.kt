@@ -1,6 +1,7 @@
 package com.suze.aivoice
 
 import android.os.Bundle
+import android.view.WindowManager
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
@@ -13,6 +14,8 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // 设置页可能短暂持有凭证明文：禁止截图、最近任务缩略图和非安全投屏捕获。
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         // 兜底：任何意外异常都不让设置页闪退
         try {
             setContentView(R.layout.activity_settings)
@@ -35,12 +38,16 @@ class SettingsActivity : AppCompatActivity() {
         val switchTaiwan = findViewById<SwitchCompat>(R.id.switchTaiwan)
         val editTaiwanPrompt = findViewById<EditText>(R.id.editTaiwanPrompt)
         val spinnerVoice = findViewById<Spinner>(R.id.spinnerVoice)
+        val editCaiyunKey = findViewById<EditText>(R.id.editCaiyunKey)
+        val editCaiyunSecret = findViewById<EditText>(R.id.editCaiyunSecret)
+        val editCaiyunToken = findViewById<EditText>(R.id.editCaiyunToken)
         val editWake = findViewById<EditText>(R.id.editWakeWord)
         val switchStream = findViewById<SwitchCompat>(R.id.switchStream)
         val switchEmotion = findViewById<SwitchCompat>(R.id.switchEmotion)
         val switchMind = findViewById<SwitchCompat>(R.id.switchMind)
         val switchGrow = findViewById<SwitchCompat>(R.id.switchGrow)
         val switchMemory = findViewById<SwitchCompat>(R.id.switchMemory)
+        val switchFreeChat = findViewById<SwitchCompat>(R.id.switchFreeChat)
         val btnMemorySummary = findViewById<Button>(R.id.btnMemorySummary)
         val btnTest = findViewById<Button>(R.id.btnTestVoice)
         val seekRate = findViewById<SeekBar>(R.id.seekRate)
@@ -52,15 +59,22 @@ class SettingsActivity : AppCompatActivity() {
         // 安全：绝不回显完整 API Key。已保存过就显示脱敏占位，仅在用户重新输入时才覆盖
         val hasKey = prefs.apiKey.isNotBlank()
         editApiKey.setText("")
-        editApiKey.hint = if (hasKey) "已保存 · " + maskKey(prefs.apiKey) + "（留空则不修改）" else getString(R.string.label_apikey_hint)
+        editApiKey.hint = if (hasKey) "已加密保存（留空则不修改）" else getString(R.string.label_apikey_hint)
+        listOf(editApiKey, editCaiyunKey, editCaiyunSecret, editCaiyunToken).forEach {
+            it.filterTouchesWhenObscured = true
+        }
         editModel.setText(prefs.model)
         editSystem.setText(prefs.systemPrompt)
+        editCaiyunKey.hint = if (prefs.caiyunAppKey.isNotBlank()) "已加密保存 · 留空不修改" else "请输入彩云 App Key"
+        editCaiyunSecret.hint = if (prefs.caiyunAppSecret.isNotBlank()) "已加密保存 · 留空不修改" else "请输入彩云 App Secret"
+        editCaiyunToken.hint = if (prefs.caiyunToken.isNotBlank()) "旧 Token 已加密保存 · 留空不修改" else "可选：旧版 Token"
         editWake.setText(prefs.wakeWord)
         switchStream.isChecked = prefs.streamEnabled
         switchEmotion.isChecked = prefs.emotionEnabled
         switchMind.isChecked = prefs.mindEnabled
         switchGrow.isChecked = prefs.growEnabled
         switchMemory.isChecked = prefs.memoryEnabled
+        switchFreeChat.isChecked = prefs.freeChatEnabled
         switchTaiwan.isChecked = prefs.taiwanVoice
         editTaiwanPrompt.setText(prefs.taiwanPrompt)
         seekRate.progress = (((prefs.ttsRate - 0.5f) / 1.1f) * 110f).toInt().coerceIn(0, 110)
@@ -86,6 +100,8 @@ class SettingsActivity : AppCompatActivity() {
                 val twIdx = localeLabels.indexOfFirst { it.contains("台湾") }
                 if (twIdx >= 0) spinnerLocale.setSelection(twIdx)
                 refreshVoices(spinnerVoice)
+                val strongTwIndex = tts.availableVoices().indexOfFirst { it.contains("台湾腔·女·浓") }
+                if (strongTwIndex >= 0) spinnerVoice.setSelection(strongTwIndex)
                 Toast.makeText(this, if (name != null) "已切换台湾音色：$name" else "未找到台湾音色，已回退中文音色", Toast.LENGTH_SHORT).show()
             } else {
                 tts.setLocale(Locale.CHINA)
@@ -97,7 +113,7 @@ class SettingsActivity : AppCompatActivity() {
 
         btnTest.setOnClickListener {
             val demo = if (switchTaiwan.isChecked)
-                "欸，你好喔主人，我这样讲话有沒有比较台湾腔啦～"
+                "欸，主人你好喔！今天过得还好吗？这个真的很可以耶，我陪你一起聊，好不好嘛～"
             else
                 "你好主人，这是当前的语音音色试听效果。"
             tts.setRate(0.5f + seekRate.progress / 100f)
@@ -124,7 +140,14 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         btnSave.setOnClickListener {
-            prefs.baseUrl = editBaseUrl.text.toString().trim()
+            val baseUrl = editBaseUrl.text.toString().trim()
+            if (!isSafeHttpsBaseUrl(baseUrl)) {
+                editBaseUrl.error = getString(R.string.error_https_base_url)
+                editBaseUrl.requestFocus()
+                Toast.makeText(this, R.string.error_https_base_url, Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
+            prefs.baseUrl = baseUrl
             // 安全：只有用户真正输入了新 Key 才覆盖；留空则保留原有加密 Key（不读取、不回显、不落盘明文）
             val newKey = editApiKey.text.toString().trim()
             if (newKey.isNotEmpty()) {
@@ -134,6 +157,12 @@ class SettingsActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(this, R.string.toast_key_on, Toast.LENGTH_SHORT).show()
             }
+            editCaiyunKey.text.toString().trim().takeIf { it.isNotEmpty() }?.let { prefs.caiyunAppKey = it }
+            editCaiyunSecret.text.toString().trim().takeIf { it.isNotEmpty() }?.let { prefs.caiyunAppSecret = it }
+            editCaiyunToken.text.toString().trim().takeIf { it.isNotEmpty() }?.let { prefs.caiyunToken = it }
+            editCaiyunKey.setText("")
+            editCaiyunSecret.setText("")
+            editCaiyunToken.setText("")
             prefs.model = editModel.text.toString().trim()
             prefs.systemPrompt = editSystem.text.toString().trim()
             prefs.wakeWord = editWake.text.toString().trim().ifBlank { "你好小沫" }
@@ -142,6 +171,7 @@ class SettingsActivity : AppCompatActivity() {
             prefs.mindEnabled = switchMind.isChecked
             prefs.growEnabled = switchGrow.isChecked
             prefs.memoryEnabled = switchMemory.isChecked
+            prefs.freeChatEnabled = switchFreeChat.isChecked
             prefs.taiwanVoice = switchTaiwan.isChecked
             val tp = editTaiwanPrompt.text.toString().trim()
             if (tp.isNotBlank()) prefs.taiwanPrompt = tp
@@ -159,16 +189,11 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * 把 Key 脱敏成 sk-****abcd 形式，仅用于界面提示，绝不暴露完整内容。
-     */
-    private fun maskKey(k: String): String {
-        if (k.isBlank()) return "—"
-        if (k.length <= 7) return "****"
-        val head = k.take(3)
-        val tail = k.takeLast(4)
-        return head + "-****" + tail
-    }
+    private fun isSafeHttpsBaseUrl(value: String): Boolean = runCatching {
+        val uri = java.net.URI(value)
+        uri.scheme.equals("https", ignoreCase = true) && !uri.host.isNullOrBlank() &&
+            uri.rawUserInfo == null && uri.rawQuery == null && uri.rawFragment == null
+    }.getOrDefault(false)
 
     private fun refreshVoices(spinnerVoice: Spinner) {
         val voices = tts.availableVoices()

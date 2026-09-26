@@ -49,9 +49,27 @@ class Prefs(context: Context) {
 
     /** 台湾腔人设提示词（预设，可编辑） */
     var taiwanPrompt: String
-        get() = sp.getString("taiwanPrompt",
-            "你是来自台湾的可爱语音助手，请用台湾腔口语习惯回答，例如会使用「超好看的啦」「好可爱喔」「真的假的」「很可以」「好哦」「欸」等语气词，语气轻松俏皮。") ?: ""
+        get() = sp.getString("taiwanPrompt", DEFAULT_TAIWAN_PROMPT) ?: DEFAULT_TAIWAN_PROMPT
         set(v) = sp.edit().putString("taiwanPrompt", v).apply()
+
+    /**
+     * 小智式“机车台湾腔”：嘴贫、有梗、会轻轻吐槽，但不能恶意辱骂主人。
+     * 固定风格与用户可编辑提示叠加，旧安装即使保存过旧提示也能立即生效。
+     */
+    fun effectiveTaiwanPrompt(): String = taiwanPrompt.trim() + "\n" + SASSY_TAIWAN_STYLE
+
+    companion object {
+        private const val DEFAULT_TAIWAN_PROMPT =
+            "你是来自台湾的可爱语音助手小沫，请使用自然的台湾国语和口语表达。"
+        private const val SASSY_TAIWAN_STYLE =
+            "采用小智AI那种机灵、嘴贫、略机车的台湾腔聊天风格：回答短而有梗，" +
+            "自然使用欸、齁、吼、啦、耶、喔、诶不是、真的假的、是在哈啰、很可以、" +
+            "有够、超扯、你很会耶、好不好等说法；可以轻轻吐槽、接梗、反问，" +
+            "偶尔傲娇，但本质亲近可爱。每次只自然放一到三个台湾语气词，不要句句堆砌，" +
+            "不要刻意解释自己在说台湾腔。禁止恶意侮辱、歧视、霸凌或攻击主人；" +
+            "主人认真求助或难过时立刻停止吐槽，改为温柔可靠。尽量使用繁体口语常见措辞，" +
+            "例如软体、网路、影片、资讯、品质，但不要为了转换而影响信息准确性。"
+    }
 
     /** 已选语音区域名称（用于设置页回显） */
     var voiceLocaleName: String
@@ -92,10 +110,30 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("welcomeEnabled", true)
         set(v) = sp.edit().putBoolean("welcomeEnabled", v).apply()
 
-    /** 免费在线闲聊开关：没配大模型 Key 时，联网调用免费公共接口聊天（默认开） */
+    /** 免费在线闲聊开关：会把对话发给公共第三方服务，出于隐私保护默认关闭。 */
     var freeChatEnabled: Boolean
-        get() = sp.getBoolean("freeChatEnabled", true)
-        set(v) = sp.edit().putBoolean("freeChatEnabled", v).apply()
+        get() {
+            if (!sp.getBoolean("freeChatPrivacyV2", false)) {
+                sp.edit().putBoolean("freeChatEnabled", false).putBoolean("freeChatPrivacyV2", true).apply()
+                return false
+            }
+            return sp.getBoolean("freeChatEnabled", false)
+        }
+        set(v) = sp.edit().putBoolean("freeChatEnabled", v)
+            .putBoolean("freeChatPrivacyV2", true).apply()
+
+    /** 彩云天气凭证，使用 Android Keystore 加密保存。优先 App Key + Secret，也兼容旧 Token。 */
+    var caiyunAppKey: String
+        get() = KeyVault.readNamed(sp, "caiyunAppKeyEnc")
+        set(v) = KeyVault.writeNamed(sp, "caiyunAppKeyEnc", v)
+    var caiyunAppSecret: String
+        get() = KeyVault.readNamed(sp, "caiyunAppSecretEnc")
+        set(v) = KeyVault.writeNamed(sp, "caiyunAppSecretEnc", v)
+    var caiyunToken: String
+        get() = KeyVault.readNamed(sp, "caiyunTokenEnc")
+        set(v) = KeyVault.writeNamed(sp, "caiyunTokenEnc", v)
+    fun hasCaiyunCredential(): Boolean =
+        (caiyunAppKey.isNotBlank() && caiyunAppSecret.isNotBlank()) || caiyunToken.isNotBlank()
 
     /** 上次查询天气的城市（用于菜单快捷查询，默认北京） */
     var lastCity: String
