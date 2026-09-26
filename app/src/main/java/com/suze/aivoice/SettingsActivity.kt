@@ -13,7 +13,16 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_settings)
+        // 兜底：任何意外异常都不让设置页闪退
+        try {
+            setContentView(R.layout.activity_settings)
+            initView()
+        } catch (t: Throwable) {
+            Toast.makeText(this, "设置页初始化失败：" + t.message, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun initView() {
         prefs = Prefs(this)
         tts = TtsHelper(this)
         memory = MemoryEngine(this)
@@ -54,7 +63,7 @@ class SettingsActivity : AppCompatActivity() {
         seekRate.progress = (((prefs.ttsRate - 0.5f) / 1.1f) * 110f).toInt().coerceIn(0, 110)
         seekPitch.progress = (((prefs.ttsPitch - 0.5f) / 1.1f) * 110f).toInt().coerceIn(0, 110)
 
-        val localeLabels = tts.localeOptions.map { it.first }
+        val localeLabels = try { tts.localeOptions.map { it.first } } catch (t: Throwable) { listOf("普通话（大陆）") }
         spinnerLocale.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, localeLabels)
         val savedIdx = localeLabels.indexOfFirst { it == prefs.voiceLocaleName }
         if (savedIdx >= 0) spinnerLocale.setSelection(savedIdx)
@@ -154,6 +163,6 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        tts.shutdown()
+        if (::tts.isInitialized) tts.shutdown()
     }
 }

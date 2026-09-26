@@ -182,9 +182,10 @@ class MainActivity : AppCompatActivity() {
     // ---------------- 语音唤醒 ----------------
     private fun toggleWake(enable: Boolean) {
         if (enable) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-                != PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "请先授予录音权限", Toast.LENGTH_SHORT).show()
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                // 没录音权限时不能监听，先申请权限（否则会误报“不支持”）
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 1001)
+                Toast.makeText(this, "请先授予麦克风权限，然后重新开启唤醒", Toast.LENGTH_LONG).show()
                 return
             }
             val word = prefs.wakeWord.ifBlank { "你好小沫" }
