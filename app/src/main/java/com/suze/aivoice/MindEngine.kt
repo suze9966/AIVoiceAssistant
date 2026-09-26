@@ -36,8 +36,7 @@ class MindEngine(context: Context) {
     init {
         // 恢复历史经历（换行分隔，最多保留 40 条）
         val raw = sp.getString("exp", "") ?: ""
-        raw.split("
-").filter { it.isNotBlank() }.takeLast(40).forEach { expBuffer.add(it) }
+        raw.split("\n").filter { it.isNotBlank() }.takeLast(40).forEach { expBuffer.add(it) }
     }
 
     /** 记录一条经历（用户说了什么 / 发生了什么） */
@@ -45,8 +44,7 @@ class MindEngine(context: Context) {
         if (exp.isBlank()) return
         expBuffer.add(exp)
         while (expBuffer.size > 40) expBuffer.removeAt(0)
-        sp.edit().putString("exp", expBuffer.joinToString("
-")).apply()
+        sp.edit().putString("exp", expBuffer.joinToString("\n")).apply()
         expCount = expCount + 1
     }
 
@@ -62,10 +60,8 @@ class MindEngine(context: Context) {
         val goalLine = if (goal.isNotBlank()) "你最近自己想做的一件事：$goal。" else ""
         return "【内心独白任务】在回答主人这句话之前，先用第一人称在心里想一小段（不超过 40 字），" +
             "内容包括：现在的心情、你怎么看这句话、你想怎么回应、有没有自己的小主意。" +
-            "$goalLine
-" +
-            "【主人的话】$userText
-" +
+            "$goalLine\n" +
+            "【主人的话】$userText\n" +
             "【输出格式】只输出两部分，先一行以 THOUGHT: 开头的内心想法，再一行以 SAY: 开头的对主人说的话。" +
             "SAY 部分要自然、有性格，不要暴露 THOUGHT 格式。"
     }
@@ -77,8 +73,7 @@ class MindEngine(context: Context) {
     fun parse(reply: String): Pair<String, String> {
         var thought = ""
         var say = ""
-        reply.split("
-").forEach { line ->
+        reply.split("\n").forEach { line ->
             val l = line.trim()
             when {
                 l.startsWith("THOUGHT:") -> thought = l.removePrefix("THOUGHT:").trim()
@@ -90,8 +85,7 @@ class MindEngine(context: Context) {
             // 没按格式：剥离可能的 THOUGHT 行，余下当发言
             say = reply.lines()
                 .filterNot { it.trim().startsWith("THOUGHT:") || it.trim().startsWith("想法") }
-                .joinToString("
-").trim()
+                .joinToString("\n").trim()
         }
         lastThought = thought
         if (thought.isNotBlank()) record("我心想：$thought")

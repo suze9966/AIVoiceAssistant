@@ -147,7 +147,9 @@ class MainActivity : AppCompatActivity() {
     // ---------------- 对话长按：复制 / 删除 ----------------
     private fun setupChatInteractions() {
         adapter.onItemLongClick = { pos ->
-            val anchorView = recycler.getChildAt(pos - recycler.firstVisiblePosition)
+            val first = (recycler.layoutManager as? LinearLayoutManager)
+                ?.findFirstVisibleItemPosition() ?: 0
+            val anchorView = recycler.getChildAt(pos - first)
                 ?: recycler
             val popup = PopupMenu(this, anchorView)
             popup.menu.add(0, 1, 0, getString(R.string.menu_copy))
