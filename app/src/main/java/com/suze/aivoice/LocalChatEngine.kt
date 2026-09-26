@@ -126,10 +126,11 @@ class LocalChatEngine(private val prefs: Prefs) {
         }
 
         // ===== 8) 情绪引擎联动：根据心情决定结尾语气 =====
+        val emo = emotion
         val moodTail = when {
-            emotion == null -> ""
-            emotion.mood >= 70 -> tw(" 今天心情超好的喔～")
-            emotion.mood <= 30 -> tw(" 唔…我有点点没精神呢。")
+            emo == null -> ""
+            emo.mood >= 70 -> tw(" 今天心情超好的喔～")
+            emo.mood <= 30 -> tw(" 唔…我有点点没精神呢。")
             else -> ""
         }
 

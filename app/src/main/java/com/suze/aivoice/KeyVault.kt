@@ -30,60 +30,66 @@ object KeyVault {
     private const val GCM_TAG_BITS = 128
     private const val IV_LEN = 12
 
-    private fun getOrCreateKey(): SecretKey? = try {
-        val ks = KeyStore.getInstance(KEYSTORE).apply { load(null) }
-        val existing = ks.getEntry(ALIAS, null) as? KeyStore.SecretKeyEntry
-        if (existing != null) {
-            existing.secretKey
-        } else {
-            val gen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE)
-            gen.init(
-                KeyGenParameterSpec.Builder(
-                    ALIAS,
-                    KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+    private fun getOrCreateKey(): SecretKey? {
+        return try {
+            val ks = KeyStore.getInstance(KEYSTORE).apply { load(null) }
+            val existing = ks.getEntry(ALIAS, null) as? KeyStore.SecretKeyEntry
+            if (existing != null) {
+                existing.secretKey
+            } else {
+                val gen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE)
+                gen.init(
+                    KeyGenParameterSpec.Builder(
+                        ALIAS,
+                        KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+                    )
+                        .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                        .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                        .setKeySize(256)
+                        .setRandomizedEncryptionRequired(true)
+                        .build()
                 )
-                    .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                    .setKeySize(256)
-                    .setRandomizedEncryptionRequired(true)
-                    .build()
-            )
-            gen.generateKey()
-        }
+                gen.generateKey()
+            }
     } catch (t: Throwable) {
         // 极端情况（个别 ROM Keystore 异常）退化为 null，交由上层决定
         null
     }
+    }
 
     /** 加密明文，返回 Base64(IV + 密文)；失败返回 null */
-    fun encrypt(plain: String): String? = try {
-        if (plain.isEmpty()) return ""
-        val key = getOrCreateKey() ?: return null
-        val cipher = Cipher.getInstance(TRANSFORM)
-        cipher.init(Cipher.ENCRYPT_MODE, key)
-        val iv = cipher.iv
-        val enc = cipher.doFinal(plain.toByteArray(Charsets.UTF_8))
-        val out = ByteArray(iv.size + enc.size)
-        System.arraycopy(iv, 0, out, 0, iv.size)
-        System.arraycopy(enc, 0, out, iv.size, enc.size)
-        Base64.encodeToString(out, Base64.NO_WRAP)
+    fun encrypt(plain: String): String? {
+        return try {
+            if (plain.isEmpty()) return ""
+            val key = getOrCreateKey() ?: return null
+            val cipher = Cipher.getInstance(TRANSFORM)
+            cipher.init(Cipher.ENCRYPT_MODE, key)
+            val iv = cipher.iv
+            val enc = cipher.doFinal(plain.toByteArray(Charsets.UTF_8))
+            val out = ByteArray(iv.size + enc.size)
+            System.arraycopy(iv, 0, out, 0, iv.size)
+            System.arraycopy(enc, 0, out, iv.size, enc.size)
+            Base64.encodeToString(out, Base64.NO_WRAP)
     } catch (t: Throwable) {
         null
     }
+    }
 
     /** 解密 Base64(IV + 密文)；失败返回 null（含被篡改、换机后密钥失效等情况） */
-    fun decrypt(stored: String): String? = try {
-        if (stored.isEmpty()) return ""
-        val raw = Base64.decode(stored, Base64.NO_WRAP)
-        if (raw.size <= IV_LEN) return null
-        val iv = raw.copyOfRange(0, IV_LEN)
-        val enc = raw.copyOfRange(IV_LEN, raw.size)
-        val key = getOrCreateKey() ?: return null
-        val cipher = Cipher.getInstance(TRANSFORM)
-        cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(GCM_TAG_BITS, iv))
-        String(cipher.doFinal(enc), Charsets.UTF_8)
+    fun decrypt(stored: String): String? {
+        return try {
+            if (stored.isEmpty()) return ""
+            val raw = Base64.decode(stored, Base64.NO_WRAP)
+            if (raw.size <= IV_LEN) return null
+            val iv = raw.copyOfRange(0, IV_LEN)
+            val enc = raw.copyOfRange(IV_LEN, raw.size)
+            val key = getOrCreateKey() ?: return null
+            val cipher = Cipher.getInstance(TRANSFORM)
+            cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(GCM_TAG_BITS, iv))
+            String(cipher.doFinal(enc), Charsets.UTF_8)
     } catch (t: Throwable) {
         null
+    }
     }
 
     /**
