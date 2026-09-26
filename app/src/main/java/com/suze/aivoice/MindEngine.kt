@@ -102,7 +102,7 @@ class MindEngine(context: Context) {
 
     /** 解析反思结果，写入自主目标 */
     fun applyReflection(reply: String) {
-        val r = Regex("REFLECT:\s*(.+?)\s*\|\s*GOAL:\s*(.+)", RegexOption.DOT_MATCHES_ALL)
+        val r = Regex("REFLECT:\\s*(.+?)\\s*\\|\\s*GOAL:\\s*(.+)", RegexOption.DOT_MATCHES_ALL)
         val m = r.find(reply)
         if (m != null) {
             goal = m.groupValues[2].trim().take(60)
@@ -119,6 +119,7 @@ class MindEngine(context: Context) {
         val s = if (selfView().isNotBlank()) "你对自己的认知：${selfView()}。" else ""
         return "【独立思考】你是有独立人格的伙伴，不是只会顺从的工具：" +
             "可以表达自己的看法、适当的反对意见与好奇心，会主动提问和分享想法，" +
-            "但始终把主人的利益放在第一位。$s$g只有当涉及危险/不可逆操作时才提醒确认。"
+            "但始终把主人的利益放在第一位。$s$g" +
+            "只有当涉及危险/不可逆操作时才提醒确认。"
     }
 }
