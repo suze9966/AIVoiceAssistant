@@ -105,8 +105,10 @@ class MainActivity : AppCompatActivity() {
         recycler.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
         recycler.adapter = adapter
 
-        // 恢复本地历史
-        history.addAll(store.load())
+        // 恢复本地历史，并清理旧版本因 history/adapter 共用列表产生的相邻重复项。
+        val loadedHistory = collapseLegacyDuplicates(store.load())
+        history.addAll(loadedHistory)
+        if (loadedHistory.isNotEmpty()) store.save(history)
         adapter.notifyDataSetChanged()
         if (history.isNotEmpty()) scrollToBottom()
         // 欢迎语／引导（首次进入且无历史）
@@ -138,9 +140,38 @@ class MainActivity : AppCompatActivity() {
         ensureAudioPermission()
         initRecognizer()
         refreshMoodSubtitle()
-        // 注入用户设定的基准语速/音调
+        // 恢复用户保存的音色、区域、语速和音调。
+        if (prefs.taiwanVoice) {
+            tts.applyTaiwanVoice()
+        } else {
+            val savedVoice = tts.availableVoices().getOrNull(prefs.voiceIndex)
+            if (savedVoice != null) tts.setVoiceByName(savedVoice)
+            else when {
+                prefs.voiceLocaleName.contains("台湾") -> tts.setLocale(Locale.TAIWAN)
+                prefs.voiceLocaleName.contains("香港") -> tts.setLocale(Locale("zh", "HK"))
+                else -> tts.setLocale(Locale.CHINA)
+            }
+        }
         tts.setRate(prefs.ttsRate)
         tts.setPitch(prefs.ttsPitch)
+    }
+
+    /**
+     * 旧版本把同一消息同时加入 history 和 adapter；两者实际共用一个列表，
+     * 因而持久化出了成对的相邻重复项。这里只折叠完全相同且相邻的记录，
+     * 不会删除主人隔一段时间主动重复发送的正常消息。
+     */
+    private fun collapseLegacyDuplicates(source: List<ChatMessage>): List<ChatMessage> {
+        if (source.size < 2) return source
+        val result = ArrayList<ChatMessage>(source.size)
+        var index = 0
+        while (index < source.size) {
+            val current = source[index]
+            result.add(current)
+            if (index + 1 < source.size && source[index + 1] == current) index += 2
+            else index += 1
+        }
+        return result
     }
 
     /** 把情绪状态显示在标题栏副标题上 */
@@ -409,11 +440,7 @@ class MainActivity : AppCompatActivity() {
         extra.append("可用关键词有：" + StickerLibrary.stickerHint() + "。")
         extra.append("注意：一条回复最多发一个表情包标记，不要解释这个标记。")
         llm.extraSystemPrompt = extra.toString().takeIf { it.isNotBlank() }
-
-        history.add(ChatMessage("user", userText, isMe = true))
         adapter.add(ChatMessage("user", userText, isMe = true))
-
-        history.add(ChatMessage("assistant", "", isMe = false))
         adapter.add(ChatMessage("assistant", "", isMe = false))
         scrollToBottom()
 
@@ -460,7 +487,6 @@ class MainActivity : AppCompatActivity() {
             // 有贴图时，额外追加一条图片消息
             if (stickerUrl != null) {
                 val imgMsg = ChatMessage("assistant", stickerUrl, isMe = false, type = ChatMessage.TYPE_IMAGE)
-                history.add(imgMsg)
                 adapter.add(imgMsg)
             }
             scrollToBottom()
@@ -535,12 +561,8 @@ class MainActivity : AppCompatActivity() {
     /** 发送一个 emoji 表情（以大字号气泡显示） */
     private fun sendEmoji(emoji: String) {
         if (isSending) return
-        val msg = ChatMessage("user", emoji, isMe = true, type = ChatMessage.TYPE_EMOJI)
-        history.add(msg)
-        adapter.add(msg)
-        scrollToBottom()
-        store.save(history)
-        // 让小沫用语音回应这个表情
+        // 统一交给 sendToLlm 添加消息，避免同一个 emoji 被加入两次。
+        findViewById<android.widget.HorizontalScrollView>(R.id.emojiPanel).visibility = View.GONE
         sendToLlm(emoji)
     }
 
@@ -562,6 +584,8 @@ class MainActivity : AppCompatActivity() {
 
     /** 发起天气查询，以聊天气泡形式展示并语音播报 */
     private fun requestWeather(city: String) {
+        if (isSending) return
+        isSending = true
         val c = city.trim().ifBlank { prefs.lastCity }
         prefs.lastCity = c
         tvStatus.text = "🌤 正在查询【" + c + "】天气…"
@@ -569,6 +593,7 @@ class MainActivity : AppCompatActivity() {
             val info = weather.query(c)
             if (info == null) {
                 runOnUiThread {
+                    isSending = false
                     tvStatus.text = getString(R.string.status_idle)
                     Toast.makeText(this@MainActivity, getString(R.string.weather_fail), Toast.LENGTH_SHORT).show()
                 }
@@ -576,12 +601,11 @@ class MainActivity : AppCompatActivity() {
             }
             val text = info.toSpeakText()
             runOnUiThread {
-                history.add(ChatMessage("user", c + "\u5929\u6c14", isMe = true))
                 adapter.add(ChatMessage("user", c + "\u5929\u6c14", isMe = true))
-                history.add(ChatMessage("assistant", text, isMe = false))
                 adapter.add(ChatMessage("assistant", text, isMe = false))
                 scrollToBottom()
                 store.save(history)
+                isSending = false
                 tvStatus.text = getString(R.string.status_idle)
                 if (prefs.emotionEnabled) {
                     tts.setEmotion(emotion.ttsRate(), emotion.ttsPitch())
@@ -611,7 +635,7 @@ class MainActivity : AppCompatActivity() {
         )
         noise.forEach { city = city.replace(it, "") }
         city = city.trim()
-        return city.ifBlank { null }
+        return city.ifBlank { prefs.lastCity }
     }
 
     private fun scrollToBottom() {

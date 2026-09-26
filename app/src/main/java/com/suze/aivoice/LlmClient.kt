@@ -54,7 +54,8 @@ class LlmClient(private val prefs: Prefs) {
             messages.put(JSONObject().put("role", "system").put("content", sys))
         }
         history.forEach { m ->
-            if (m.content.isNotBlank()) {
+            // 图片表情的 content 是 URL，不应作为自然语言上下文发送给模型。
+            if (m.type != ChatMessage.TYPE_IMAGE && m.content.isNotBlank()) {
                 messages.put(JSONObject().put("role", m.role).put("content", m.content))
             }
         }
@@ -75,13 +76,22 @@ class LlmClient(private val prefs: Prefs) {
             .post(body.toRequestBody("application/json".toMediaType()))
             .build()
 
+    /** 免费聊天端点也带上当前人设，并排除图片 URL 消息。 */
+    private fun freeHistory(history: List<ChatMessage>): List<ChatMessage> {
+        var sys = systemPromptOverride?.takeIf { it.isNotBlank() } ?: prefs.systemPrompt
+        extraSystemPrompt?.takeIf { it.isNotBlank() }?.let { sys += "\n" + it }
+        val clean = history.filter { it.type != ChatMessage.TYPE_IMAGE && it.content.isNotBlank() }
+        return if (sys.isBlank()) clean
+        else listOf(ChatMessage("system", sys, isMe = false)) + clean
+    }
+
     /** 非流式：一次性返回完整回复（未配大模型时走免费在线，再不行走本地引擎） */
     suspend fun chat(history: List<ChatMessage>): String = withContext(Dispatchers.IO) {
         val lastUser = history.lastOrNull { it.role == "user" }?.content ?: ""
         // 未配置大模型：优先免费在线，失败再落本地规则引擎
         if (!llmConfigured()) {
             if (freeChatEnabled()) {
-                val r = free.reply(history)
+                val r = free.reply(freeHistory(history))
                 if (!r.isNullOrBlank()) return@withContext r
             }
             return@withContext local.reply(lastUser)
@@ -92,7 +102,7 @@ class LlmClient(private val prefs: Prefs) {
                 if (!resp.isSuccessful) {
                     // 请求失败：免费在线兜底，再不行落本地
                     if (freeChatEnabled()) {
-                        val r = free.reply(history)
+                        val r = free.reply(freeHistory(history))
                         if (!r.isNullOrBlank()) return@withContext r
                     }
                     return@withContext local.reply(lastUser)
@@ -102,7 +112,7 @@ class LlmClient(private val prefs: Prefs) {
                     choices.getJSONObject(0).optJSONObject("message")?.optString("content") ?: "（无内容）"
                 } else {
                     if (freeChatEnabled()) {
-                        val r = free.reply(history)
+                        val r = free.reply(freeHistory(history))
                         if (!r.isNullOrBlank()) return@withContext r
                     }
                     local.reply(lastUser)
@@ -111,7 +121,7 @@ class LlmClient(private val prefs: Prefs) {
         } catch (e: Exception) {
             // 网络异常：免费在线兜底，再不行落本地
             if (freeChatEnabled()) {
-                val r = free.reply(history)
+                val r = free.reply(freeHistory(history))
                 if (!r.isNullOrBlank()) return@withContext r
             }
             local.reply(lastUser)
@@ -132,7 +142,7 @@ class LlmClient(private val prefs: Prefs) {
         // 未配置大模型：优先免费在线（联网），失败再落本地规则引擎
         if (!llmConfigured()) {
             var r: String? = null
-            if (freeChatEnabled()) r = free.reply(history)
+            if (freeChatEnabled()) r = free.reply(freeHistory(history))
             val ans = if (!r.isNullOrBlank()) r!! else local.reply(lastUser)
             onDelta(ans)
             return@withContext ans
@@ -142,7 +152,7 @@ class LlmClient(private val prefs: Prefs) {
                 if (!resp.isSuccessful) {
                     // 请求失败：免费在线兜底，再不行落本地
                     var r: String? = null
-                    if (freeChatEnabled()) r = free.reply(history)
+                    if (freeChatEnabled()) r = free.reply(freeHistory(history))
                     val ans = if (!r.isNullOrBlank()) r!! else local.reply(lastUser)
                     onDelta(ans)
                     return@withContext ans

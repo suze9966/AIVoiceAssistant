@@ -3,6 +3,8 @@ package com.suze.aivoice
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.os.Handler
 import android.os.Looper
 import okhttp3.OkHttpClient
@@ -14,6 +16,7 @@ import okio.ByteString
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
+import java.security.MessageDigest
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
@@ -42,11 +45,42 @@ class TtsHelper(private val context: Context) {
     private var player: MediaPlayer? = null
     private var currentFile: File? = null
     private var socket: WebSocket? = null
+    private var fallbackTts: TextToSpeech? = null
+    private var fallbackReady = false
+    private var pendingFallback: String? = null
+    private var fallbackStarted = false
+    private var currentText: String = ""
+    /** 每次开始/停止朗读都会递增；旧网络回调不得影响新朗读。 */
+    private var speechGeneration: Long = 0L
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(25, TimeUnit.SECONDS)
             .build()
+
+    init {
+        fallbackTts = TextToSpeech(context.applicationContext) { status ->
+            fallbackReady = status == TextToSpeech.SUCCESS
+            val engine = fallbackTts
+            if (fallbackReady && engine != null) {
+                engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) {
+                        main.post {
+                            if (utteranceId == "fallback_" + speechGeneration) isSpeaking = true
+                        }
+                    }
+                    override fun onDone(utteranceId: String?) = finishFallback(utteranceId)
+                    @Deprecated("Deprecated in Java")
+                    override fun onError(utteranceId: String?) = finishFallback(utteranceId)
+                    override fun onError(utteranceId: String?, errorCode: Int) = finishFallback(utteranceId)
+                })
+                pendingFallback?.let { text ->
+                    pendingFallback = null
+                    main.post { speakFallback(text, speechGeneration) }
+                }
+            }
+        }
+    }
 
     /** EdgeTTS 固定 TrustedClientToken（公开常量，各客户端通用） */
     private val trustedToken = "6A5AA1D4EAFF4E9FB37E23D68491D6F4"
@@ -179,6 +213,9 @@ class TtsHelper(private val context: Context) {
         }
 
         stopInternal()
+        val generation = speechGeneration
+        currentText = text
+        fallbackStarted = false
         isSpeaking = true
 
         val voice = voiceForLocale(currentLocale)
@@ -188,13 +225,25 @@ class TtsHelper(private val context: Context) {
         val out = File(context.cacheDir, "tts_" + System.currentTimeMillis() + ".mp3")
         val audio = FileOutputStream(out)
 
+        // Edge 现行协议要求 Sec-MS-GEC 签名、版本参数及新版扩展 Origin；
+        // 缺少这些字段时握手会返回 HTTP 403，不能只靠旧 TrustedClientToken。
+        val chromiumVersion = "143.0.3650.75"
         val url = "wss://speech.platform.bing.com/consumer/speech/synthesize/" +
             "readaloud/edge/v1?TrustedClientToken=" + trustedToken + "&" +
-            "ConnectionId=" + uuidNoDash()
+            "ConnectionId=" + uuidNoDash() + "&" +
+            "Sec-MS-GEC=" + edgeSecMsGec() + "&" +
+            "Sec-MS-GEC-Version=1-" + chromiumVersion
         val req = Request.Builder()
             .url(url)
-            .header("Origin", "chrome-extension://jdiccldimpahogkjbkabmgfgpnmlfhd")
-            .header("User-Agent", "Mozilla/5.0")
+            .header("Origin", "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold")
+            .header(
+                "User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+                    "Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0"
+            )
+            .header("Pragma", "no-cache")
+            .header("Cache-Control", "no-cache")
+            .header("Cookie", "muid=" + uuidNoDash().uppercase(Locale.US) + ";")
             .build()
 
         val ws = client.newWebSocket(req, object : WebSocketListener() {
@@ -218,7 +267,7 @@ class TtsHelper(private val context: Context) {
                     "</voice></speak>"
                 val speech = "X-RequestId:" + id + "\r\n" +
                     "Content-Type:application/ssml+xml\r\n" +
-                    "X-Timestamp:" + edgeTimestamp() + "Z\r\n" +
+                    "X-Timestamp:" + edgeTimestamp() + "\r\n" +
                     "Path:ssml\r\n\r\n" + ssml
                 ws.send(speech)
             }
@@ -235,34 +284,43 @@ class TtsHelper(private val context: Context) {
                 } catch (_: Exception) { }
             }
 
-            override fun onMessage(ws: WebSocket, text: String) {
-                if (text.contains("Path:turn.end")) {
+            override fun onMessage(ws: WebSocket, frameText: String) {
+                if (frameText.contains("Path:turn.end")) {
                     try { audio.flush(); audio.close() } catch (_: Exception) { }
+                    if (generation != speechGeneration) { out.delete(); return }
+                    socket = null
                     ws.close(1000, null)
-                    main.post { playFile(out) }
+                    main.post { if (generation == speechGeneration) playFile(out, text, generation) }
                 }
             }
 
             override fun onFailure(ws: WebSocket, t: Throwable, response: Response?) {
                 try { audio.close() } catch (_: Exception) { }
                 out.delete()
-                main.post {
-                    isSpeaking = false
-                    onSpeakDone?.invoke()
-                }
+                main.post { if (generation == speechGeneration) speakFallback(text, generation) }
             }
 
             override fun onClosed(ws: WebSocket, code: Int, reason: String) { }
         })
 
         socket = ws
+        // Edge 服务偶尔可能连接成功但不返回 turn.end；超时后自动切到系统 TTS。
+        main.postDelayed({
+            if (generation == speechGeneration && isSpeaking && socket === ws && !fallbackStarted) {
+                try { ws.cancel() } catch (_: Exception) { }
+                socket = null
+                try { audio.close() } catch (_: Exception) { }
+                out.delete()
+                speakFallback(text, generation)
+            }
+        }, 18_000L)
     }
 
     /** 主线程用 MediaPlayer 播放缓存 MP3 */
-    private fun playFile(file: File) {
+    private fun playFile(file: File, text: String, generation: Long) {
+        if (generation != speechGeneration) { file.delete(); return }
         if (!file.exists() || file.length() <= 0) {
-            isSpeaking = false
-            onSpeakDone?.invoke()
+            speakFallback(text, generation)
             return
         }
         try {
@@ -279,20 +337,61 @@ class TtsHelper(private val context: Context) {
                 )
                 setDataSource(file.absolutePath)
                 setOnCompletionListener {
-                    isSpeaking = false
-                    onSpeakDone?.invoke()
+                    if (generation == speechGeneration) {
+                        isSpeaking = false
+                        onSpeakDone?.invoke()
+                    }
                 }
                 setOnErrorListener { _, _, _ ->
-                    isSpeaking = false
-                    onSpeakDone?.invoke()
+                    speakFallback(text, generation)
                     true
                 }
                 prepare()
                 start()
             }
         } catch (_: Exception) {
+            speakFallback(text, generation)
+        }
+    }
+
+    /** EdgeTTS 不可用时使用手机系统 TTS，保证最差情况下仍能说话。 */
+    private fun speakFallback(text: String, generation: Long = speechGeneration) {
+        if (generation != speechGeneration || text.isBlank() || fallbackStarted) return
+        fallbackStarted = true
+        try { socket?.cancel() } catch (_: Exception) { }
+        socket = null
+        val engine = fallbackTts
+        if (!fallbackReady || engine == null) {
+            // 等初始化完成后需要允许再次进入 speakFallback。
+            fallbackStarted = false
+            pendingFallback = text
+            // 初始化很慢或设备没有 TTS 引擎时，避免永久卡在“正在说话”。
+            main.postDelayed({
+                if (generation == speechGeneration && pendingFallback == text) {
+                    pendingFallback = null
+                    isSpeaking = false
+                    onSpeakDone?.invoke()
+                }
+            }, 5_000L)
+            return
+        }
+        engine.language = currentLocale
+        engine.setSpeechRate((emotionRate * userRate).coerceIn(0.5f, 1.6f))
+        engine.setPitch((emotionPitch * userPitch).coerceIn(0.5f, 1.6f))
+        isSpeaking = true
+        val result = engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "fallback_" + generation)
+        if (result == TextToSpeech.ERROR) {
             isSpeaking = false
             onSpeakDone?.invoke()
+        }
+    }
+
+    private fun finishFallback(utteranceId: String?) {
+        main.post {
+            if (utteranceId == "fallback_" + speechGeneration) {
+                isSpeaking = false
+                onSpeakDone?.invoke()
+            }
         }
     }
 
@@ -302,6 +401,9 @@ class TtsHelper(private val context: Context) {
     }
 
     private fun stopInternal() {
+        speechGeneration++
+        pendingFallback = null
+        try { fallbackTts?.stop() } catch (_: Exception) { }
         try { socket?.cancel() } catch (_: Exception) { }
         socket = null
         try {
@@ -315,6 +417,8 @@ class TtsHelper(private val context: Context) {
         stopInternal()
         currentFile?.delete()
         currentFile = null
+        try { fallbackTts?.shutdown() } catch (_: Exception) { }
+        fallbackTts = null
         client.dispatcher.executorService.shutdown()
         isSpeaking = false
     }
@@ -322,6 +426,18 @@ class TtsHelper(private val context: Context) {
     // ===== 工具方法 =====
 
     private fun uuidNoDash(): String = UUID.randomUUID().toString().replace("-", "")
+
+    /** 生成 Edge 当前协议要求的五分钟窗口 SHA-256 签名。 */
+    private fun edgeSecMsGec(): String {
+        val windowsEpochSeconds = 11_644_473_600L
+        val unixSeconds = System.currentTimeMillis() / 1000L
+        val roundedSeconds = ((unixSeconds + windowsEpochSeconds) / 300L) * 300L
+        val ticks = roundedSeconds * 10_000_000L
+        val source = ticks.toString() + trustedToken
+        return MessageDigest.getInstance("SHA-256")
+            .digest(source.toByteArray(Charsets.US_ASCII))
+            .joinToString("") { "%02X".format(Locale.US, it.toInt() and 0xff) }
+    }
 
     private fun edgeTimestamp(): String {
         val fmt = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)

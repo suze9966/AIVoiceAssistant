@@ -21,7 +21,8 @@ class HistoryStore(context: Context) {
                 arr.put(JSONObject()
                     .put("role", m.role)
                     .put("content", m.content)
-                    .put("isMe", m.isMe))
+                    .put("isMe", m.isMe)
+                    .put("type", m.type))
             }
             file.writeText(arr.toString())
         } catch (_: Exception) { }
@@ -38,7 +39,8 @@ class HistoryStore(context: Context) {
                     ChatMessage(
                         role = o.optString("role", "user"),
                         content = o.optString("content", ""),
-                        isMe = o.optBoolean("isMe", false)
+                        isMe = o.optBoolean("isMe", false),
+                        type = o.optInt("type", ChatMessage.TYPE_TEXT)
                     )
                 )
             }
