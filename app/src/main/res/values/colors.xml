@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 主品牌色（小爱同学风：紫粉渐变主色） -->
+    <color name="purple_500">#FF7C5CFF</color>
+    <color name="purple_700">#FF5B3DE8</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="black">#FF1A1A1A</color>
+    <color name="gray_bg">#FFF6F5FB</color>
+
+    <!-- 气泡 -->
+    <color name="bubble_me">#FF7C5CFF</color>
+    <color name="bubble_me_text">#FFFFFFFF</color>
+    <color name="bubble_ai">#FFFFFFFF</color>
+    <color name="bubble_ai_text">#FF23222B</color>
+
+    <!-- 界面配色 -->
+    <color name="bg_top">#FF7C5CFF</color>
+    <color name="bg_top_end">#FF9B7BFF</color>
+    <color name="card_white">#FFFFFFFF</color>
+    <color name="text_primary">#FF23222B</color>
+    <color name="text_secondary">#FF8A88A0</color>
+    <color name="divider">#FFECEAF5</color>
+    <color name="input_bg">#FFF2F1F9</color>
+
+    <!-- 状态光环（小智风） -->
+    <color name="halo_inner">#33FFFFFF</color>
+    <color name="halo_outer">#1AFFFFFF</color>
+    <color name="halo_idle">#FFB4A8FF</color>
+    <color name="halo_listening">#FF5B3DE8</color>
+    <color name="halo_speaking">#FF03DAC5</color>
+
+    <color name="ic_launcher_background">#FF7C5CFF</color>
+    <color name="halo_listening_fill">#33B4A8FF</color>
+
+    <!-- 设置页扩展配色 -->
+    <color name="ghost_bg">#FFF2F1F9</color>
+    <color name="card_stroke">#FFEDEBF7</color>
+    <color name="accent_pink">#FFFF6B9D</color>
+    <color name="purple_deep2">#FF4B2FD6</color>
+    <color name="header_top">#FF7C5CFF</color>
+    <color name="header_end">#FFA98CFF</color>
+</resources>
