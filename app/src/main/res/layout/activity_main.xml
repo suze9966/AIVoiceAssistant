@@ -97,6 +97,17 @@
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
+            <ImageButton
+                android:id="@+id/btnEmoji"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_emoji"
+                android:scaleType="fitCenter"
+                android:padding="7dp"
+                android:layout_marginEnd="6dp"
+                android:contentDescription="表情" />
+
             <!-- 圆形麦克风大钮（小智风状态光环） -->
             <FrameLayout
                 android:layout_width="48dp"
@@ -148,5 +159,21 @@
                 android:padding="10dp"
                 android:contentDescription="@string/btn_send" />
         </LinearLayout>
+
+        <!-- ===== 表情面板（默认隐藏，点 emoji 按钮展开） ===== -->
+        <HorizontalScrollView
+            android:id="@+id/emojiPanel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:scrollbars="none"
+            android:visibility="gone">
+            <LinearLayout
+                android:id="@+id/emojiRow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical" />
+        </HorizontalScrollView>
     </LinearLayout>
 </LinearLayout>

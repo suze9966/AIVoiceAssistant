@@ -7,6 +7,10 @@
         android:checkable="true"
         app:showAsAction="never" />
     <item
+        android:id="@+id/action_weather"
+        android:title="@string/menu_weather"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_stop"
         android:title="@string/btn_stop_speak"
         app:showAsAction="never" />

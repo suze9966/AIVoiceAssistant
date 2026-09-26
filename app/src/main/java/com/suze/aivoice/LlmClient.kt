@@ -17,6 +17,22 @@ import java.util.concurrent.TimeUnit
  */
 class LlmClient(private val prefs: Prefs) {
 
+    /** 本地闲聊引擎：未配置大模型 / 网络失败时的兜底，保证离线也能聊天 */
+    private val local = LocalChatEngine(prefs)
+
+    /** 免费在线闲聊：联网但没接大模型时使用（无需 Key、不花钱） */
+    private val free = FreeChatClient()
+
+    /** 外部注入情绪引擎（本地引擎据此调整语气） */
+    fun bindEmotion(e: EmotionEngine) { local.emotion = e }
+
+    /** 是否已配置可用的大模型（有 Key 才认为可用） */
+    private fun llmConfigured(): Boolean =
+        prefs.apiKey.isNotBlank() && prefs.baseUrl.isNotBlank() && prefs.model.isNotBlank()
+
+    /** 是否启用免费在线闲聊（默认开，可在设置里关） */
+    private fun freeChatEnabled(): Boolean = prefs.freeChatEnabled
+
     /** 运行时覆盖系统提示词（台湾腔人设切换用） */
     var systemPromptOverride: String? = null
 
@@ -59,19 +75,46 @@ class LlmClient(private val prefs: Prefs) {
             .post(body.toRequestBody("application/json".toMediaType()))
             .build()
 
-    /** 非流式：一次性返回完整回复 */
+    /** 非流式：一次性返回完整回复（未配大模型时走免费在线，再不行走本地引擎） */
     suspend fun chat(history: List<ChatMessage>): String = withContext(Dispatchers.IO) {
+        val lastUser = history.lastOrNull { it.role == "user" }?.content ?: ""
+        // 未配置大模型：优先免费在线，失败再落本地规则引擎
+        if (!llmConfigured()) {
+            if (freeChatEnabled()) {
+                val r = free.reply(history)
+                if (!r.isNullOrBlank()) return@withContext r
+            }
+            return@withContext local.reply(lastUser)
+        }
         try {
             client.newCall(buildRequest(false, buildBody(history, false))).execute().use { resp ->
                 val text = resp.body?.string() ?: ""
-                if (!resp.isSuccessful) return@withContext "【请求失败 ${resp.code}】$text"
+                if (!resp.isSuccessful) {
+                    // 请求失败：免费在线兜底，再不行落本地
+                    if (freeChatEnabled()) {
+                        val r = free.reply(history)
+                        if (!r.isNullOrBlank()) return@withContext r
+                    }
+                    return@withContext local.reply(lastUser)
+                }
                 val choices = JSONObject(text).optJSONArray("choices")
                 if (choices != null && choices.length() > 0) {
                     choices.getJSONObject(0).optJSONObject("message")?.optString("content") ?: "（无内容）"
-                } else "（返回格式异常）$text"
+                } else {
+                    if (freeChatEnabled()) {
+                        val r = free.reply(history)
+                        if (!r.isNullOrBlank()) return@withContext r
+                    }
+                    local.reply(lastUser)
+                }
             }
         } catch (e: Exception) {
-            "【网络错误】${e.message}"
+            // 网络异常：免费在线兜底，再不行落本地
+            if (freeChatEnabled()) {
+                val r = free.reply(history)
+                if (!r.isNullOrBlank()) return@withContext r
+            }
+            local.reply(lastUser)
         }
     }
 
@@ -85,13 +128,24 @@ class LlmClient(private val prefs: Prefs) {
         onDelta: (String) -> Unit
     ): String = withContext(Dispatchers.IO) {
         val sb = StringBuilder()
+        val lastUser = history.lastOrNull { it.role == "user" }?.content ?: ""
+        // 未配置大模型：优先免费在线（联网），失败再落本地规则引擎
+        if (!llmConfigured()) {
+            var r: String? = null
+            if (freeChatEnabled()) r = free.reply(history)
+            val ans = if (!r.isNullOrBlank()) r!! else local.reply(lastUser)
+            onDelta(ans)
+            return@withContext ans
+        }
         try {
             client.newCall(buildRequest(true, buildBody(history, true))).execute().use { resp ->
                 if (!resp.isSuccessful) {
-                    val err = resp.body?.string() ?: ""
-                    val msg = "【请求失败 ${resp.code}】$err"
-                    onDelta(msg)
-                    return@withContext msg
+                    // 请求失败：免费在线兜底，再不行落本地
+                    var r: String? = null
+                    if (freeChatEnabled()) r = free.reply(history)
+                    val ans = if (!r.isNullOrBlank()) r!! else local.reply(lastUser)
+                    onDelta(ans)
+                    return@withContext ans
                 }
                 val reader: BufferedReader = resp.body!!.source().inputStream()
                     .bufferedReader(Charsets.UTF_8)
@@ -117,9 +171,12 @@ class LlmClient(private val prefs: Prefs) {
                 }
             }
         } catch (e: Exception) {
-            val msg = if (sb.isEmpty()) "【网络错误】${e.message}" else ""
-            if (msg.isNotEmpty()) onDelta(msg)
-            return@withContext if (sb.isEmpty()) msg else sb.toString()
+            // 网络异常：若还没吐任何内容，用本地引擎兜底
+            if (sb.isEmpty()) {
+                val r = local.reply(lastUser)
+                onDelta(r)
+                return@withContext r
+            }
         }
         sb.toString()
     }

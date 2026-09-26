@@ -35,6 +35,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var emotion: EmotionEngine
     private lateinit var mind: MindEngine
     private lateinit var memory: MemoryEngine
+    private lateinit var weather: WeatherClient
     private lateinit var adapter: ChatAdapter
     private lateinit var recycler: RecyclerView
     private lateinit var editInput: EditText
@@ -45,6 +46,13 @@ class MainActivity : AppCompatActivity() {
     private var wakeHelper: WakeWordHelper? = null
     private val history = mutableListOf<ChatMessage>()
     private var isSending = false
+    // 防重复发送：记录上一次发送的原文与时间戳（部分语音引擎会把同一条结果回调两次）
+    private var lastSentText: String = ""
+    private var lastSentAt: Long = 0L
+    // 是否正在识别中（防止重复启动语音识别）
+    private var isListening = false
+    // 语音聆听开关：开启后持续识别主人的话并自动发送
+    private var listeningEnabled = false
 
     private val REQ_AUDIO = 1001
 
@@ -57,8 +65,10 @@ class MainActivity : AppCompatActivity() {
         tts = TtsHelper(this)
         store = HistoryStore(this)
         emotion = EmotionEngine(this)
+        llm.bindEmotion(emotion)
         mind = MindEngine(this)
         memory = MemoryEngine(this)
+        weather = WeatherClient()
 
         tvStatus = findViewById(R.id.tvStatus)
         micHalo = findViewById(R.id.micHalo)
@@ -66,12 +76,14 @@ class MainActivity : AppCompatActivity() {
         btnMenu.setOnClickListener { v ->
             val pop = PopupMenu(this, v)
             pop.menu.add(0, 1, 0, getString(R.string.btn_settings))
-            pop.menu.add(0, 2, 1, getString(R.string.menu_clear))
-            pop.menu.add(0, 4, 2, getString(R.string.menu_stop_speak))
-            pop.menu.add(0, 3, 3, getString(R.string.menu_wake))
+            pop.menu.add(0, 5, 1, getString(R.string.menu_weather))
+            pop.menu.add(0, 2, 2, getString(R.string.menu_clear))
+            pop.menu.add(0, 4, 3, getString(R.string.menu_stop_speak))
+            pop.menu.add(0, 3, 4, getString(R.string.menu_wake))
             pop.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     1 -> { startActivity(Intent(this, SettingsActivity::class.java)); true }
+                    5 -> { askCityAndShowWeather(); true }
                     2 -> {
                         history.clear()
                         adapter.notifyDataSetChanged()
@@ -116,10 +128,12 @@ class MainActivity : AppCompatActivity() {
             }
         }
         btnMic.setOnClickListener {
-            // 语音打断：正在朗读时先停止
-            tts.stop()
-            startListening()
+            // 语音聆听开关：开 → 关闭；关 → 开启（自动申请权限并持续识别）
+            if (listeningEnabled) stopListeningMode() else startListeningMode()
         }
+
+        // ===== 表情：emoji 面板 + 图片表情包 =====
+        setupEmojiPanel()
 
         ensureAudioPermission()
         initRecognizer()
@@ -222,6 +236,25 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** 权限回调：授予麦克风权限后，如果用户刚才是点“开启聆听”，就自动开始 */
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQ_AUDIO) {
+            val granted = grantResults.isNotEmpty() &&
+                grantResults[0] == PackageManager.PERMISSION_GRANTED
+            if (granted) {
+                // 授权成功：自动开启聆听
+                startListeningMode()
+            } else {
+                Toast.makeText(this, "未授予麦克风权限，无法聆听", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     private fun initRecognizer() {
         if (!SpeechRecognizer.isRecognitionAvailable(this)) return
         recognizer = SpeechRecognizer.createSpeechRecognizer(this)
@@ -230,14 +263,32 @@ class MainActivity : AppCompatActivity() {
             override fun onBeginningOfSpeech() {}
             override fun onRmsChanged(rmsdB: Float) {}
             override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() { setHalo(false) }
+            override fun onEndOfSpeech() { isListening = false }
             override fun onError(error: Int) {
-                Toast.makeText(this@MainActivity, "语音识别失败: $error", Toast.LENGTH_SHORT).show()
+                isListening = false
+                // 聆听模式：出错后稍等重试（如未检测到语音、超时等，属正常情况不打扰用户）
+                if (listeningEnabled) {
+                    if (error != SpeechRecognizer.ERROR_NO_MATCH && error != SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
+                        Toast.makeText(this@MainActivity, "语音识别失败: $error", Toast.LENGTH_SHORT).show()
+                    }
+                    scheduleRestartListening()
+                } else {
+                    setHalo(false)
+                }
             }
             override fun onResults(results: Bundle?) {
+                isListening = false
                 val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     ?.firstOrNull()?.trim()
-                if (!text.isNullOrEmpty() && !isSending) sendToLlm(text)
+                if (!text.isNullOrEmpty() && !isSending) {
+                    // 立刻上锁，防止同一轮识别被回调两次时两条都穿透
+                    isSending = true
+                    editInput.setText("")
+                    sendToLlm(text)
+                } else if (listeningEnabled) {
+                    // 没识别到有效内容：继续听下一句
+                    scheduleRestartListening()
+                }
             }
             override fun onPartialResults(partialResults: Bundle?) {
                 val text = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
@@ -253,6 +304,9 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "当前设备不支持语音识别", Toast.LENGTH_SHORT).show()
             return
         }
+        // 已在识别/发送中就不重复启动，避免一次说话产生两份结果
+        if (isListening || isSending) return
+        isListening = true
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, if (prefs.taiwanVoice) Locale.TAIWAN else Locale.CHINA)
@@ -260,18 +314,72 @@ class MainActivity : AppCompatActivity() {
         }
         recognizer?.startListening(intent)
         setHalo(true)
-        Toast.makeText(this, "请说话…", Toast.LENGTH_SHORT).show()
+    }
+
+    /** 聆听模式的“续听”：识别一轮结束后，稍等片刻自动开始听下一句 */
+    private fun scheduleRestartListening() {
+        if (!listeningEnabled) return
+        recycler.postDelayed({
+            if (listeningEnabled && !isListening && !isSending) {
+                startListening()
+            }
+        }, 500L)
+    }
+
+    /** 开启语音聆听：申请麦克风权限 → 持续识别主人的话并自动发送 */
+    private fun startListeningMode() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED) {
+            // 自动向系统申请麦克风权限，授权后会回调 onRequestPermissionsResult 继续开启
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), REQ_AUDIO)
+            Toast.makeText(this, "请授予麦克风权限，之后会自动开始聆听", Toast.LENGTH_LONG).show()
+            return
+        }
+        if (recognizer == null) {
+            Toast.makeText(this, "当前设备不支持语音识别", Toast.LENGTH_SHORT).show()
+            return
+        }
+        listeningEnabled = true
+        tts.onSpeakDone = null   // 清掉旧回调，避免 stop() 触发意外续听
+        tts.stop()
+        setHalo(true)
+        startListening()
+        Toast.makeText(this, "已开启聆听，直接说话即可；再点一次麦克风可关闭", Toast.LENGTH_LONG).show()
+    }
+
+    /** 关闭语音聆听 */
+    private fun stopListeningMode() {
+        listeningEnabled = false
+        isListening = false
+        runCatching { recognizer?.stopListening() }
+        runCatching { recognizer?.cancel() }
+        setHalo(false)
+        Toast.makeText(this, "已关闭聆听", Toast.LENGTH_SHORT).show()
     }
 
     // ---------------- 发送：流式 / 非流式 ----------------
     private fun sendToLlm(userText: String) {
+        // 防重复：2 秒内完全相同的文本只处理一次（语音引擎双回调 / 双击发送按钮）
+        val now = System.currentTimeMillis()
+        if (userText == lastSentText && now - lastSentAt < 2000L) return
+        lastSentText = userText
+        lastSentAt = now
+
         isSending = true
+
+        // ⚡ 智能天气：主人说“北京天气”之类，直接走天气查询（不耗大模型）
+        val wxCity = detectWeatherQuery(userText)
+        if (wxCity != null) {
+            isSending = false
+            requestWeather(wxCity)
+            return
+        }
 
         // ① 情感引擎：先根据主人的话更新情绪（心情/好感度/精力）
         if (prefs.emotionEnabled) {
             val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
             emotion.reactToUser(userText, isNight = hour >= 22 || hour < 6)
-        if (prefs.growEnabled) memory.learnFromUser(userText)
+            if (prefs.growEnabled) memory.learnFromUser(userText)
             refreshMoodSubtitle()
         }
         // ② 思考引擎：记录经历（供反思使用）
@@ -293,6 +401,13 @@ class MainActivity : AppCompatActivity() {
         if (prefs.emotionEnabled) {
             extra.append(emotion.emotionPrompt())
         }
+        // 表情包能力：告诉模型可发 emoji 与图片表情包
+        extra.append("\n")
+        extra.append("你可以自然地在聊天里使用 emoji 表情（如 😊👍😂）增添温度；")
+        extra.append("当情绪强烈、想逗主人开心时，你可以发一张图片表情包，")
+        extra.append("使用方式是在回复里写一个标记：[sticker:关键词]，")
+        extra.append("可用关键词有：" + StickerLibrary.stickerHint() + "。")
+        extra.append("注意：一条回复最多发一个表情包标记，不要解释这个标记。")
         llm.extraSystemPrompt = extra.toString().takeIf { it.isNotBlank() }
 
         history.add(ChatMessage("user", userText, isMe = true))
@@ -335,8 +450,19 @@ class MainActivity : AppCompatActivity() {
                 finalText = parsed.second.ifBlank { rawText }
             }
 
+            // 表情包：解析 AI 回复里的 [sticker:xxx] 标记
+            val (stickerUrl, textNoSticker) = StickerLibrary.parseImageTag(finalText)
+            finalText = if (stickerUrl != null) {
+                if (textNoSticker.isNotBlank()) textNoSticker else "（发了一张表情包）"
+            } else finalText
             history[history.size - 1] = ChatMessage("assistant", finalText, isMe = false)
             adapter.updateLast(finalText)
+            // 有贴图时，额外追加一条图片消息
+            if (stickerUrl != null) {
+                val imgMsg = ChatMessage("assistant", stickerUrl, isMe = false, type = ChatMessage.TYPE_IMAGE)
+                history.add(imgMsg)
+                adapter.add(imgMsg)
+            }
             scrollToBottom()
             store.save(history)
             // 内心独白：不展示正文，但记录到状态栏提示
@@ -353,6 +479,17 @@ class MainActivity : AppCompatActivity() {
             // 应用用户设定的语速/音调（在情感引擎基础上叠加）
             tts.setRate(prefs.ttsRate)
             tts.setPitch(prefs.ttsPitch)
+            // 聆听模式：等 TTS 播报完再续听（避免把朗读声当输入造成自问自答）
+            if (listeningEnabled) {
+                tts.onSpeakDone = {
+                    runOnUiThread {
+                        if (listeningEnabled && !isSending) scheduleRestartListening()
+                    }
+                }
+            } else {
+                tts.onSpeakDone = null
+            }
+            // 用 EdgeTTS 普通话音色朗读（台湾腔已改为可选，默认关闭）
             tts.speak(finalText, prefs.taiwanVoice)
 
             // 思考引擎：到反射周期就发起一次反思（异步，不阻塞）
@@ -369,12 +506,128 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * 初始化表情面板：动态生成 emoji 按钮，点击发送。
+     * 面板默认隐藏，点左侧 emoji 按钮切换显示。
+     */
+    private fun setupEmojiPanel() {
+        val btnEmoji = findViewById<ImageButton>(R.id.btnEmoji)
+        val panel = findViewById<android.widget.HorizontalScrollView>(R.id.emojiPanel)
+        val row = findViewById<android.widget.LinearLayout>(R.id.emojiRow)
+        if (row.childCount == 0) {
+            val size = (44 * resources.displayMetrics.density).toInt()
+            StickerLibrary.emojiPanel.forEach { emo ->
+                val tv = TextView(this)
+                tv.text = emo
+                tv.textSize = 26f
+                tv.gravity = android.view.Gravity.CENTER
+                val lp = android.widget.LinearLayout.LayoutParams(size, size)
+                tv.layoutParams = lp
+                tv.setOnClickListener { sendEmoji(emo) }
+                row.addView(tv)
+            }
+        }
+        btnEmoji.setOnClickListener {
+            panel.visibility = if (panel.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+        }
+    }
+
+    /** 发送一个 emoji 表情（以大字号气泡显示） */
+    private fun sendEmoji(emoji: String) {
+        if (isSending) return
+        val msg = ChatMessage("user", emoji, isMe = true, type = ChatMessage.TYPE_EMOJI)
+        history.add(msg)
+        adapter.add(msg)
+        scrollToBottom()
+        store.save(history)
+        // 让小沫用语音回应这个表情
+        sendToLlm(emoji)
+    }
+
+    /** 菜单「查天气」：弹窗让主人输入城市（默认上次城市） */
+    private fun askCityAndShowWeather() {
+        val input = EditText(this)
+        input.hint = getString(R.string.weather_city_hint)
+        input.setText(prefs.lastCity)
+        android.app.AlertDialog.Builder(this)
+            .setTitle(getString(R.string.menu_weather))
+            .setView(input)
+            .setPositiveButton(getString(R.string.btn_send)) { _, _ ->
+                val city = input.text.toString().trim().ifBlank { prefs.lastCity }
+                requestWeather(city)
+            }
+            .setNegativeButton(getString(R.string.menu_weather_cancel), null)
+            .show()
+    }
+
+    /** 发起天气查询，以聊天气泡形式展示并语音播报 */
+    private fun requestWeather(city: String) {
+        val c = city.trim().ifBlank { prefs.lastCity }
+        prefs.lastCity = c
+        tvStatus.text = "🌤 正在查询【" + c + "】天气…"
+        lifecycleScope.launch {
+            val info = weather.query(c)
+            if (info == null) {
+                runOnUiThread {
+                    tvStatus.text = getString(R.string.status_idle)
+                    Toast.makeText(this@MainActivity, getString(R.string.weather_fail), Toast.LENGTH_SHORT).show()
+                }
+                return@launch
+            }
+            val text = info.toSpeakText()
+            runOnUiThread {
+                history.add(ChatMessage("user", c + "\u5929\u6c14", isMe = true))
+                adapter.add(ChatMessage("user", c + "\u5929\u6c14", isMe = true))
+                history.add(ChatMessage("assistant", text, isMe = false))
+                adapter.add(ChatMessage("assistant", text, isMe = false))
+                scrollToBottom()
+                store.save(history)
+                tvStatus.text = getString(R.string.status_idle)
+                if (prefs.emotionEnabled) {
+                    tts.setEmotion(emotion.ttsRate(), emotion.ttsPitch())
+                }
+                tts.setRate(prefs.ttsRate)
+                tts.setPitch(prefs.ttsPitch)
+                tts.speak(text, prefs.taiwanVoice)
+            }
+        }
+    }
+
+    /**
+     * 智能识别：从主人的话里提取「查天气」意图与城市名。
+     * 匹配到则返回城市名，否则返回 null。
+     */
+    private fun detectWeatherQuery(text: String): String? {
+        val t = text.trim()
+        if (t.isEmpty()) return null
+        // 含“天气”关键词才触发
+        if (!t.contains("\u5929\u6c14") && !t.contains("\u6c14\u6e29")) return null
+        // 提取城市：去掉常见问法词
+        var city = t
+        val noise = listOf(
+            "\u4eca\u5929", "\u660e\u5929", "\u540e\u5929", "\u73b0\u5728", "\u8bf7\u95ee", "\u5e2e\u6211",
+            "\u67e5\u4e00\u4e0b", "\u67e5\u67e5", "\u67e5\u8be2", "\u7684", "\u5929\u6c14", "\u600e\u4e48\u6837",
+            "\u5982\u4f55", "\u6c14\u6e29", "\u591a\u5c11\u5ea6", "\u5462", "\u5417", "\uff1f", "?", "\u3002", "\uff0c", ",", "\u4e00\u4e0b", "\u544a\u8bc9\u6211"
+        )
+        noise.forEach { city = city.replace(it, "") }
+        city = city.trim()
+        return city.ifBlank { null }
+    }
+
     private fun scrollToBottom() {
         recycler.post { recycler.scrollToPosition(adapter.itemCount - 1) }
     }
 
+    override fun onPause() {
+        super.onPause()
+        // 退到后台时关闭聆听，避免持续占用麦克风
+        if (listeningEnabled) stopListeningMode()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
+        listeningEnabled = false
+        tts.onSpeakDone = null
         recognizer?.destroy()
         wakeHelper?.stop()
         tts.shutdown()

@@ -49,7 +49,10 @@ class SettingsActivity : AppCompatActivity() {
         val btnSave = findViewById<Button>(R.id.btnSave)
 
         editBaseUrl.setText(prefs.baseUrl)
-        editApiKey.setText(prefs.apiKey)
+        // 安全：绝不回显完整 API Key。已保存过就显示脱敏占位，仅在用户重新输入时才覆盖
+        val hasKey = prefs.apiKey.isNotBlank()
+        editApiKey.setText("")
+        editApiKey.hint = if (hasKey) "已保存 · " + maskKey(prefs.apiKey) + "（留空则不修改）" else getString(R.string.label_apikey_hint)
         editModel.setText(prefs.model)
         editSystem.setText(prefs.systemPrompt)
         editWake.setText(prefs.wakeWord)
@@ -122,7 +125,15 @@ class SettingsActivity : AppCompatActivity() {
 
         btnSave.setOnClickListener {
             prefs.baseUrl = editBaseUrl.text.toString().trim()
-            prefs.apiKey = editApiKey.text.toString().trim()
+            // 安全：只有用户真正输入了新 Key 才覆盖；留空则保留原有加密 Key（不读取、不回显、不落盘明文）
+            val newKey = editApiKey.text.toString().trim()
+            if (newKey.isNotEmpty()) {
+                prefs.apiKey = newKey
+                editApiKey.setText("") // 保存后立即清空输入框，避免遗留在界面/内存
+                Toast.makeText(this, R.string.toast_key_saved, Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, R.string.toast_key_on, Toast.LENGTH_SHORT).show()
+            }
             prefs.model = editModel.text.toString().trim()
             prefs.systemPrompt = editSystem.text.toString().trim()
             prefs.wakeWord = editWake.text.toString().trim().ifBlank { "你好小沫" }
@@ -146,6 +157,17 @@ class SettingsActivity : AppCompatActivity() {
             Toast.makeText(this, "已保存", Toast.LENGTH_SHORT).show()
             finish()
         }
+    }
+
+    /**
+     * 把 Key 脱敏成 sk-****abcd 形式，仅用于界面提示，绝不暴露完整内容。
+     */
+    private fun maskKey(k: String): String {
+        if (k.isBlank()) return "—"
+        if (k.length <= 7) return "****"
+        val head = k.take(3)
+        val tail = k.takeLast(4)
+        return head + "-****" + tail
     }
 
     private fun refreshVoices(spinnerVoice: Spinner) {

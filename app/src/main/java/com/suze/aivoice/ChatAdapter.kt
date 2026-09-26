@@ -3,6 +3,7 @@ package com.suze.aivoice
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
@@ -12,6 +13,10 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
     companion object {
         private const val TYPE_ME = 1
         private const val TYPE_AI = 2
+
+        /** emoji 表情气泡的大字号 / 普通字号 */
+        private const val EMOJI_SIZE_SP = 40f
+        private const val TEXT_SIZE_SP = 16f
     }
 
     /** 长按某条消息的回调：position 为条目下标 */
@@ -19,6 +24,7 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
 
     class VH(view: View) : RecyclerView.ViewHolder(view) {
         val tvMsg: TextView = view.findViewById(R.id.tvMsg)
+        val ivSticker: ImageView = view.findViewById(R.id.ivSticker)
     }
 
     override fun getItemViewType(position: Int): Int =
@@ -31,7 +37,24 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
     }
 
     override fun onBindViewHolder(holder: VH, position: Int) {
-        holder.tvMsg.text = items[position].content
+        val msg = items[position]
+        when (msg.type) {
+            ChatMessage.TYPE_IMAGE -> {
+                // 图片表情包：显示图片，隐藏文本
+                holder.ivSticker.visibility = View.VISIBLE
+                holder.tvMsg.visibility = View.GONE
+                ImageLoader.load(msg.content, holder.ivSticker)
+            }
+            else -> {
+                holder.ivSticker.visibility = View.GONE
+                holder.tvMsg.visibility = View.VISIBLE
+                holder.tvMsg.text = msg.content
+                // 纯 emoji 用超大字号，形成表情包效果
+                val pureEmoji = msg.type == ChatMessage.TYPE_EMOJI ||
+                        ChatMessage.isPureEmoji(msg.content)
+                holder.tvMsg.textSize = if (pureEmoji) EMOJI_SIZE_SP else TEXT_SIZE_SP
+            }
+        }
         holder.itemView.setOnLongClickListener {
             val pos = holder.bindingAdapterPosition
             if (pos != RecyclerView.NO_POSITION) onItemLongClick?.invoke(pos)
@@ -46,6 +69,7 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
         notifyItemInserted(items.size - 1)
     }
 
+    /** 更新最后一条（打字机增量更新时保持原有类型） */
     fun updateLast(content: String) {
         if (items.isEmpty()) return
         val last = items.last()
