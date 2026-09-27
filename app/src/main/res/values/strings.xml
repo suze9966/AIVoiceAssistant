@@ -60,7 +60,7 @@
     <string name="label_apikey_hint">留空表示不修改，输入新值才会覆盖</string>
     <string name="toast_key_saved">API Key 已加密保存</string>
     <string name="toast_key_on">已保留本机加密的 API Key</string>
-    <string name="label_taiwan_switch">小智式机车台湾腔（曉雨浓台湾音色）</string>
+    <string name="label_taiwan_switch">台湾腔语音（默认曉臻真人音色）</string>
     <string name="label_rate">语速 0.5-1.6</string>
     <string name="label_pitch">音调 0.5-1.6</string>
     <string name="label_wake_hint">例：你好小沫</string>
@@ -68,14 +68,15 @@
     <string name="menu_weather_cancel">取消</string>
     <string name="weather_city_hint">输入城市名，如：北京 / 上海 / 广州</string>
     <string name="weather_fail">查询失败啦，检查下网络或换个城市名试试～</string>
-    <string name="weather_xiaomi_unavailable">未读取到匹配城市的小米系统天气；请先在小米天气中添加该城市，或在设置中配置彩云凭证</string>
+    <string name="weather_xiaomi_unavailable">当前天气源暂无数据，可在设置里切换 Open-Meteo / wttr.in / 小米 / 彩云后再试</string>
     <string name="weather_empty_city">没听清是哪个城市呢，再说一次城市名就好啦～</string>
     <string name="weather_title">动态天气</string>
     <string name="weather_refresh">刷新天气</string>
     <string name="weather_back">返回</string>
     <string name="weather_loading">正在读取天气数据…</string>
     <string name="weather_source">天气数据以页面标注来源为准</string>
-    <string name="weather_missing_key">请先在设置中填写彩云天气凭证</string>
+    <string name="weather_missing_key">当前天气源需要凭证或暂时不可用，请切换到 Open-Meteo / wttr.in</string>
+    <string name="label_weather_source">天气数据源（可随时切换）</string>
     <string name="weather_hourly">逐小时预报</string>
     <string name="weather_daily">未来 7 天</string>
     <string name="weather_details">天气详情</string>

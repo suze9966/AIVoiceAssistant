@@ -39,8 +39,7 @@ class WeatherActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val info = client.query(city)
             if (info == null) {
-                val message = if (prefs.hasCaiyunCredential()) getString(R.string.weather_fail)
-                    else getString(R.string.weather_xiaomi_unavailable)
+                val message = getString(R.string.weather_fail)
                 findViewById<TextView>(R.id.tvWeatherUpdated).text = message
                 findViewById<TextView>(R.id.tvWeatherMinutely).text = message
                 Toast.makeText(this@WeatherActivity, message, Toast.LENGTH_LONG).show()

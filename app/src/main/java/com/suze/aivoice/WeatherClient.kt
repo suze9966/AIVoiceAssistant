@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
-/** 天气客户端：优先读取小米/澎湃 OS 本机天气，失败后使用彩云天气。 */
+/** 天气客户端：支持 Open-Meteo / wttr.in / 小米系统天气 / 彩云，可在设置中切换。 */
 class WeatherClient(context: Context, private val prefs: Prefs) {
     private val appContext = context.applicationContext
     private val client = OkHttpClient.Builder()
@@ -28,12 +28,52 @@ class WeatherClient(context: Context, private val prefs: Prefs) {
         .build()
 
     suspend fun query(city: String): WeatherInfo? = withContext(Dispatchers.IO) {
+        val requested = city.trim().ifBlank { prefs.lastCity }
         runCatching {
-            queryXiaomi(city)?.let { return@withContext it }
-            val location = geocode(city.trim().ifBlank { prefs.lastCity }) ?: return@withContext null
-            val json = requestCaiyun(location.longitude, location.latitude) ?: return@withContext null
-            parse(location, json)
+            when (prefs.weatherSource) {
+                "openmeteo" -> queryOpenMeteo(requested)
+                "wttr" -> queryWttr(requested)
+                "xiaomi" -> queryXiaomi(requested)
+                "caiyun" -> queryCaiyun(requested)
+                else -> queryAuto(requested)
+            }
         }.getOrNull()
+    }
+
+    private fun queryAuto(city: String): WeatherInfo? {
+        queryOpenMeteo(city)?.let { return it }
+        queryWttr(city)?.let { return it }
+        queryXiaomi(city)?.let { return it }
+        return queryCaiyun(city)
+    }
+
+    private fun queryCaiyun(city: String): WeatherInfo? {
+        val location = geocode(city) ?: return null
+        val json = requestCaiyun(location.longitude, location.latitude) ?: return null
+        return parse(location, json)
+    }
+
+    private fun queryOpenMeteo(city: String): WeatherInfo? {
+        val location = geocode(city) ?: return null
+        val url = "https://api.open-meteo.com/v1/forecast?latitude=" + location.latitude +
+            "&longitude=" + location.longitude +
+            "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m" +
+            "&hourly=temperature_2m,weather_code,precipitation_probability" +
+            "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max" +
+            "&timezone=auto&forecast_days=7"
+        val root = getJson(Request.Builder().url(url).get().build()) ?: return null
+        return parseOpenMeteo(location, root)
+    }
+
+    private fun queryWttr(city: String): WeatherInfo? {
+        val url = "https://wttr.in/" + URLEncoder.encode(city, "UTF-8") + "?format=j1&lang=zh"
+        val root = getJson(
+            Request.Builder().url(url)
+                .header("User-Agent", "curl/8.0")
+                .header("Accept", "application/json")
+                .get().build()
+        ) ?: return null
+        return parseWttr(city, root)
     }
 
     /**
@@ -147,6 +187,131 @@ class WeatherClient(context: Context, private val prefs: Prefs) {
                 in 18..21 -> "FOG"; in 22..24 -> "SAND"; else -> "CLEAR_DAY"
             }
         }
+    }
+
+    private fun parseOpenMeteo(point: GeoPoint, root: JSONObject): WeatherInfo? {
+        val current = root.optJSONObject("current") ?: return null
+        val temp = current.optDouble("temperature_2m", Double.NaN)
+        if (temp.isNaN()) return null
+        val code = current.optInt("weather_code", 0)
+        val skycon = wmoSkycon(code)
+        val hourlyObj = root.optJSONObject("hourly")
+        val times = hourlyObj?.optJSONArray("time")
+        val temps = hourlyObj?.optJSONArray("temperature_2m")
+        val codes = hourlyObj?.optJSONArray("weather_code")
+        val pops = hourlyObj?.optJSONArray("precipitation_probability")
+        val hourly = ArrayList<HourForecast>()
+        if (times != null && temps != null) {
+            val limit = minOf(times.length(), temps.length(), 24)
+            for (i in 0 until limit) {
+                val sky = wmoSkycon(codes?.optInt(i, 0) ?: 0)
+                hourly += HourForecast(
+                    hourLabel(times.optString(i)), temps.optDouble(i, Double.NaN), sky,
+                    skyconDesc(sky), skyconEmoji(sky), pops?.optInt(i, -1) ?: -1
+                )
+            }
+        }
+        val dailyObj = root.optJSONObject("daily")
+        val dates = dailyObj?.optJSONArray("time")
+        val maxes = dailyObj?.optJSONArray("temperature_2m_max")
+        val mins = dailyObj?.optJSONArray("temperature_2m_min")
+        val dCodes = dailyObj?.optJSONArray("weather_code")
+        val dPops = dailyObj?.optJSONArray("precipitation_probability_max")
+        val days = ArrayList<DayForecast>()
+        if (dates != null && maxes != null && mins != null) {
+            val limit = minOf(dates.length(), maxes.length(), mins.length(), 7)
+            for (i in 0 until limit) {
+                val sky = wmoSkycon(dCodes?.optInt(i, 0) ?: 0)
+                days += DayForecast(
+                    dates.optString(i), sky, skyconDesc(sky), skyconEmoji(sky),
+                    maxes.optDouble(i, Double.NaN), mins.optDouble(i, Double.NaN),
+                    dPops?.optInt(i, -1) ?: -1
+                )
+            }
+        }
+        return WeatherInfo(
+            place = point.name, temp = temp,
+            feelsLike = current.optDouble("apparent_temperature", temp),
+            humidity = current.optInt("relative_humidity_2m", -1),
+            windSpeed = current.optDouble("wind_speed_10m", Double.NaN),
+            windDirection = current.optDouble("wind_direction_10m", Double.NaN),
+            skycon = skycon, desc = skyconDesc(skycon), icon = skyconEmoji(skycon), aqi = -1,
+            comfort = "", minutely = "数据来自 Open-Meteo 开源气象", alert = "",
+            hourly = hourly, days = days, source = "Open-Meteo",
+            updatedAt = SimpleDateFormat("HH:mm", Locale.CHINA).format(Date())
+        )
+    }
+
+    private fun parseWttr(city: String, root: JSONObject): WeatherInfo? {
+        val current = root.optJSONArray("current_condition")?.optJSONObject(0) ?: return null
+        val temp = current.optString("temp_C").toDoubleOrNull() ?: return null
+        val desc = current.optJSONArray("lang_zh")?.optJSONObject(0)?.optString("value")
+            ?: current.optJSONArray("weatherDesc")?.optJSONObject(0)?.optString("value")
+            ?: "天气变化"
+        val skycon = xiaomiSkycon(-1, desc)
+        val area = root.optJSONArray("nearest_area")?.optJSONObject(0)
+        val place = area?.optJSONArray("areaName")?.optJSONObject(0)?.optString("value").orEmpty()
+            .ifBlank { city }
+        val hourly = ArrayList<HourForecast>()
+        val todayHours = root.optJSONArray("weather")?.optJSONObject(0)?.optJSONArray("hourly")
+        if (todayHours != null) {
+            for (i in 0 until minOf(todayHours.length(), 8)) {
+                val item = todayHours.optJSONObject(i) ?: continue
+                val hourDesc = item.optJSONArray("lang_zh")?.optJSONObject(0)?.optString("value")
+                    ?: item.optJSONArray("weatherDesc")?.optJSONObject(0)?.optString("value")
+                    ?: desc
+                val sky = xiaomiSkycon(-1, hourDesc)
+                val timeCode = item.optString("time").padStart(4, '0')
+                val label = if (timeCode.length >= 4) timeCode.substring(0, 2) + ":00" else timeCode
+                hourly += HourForecast(
+                    label, item.optString("tempC").toDoubleOrNull() ?: Double.NaN, sky,
+                    hourDesc, skyconEmoji(sky), item.optString("chanceofrain").toIntOrNull() ?: -1
+                )
+            }
+        }
+        val days = ArrayList<DayForecast>()
+        val weatherDays = root.optJSONArray("weather")
+        if (weatherDays != null) {
+            for (i in 0 until minOf(weatherDays.length(), 7)) {
+                val item = weatherDays.optJSONObject(i) ?: continue
+                val dayDesc = item.optJSONArray("hourly")?.optJSONObject(4)?.optJSONArray("lang_zh")
+                    ?.optJSONObject(0)?.optString("value") ?: desc
+                val sky = xiaomiSkycon(-1, dayDesc)
+                days += DayForecast(
+                    item.optString("date"), sky, dayDesc, skyconEmoji(sky),
+                    item.optString("maxtempC").toDoubleOrNull() ?: Double.NaN,
+                    item.optString("mintempC").toDoubleOrNull() ?: Double.NaN,
+                    item.optJSONArray("hourly")?.optJSONObject(4)?.optString("chanceofrain")?.toIntOrNull() ?: -1
+                )
+            }
+        }
+        return WeatherInfo(
+            place = place, temp = temp,
+            feelsLike = current.optString("FeelsLikeC").toDoubleOrNull() ?: temp,
+            humidity = current.optString("humidity").toIntOrNull() ?: -1,
+            windSpeed = current.optString("windspeedKmph").toDoubleOrNull() ?: Double.NaN,
+            windDirection = current.optString("winddirDegree").toDoubleOrNull() ?: Double.NaN,
+            skycon = skycon, desc = desc, icon = skyconEmoji(skycon), aqi = -1,
+            comfort = current.optString("winddir16Point"),
+            minutely = "数据来自 wttr.in 免费天气", alert = "",
+            hourly = hourly, days = days, source = "wttr.in",
+            updatedAt = SimpleDateFormat("HH:mm", Locale.CHINA).format(Date())
+        )
+    }
+
+    private fun wmoSkycon(code: Int): String = when (code) {
+        0 -> "CLEAR_DAY"
+        1, 2 -> "PARTLY_CLOUDY_DAY"
+        3 -> "CLOUDY"
+        45, 48 -> "FOG"
+        51, 53, 55, 56, 57, 61, 80 -> "LIGHT_RAIN"
+        63, 81 -> "MODERATE_RAIN"
+        65, 66, 67, 82 -> "HEAVY_RAIN"
+        95, 96, 99 -> "STORM_RAIN"
+        71, 77, 85 -> "LIGHT_SNOW"
+        73 -> "MODERATE_SNOW"
+        75, 86 -> "HEAVY_SNOW"
+        else -> if (code in 70..79) "LIGHT_SNOW" else if (code in 50..69) "LIGHT_RAIN" else "CLEAR_DAY"
     }
 
     private fun geocode(city: String): GeoPoint? {

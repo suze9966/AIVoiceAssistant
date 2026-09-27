@@ -41,6 +41,7 @@ class SettingsActivity : AppCompatActivity() {
         val editCaiyunKey = findViewById<EditText>(R.id.editCaiyunKey)
         val editCaiyunSecret = findViewById<EditText>(R.id.editCaiyunSecret)
         val editCaiyunToken = findViewById<EditText>(R.id.editCaiyunToken)
+        val spinnerWeatherSource = findViewById<Spinner>(R.id.spinnerWeatherSource)
         val editWake = findViewById<EditText>(R.id.editWakeWord)
         val switchStream = findViewById<SwitchCompat>(R.id.switchStream)
         val switchEmotion = findViewById<SwitchCompat>(R.id.switchEmotion)
@@ -100,7 +101,7 @@ class SettingsActivity : AppCompatActivity() {
                 val twIdx = localeLabels.indexOfFirst { it.contains("台湾") }
                 if (twIdx >= 0) spinnerLocale.setSelection(twIdx)
                 refreshVoices(spinnerVoice)
-                val strongTwIndex = tts.availableVoices().indexOfFirst { it.contains("台湾腔·女·浓") }
+                val strongTwIndex = tts.availableVoices().indexOfFirst { it.contains("台湾腔·女·真人") }
                 if (strongTwIndex >= 0) spinnerVoice.setSelection(strongTwIndex)
                 Toast.makeText(this, if (name != null) "已切换台湾音色：$name" else "未找到台湾音色，已回退中文音色", Toast.LENGTH_SHORT).show()
             } else {
@@ -108,6 +109,11 @@ class SettingsActivity : AppCompatActivity() {
                 refreshVoices(spinnerVoice)
             }
         }
+
+        val weatherLabels = Prefs.WEATHER_SOURCE_OPTIONS.map { it.second }
+        spinnerWeatherSource.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, weatherLabels)
+        val weatherIdx = Prefs.WEATHER_SOURCE_OPTIONS.indexOfFirst { it.first == prefs.weatherSource }
+        if (weatherIdx >= 0) spinnerWeatherSource.setSelection(weatherIdx)
 
         spinnerVoice.postDelayed({ refreshVoices(spinnerVoice) }, 800)
 
@@ -178,6 +184,7 @@ class SettingsActivity : AppCompatActivity() {
             val locIdx = spinnerLocale.selectedItemPosition
             prefs.voiceLocaleName = localeLabels.getOrNull(locIdx) ?: "普通话（大陆）"
             prefs.voiceIndex = spinnerVoice.selectedItemPosition
+            prefs.weatherSource = Prefs.WEATHER_SOURCE_OPTIONS.getOrNull(spinnerWeatherSource.selectedItemPosition)?.first ?: "auto"
             prefs.ttsRate = 0.5f + seekRate.progress / 100f
             prefs.ttsPitch = 0.5f + seekPitch.progress / 100f
             val vName = spinnerVoice.selectedItem?.toString()

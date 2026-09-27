@@ -69,6 +69,13 @@ class Prefs(context: Context) {
             "不要刻意解释自己在说台湾腔。禁止恶意侮辱、歧视、霸凌或攻击主人；" +
             "主人认真求助或难过时立刻停止吐槽，改为温柔可靠。尽量使用繁体口语常见措辞，" +
             "例如软体、网路、影片、资讯、品质，但不要为了转换而影响信息准确性。"
+        val WEATHER_SOURCE_OPTIONS = listOf(
+            "auto" to "自动（免费优先）",
+            "openmeteo" to "Open-Meteo（免费免 Key）",
+            "wttr" to "wttr.in（免费免 Key）",
+            "xiaomi" to "小米系统天气",
+            "caiyun" to "彩云天气（需凭证）"
+        )
     }
 
     /** 已选语音区域名称（用于设置页回显） */
@@ -134,6 +141,17 @@ class Prefs(context: Context) {
         set(v) = KeyVault.writeNamed(sp, "caiyunTokenEnc", v)
     fun hasCaiyunCredential(): Boolean =
         (caiyunAppKey.isNotBlank() && caiyunAppSecret.isNotBlank()) || caiyunToken.isNotBlank()
+
+    /** 天气数据源：auto / openmeteo / wttr / xiaomi / caiyun */
+    var weatherSource: String
+        get() {
+            val saved = sp.getString("weatherSource", "auto") ?: "auto"
+            return if (saved in setOf("auto", "openmeteo", "wttr", "xiaomi", "caiyun")) saved else "auto"
+        }
+        set(v) = sp.edit().putString("weatherSource", v).apply()
+
+    fun weatherSourceLabel(): String =
+        WEATHER_SOURCE_OPTIONS.firstOrNull { it.first == weatherSource }?.second ?: "自动（免费优先）"
 
     /** 上次查询天气的城市（用于菜单快捷查询，默认北京） */
     var lastCity: String

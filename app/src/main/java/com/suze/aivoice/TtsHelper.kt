@@ -110,7 +110,7 @@ class TtsHelper(private val context: Context) {
     private fun voiceForLocale(locale: Locale): String {
         explicitVoice?.let { return it }
         return when {
-            locale.country == "TW" -> "zh-TW-HsiaoYuNeural"
+            locale.country == "TW" -> "zh-TW-HsiaoChenNeural"
             locale.country == "HK" -> "zh-HK-HiuMaanNeural"
             else -> "zh-CN-XiaoxiaoNeural"
         }
@@ -128,7 +128,7 @@ class TtsHelper(private val context: Context) {
 
     /** 最终语速（映射为 SSML 的 +N%/-N%） */
     private fun edgeRate(): String {
-        val taiwanCadence = if (isTaiwan()) 0.96f else 1.0f
+        val taiwanCadence = if (isTaiwan()) 0.98f else 1.0f
         val r = (emotionRate * userRate * taiwanCadence).coerceIn(0.5f, 1.6f)
         val pct = ((r - 1.0f) * 100).toInt()
         return if (pct >= 0) "+" + pct + "%" else "" + pct + "%"
@@ -136,7 +136,7 @@ class TtsHelper(private val context: Context) {
 
     /** 最终音调 */
     private fun edgePitch(): String {
-        val taiwanLift = if (isTaiwan()) 1.04f else 1.0f
+        val taiwanLift = if (isTaiwan()) 1.0f else 1.0f
         val p = (emotionPitch * userPitch * taiwanLift).coerceIn(0.5f, 1.6f)
         val pct = ((p - 1.0f) * 100).toInt()
         return if (pct >= 0) "+" + pct + "%" else "" + pct + "%"
@@ -157,8 +157,9 @@ class TtsHelper(private val context: Context) {
         "晓晓（大陆·女）",
         "云希（大陆·男）",
         "晓伊（大陆·童声）",
+        "曉臻（台湾腔·女·真人）",
+        "曉臻 HD（台湾腔·女·超拟真）",
         "曉雨（台湾腔·女·浓）",
-        "曉臻（台湾腔·女·自然）",
         "雲哲（台湾腔·男）",
         "曉曼（香港·女）"
     )
@@ -174,13 +175,16 @@ class TtsHelper(private val context: Context) {
                 explicitVoice = "zh-CN-XiaoyiNeural"
                 currentLocale = Locale.CHINA
             }
-            name.contains("曉雨") || name.contains("晓雨") || name.contains("台湾腔·女·浓") -> {
-                // 微软将 HsiaoYu 明确标为 Taiwanese Mandarin，口音比 HsiaoChen 更明显。
-                explicitVoice = "zh-TW-HsiaoYuNeural"
+            name.contains("HD") && (name.contains("曉臻") || name.contains("晓臻") || name.contains("超拟真")) -> {
+                explicitVoice = "zh-TW-HsiaoChen:DragonHDLatestNeural"
                 currentLocale = Locale.TAIWAN
             }
-            name.contains("晓臻") || name.contains("曉臻") || name.contains("台湾腔·女·自然") -> {
+            name.contains("曉臻") || name.contains("晓臻") || name.contains("台湾腔·女·真人") || name.contains("台湾腔·女·自然") -> {
                 explicitVoice = "zh-TW-HsiaoChenNeural"
+                currentLocale = Locale.TAIWAN
+            }
+            name.contains("曉雨") || name.contains("晓雨") || name.contains("台湾腔·女·浓") -> {
+                explicitVoice = "zh-TW-HsiaoYuNeural"
                 currentLocale = Locale.TAIWAN
             }
             name.contains("雲哲") || name.contains("云哲") || name.contains("台湾腔·男") -> {
@@ -200,8 +204,8 @@ class TtsHelper(private val context: Context) {
 
     fun applyTaiwanVoice(): String? {
         currentLocale = Locale.TAIWAN
-        explicitVoice = "zh-TW-HsiaoYuNeural"
-        return "曉雨（台湾腔·女·浓）"
+        explicitVoice = "zh-TW-HsiaoChenNeural"
+        return "曉臻（台湾腔·女·真人）"
     }
 
     fun setRate(rate: Float) { userRate = rate }
@@ -222,7 +226,10 @@ class TtsHelper(private val context: Context) {
         if (text.isBlank()) return
         if (taiwan) {
             currentLocale = Locale.TAIWAN
-            explicitVoice = "zh-TW-HsiaoYuNeural"
+            val current = explicitVoice.orEmpty()
+            if (!current.startsWith("zh-TW-")) {
+                explicitVoice = "zh-TW-HsiaoChenNeural"
+            }
         }
 
         stopInternal()
@@ -316,7 +323,15 @@ class TtsHelper(private val context: Context) {
             override fun onFailure(ws: WebSocket, t: Throwable, response: Response?) {
                 try { audio.close() } catch (_: Exception) { }
                 out.delete()
-                main.post { if (generation == speechGeneration) speakFallback(text, generation) }
+                main.post {
+                    if (generation != speechGeneration) return@post
+                    if (voice.contains("DragonHD")) {
+                        explicitVoice = "zh-TW-HsiaoChenNeural"
+                        speak(text, taiwan = false)
+                    } else {
+                        speakFallback(text, generation)
+                    }
+                }
             }
 
             override fun onClosed(ws: WebSocket, code: Int, reason: String) { }
@@ -330,7 +345,12 @@ class TtsHelper(private val context: Context) {
                 socket = null
                 try { audio.close() } catch (_: Exception) { }
                 out.delete()
-                speakFallback(text, generation)
+                if (voice.contains("DragonHD")) {
+                    explicitVoice = "zh-TW-HsiaoChenNeural"
+                    speak(text, taiwan = false)
+                } else {
+                    speakFallback(text, generation)
+                }
             }
         }, 18_000L)
     }
@@ -395,8 +415,8 @@ class TtsHelper(private val context: Context) {
             return
         }
         engine.language = currentLocale
-        val taiwanCadence = if (isTaiwan()) 0.96f else 1.0f
-        val taiwanLift = if (isTaiwan()) 1.04f else 1.0f
+        val taiwanCadence = if (isTaiwan()) 0.98f else 1.0f
+        val taiwanLift = if (isTaiwan()) 1.0f else 1.0f
         engine.setSpeechRate((emotionRate * userRate * taiwanCadence).coerceIn(0.5f, 1.6f))
         engine.setPitch((emotionPitch * userPitch * taiwanLift).coerceIn(0.5f, 1.6f))
         isSpeaking = true

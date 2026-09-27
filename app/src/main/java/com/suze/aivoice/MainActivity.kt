@@ -600,8 +600,7 @@ class MainActivity : AppCompatActivity() {
                 runOnUiThread {
                     isSending = false
                     tvStatus.text = getString(R.string.status_idle)
-                    val message = if (prefs.hasCaiyunCredential()) getString(R.string.weather_fail)
-                        else getString(R.string.weather_xiaomi_unavailable)
+                    val message = getString(R.string.weather_fail)
                     Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
                     // 打开天气页展示完整处理建议；页面会再尝试一次，便于系统天气刚完成刷新时恢复。
                     startActivity(Intent(this@MainActivity, WeatherActivity::class.java)
