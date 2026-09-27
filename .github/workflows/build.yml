@@ -24,7 +24,16 @@ jobs:
           cache-disabled: true
 
       - name: Build Debug APK
-        run: gradle assembleDebug --no-daemon --stacktrace
+        shell: bash
+        run: |
+          gradle assembleDebug --no-daemon --stacktrace 2>&1 | tee build-debug.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E '(^e: |error:|Android resource linking failed|Unresolved reference|Compilation error|FAILURE:|What went wrong:|Execution failed for task)' build-debug.log | tail -80 | while IFS= read -r line; do
+              echo "::error title=Android build detail::$line"
+            done
+          fi
+          exit "$rc"
 
       - name: Build Release APK (unsigned)
         run: gradle assembleRelease --no-daemon --stacktrace
