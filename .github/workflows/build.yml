@@ -27,6 +27,7 @@ jobs:
         id: debug_build
         shell: bash
         run: |
+          set +e
           gradle assembleDebug --no-daemon --stacktrace 2>&1 | tee build-debug.log
           rc=${PIPESTATUS[0]}
           echo "$rc" > build-debug.exit
