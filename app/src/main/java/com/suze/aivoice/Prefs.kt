@@ -42,6 +42,11 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("streamEnabled", true)
         set(v) = sp.edit().putBoolean("streamEnabled", v).apply()
 
+    /** 角色聊天走云端大模型推理思考（DeepSeek-R1 / QwQ 等会返回思考过程）。 */
+    var cloudThinkEnabled: Boolean
+        get() = sp.getBoolean("cloudThinkEnabled", true)
+        set(v) = sp.edit().putBoolean("cloudThinkEnabled", v).apply()
+
     /** 台湾腔语音开关 */
     var taiwanVoice: Boolean
         get() = sp.getBoolean("taiwanVoice", false)

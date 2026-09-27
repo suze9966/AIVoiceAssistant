@@ -25,6 +25,7 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
     class VH(view: View) : RecyclerView.ViewHolder(view) {
         val tvMsg: TextView = view.findViewById(R.id.tvMsg)
         val ivSticker: ImageView = view.findViewById(R.id.ivSticker)
+        val ivAvatar: ImageView? = view.findViewById(R.id.ivAvatar)
     }
 
     override fun getItemViewType(position: Int): Int =
@@ -38,9 +39,9 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val msg = items[position]
+        holder.ivAvatar?.let { ChatStyleStore.applyAvatar(it) }
         when (msg.type) {
             ChatMessage.TYPE_IMAGE -> {
-                // 图片表情包：显示图片，隐藏文本
                 holder.ivSticker.visibility = View.VISIBLE
                 holder.tvMsg.visibility = View.GONE
                 ImageLoader.load(msg.content, holder.ivSticker)
@@ -49,7 +50,6 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
                 holder.ivSticker.visibility = View.GONE
                 holder.tvMsg.visibility = View.VISIBLE
                 holder.tvMsg.text = msg.content
-                // 纯 emoji 用超大字号，形成表情包效果
                 val pureEmoji = msg.type == ChatMessage.TYPE_EMOJI ||
                         ChatMessage.isPureEmoji(msg.content)
                 holder.tvMsg.textSize = if (pureEmoji) EMOJI_SIZE_SP else TEXT_SIZE_SP

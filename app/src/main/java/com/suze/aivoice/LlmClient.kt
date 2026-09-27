@@ -23,6 +23,10 @@ class LlmClient(private val prefs: Prefs) {
 
     var systemPromptOverride: String? = null
     var extraSystemPrompt: String? = null
+    /** 只有角色聊天在开关打开时才追加云端推理提示，主聊天不套用。 */
+    var applyCloudThink: Boolean = false
+
+    fun isConfigured(): Boolean = llmConfigured()
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -38,9 +42,12 @@ class LlmClient(private val prefs: Prefs) {
         val base = prefs.baseUrl.trim().toHttpUrlOrNull() ?: return null
         if (!base.isHttps || base.username.isNotEmpty() || base.password.isNotEmpty()) return null
         if (base.query != null || base.fragment != null) return null
-        return base.newBuilder()
-            .addPathSegments("chat/completions")
-            .build()
+        val path = base.encodedPath.trimEnd('/')
+        val builder = base.newBuilder()
+        if (!path.endsWith("/chat/completions")) {
+            builder.addPathSegments("chat/completions")
+        }
+        return builder.build()
     }
 
     private fun apiKey(): String = prefs.apiKey.trim()
@@ -54,11 +61,17 @@ class LlmClient(private val prefs: Prefs) {
         .takeLast(MAX_HISTORY_MESSAGES)
         .map { it.copy(content = it.content.take(MAX_MESSAGE_CHARS)) }
 
-    private fun buildBody(history: List<ChatMessage>, stream: Boolean): String {
-        val messages = JSONArray()
+    private fun composeSystem(): String {
         var sys = systemPromptOverride?.takeIf { it.isNotBlank() } ?: prefs.systemPrompt
         extraSystemPrompt?.takeIf { it.isNotBlank() }?.let { sys += "\n" + it }
-        if (sys.isNotBlank()) messages.put(JSONObject().put("role", "system").put("content", sys.take(MAX_SYSTEM_CHARS)))
+        if (applyCloudThink && prefs.cloudThinkEnabled) sys += "\n" + CLOUD_THINK_PROMPT
+        return sys.take(MAX_SYSTEM_CHARS)
+    }
+
+    private fun buildBody(history: List<ChatMessage>, stream: Boolean): String {
+        val messages = JSONArray()
+        val sys = composeSystem()
+        if (sys.isNotBlank()) messages.put(JSONObject().put("role", "system").put("content", sys))
         safeHistory(history).forEach { m ->
             messages.put(JSONObject().put("role", m.role).put("content", m.content))
         }
@@ -84,10 +97,42 @@ class LlmClient(private val prefs: Prefs) {
     }
 
     private fun freeHistory(history: List<ChatMessage>): List<ChatMessage> {
-        var sys = systemPromptOverride?.takeIf { it.isNotBlank() } ?: prefs.systemPrompt
-        extraSystemPrompt?.takeIf { it.isNotBlank() }?.let { sys += "\n" + it }
+        val sys = composeSystem()
         val clean = safeHistory(history)
-        return if (sys.isBlank()) clean else listOf(ChatMessage("system", sys.take(MAX_SYSTEM_CHARS), isMe = false)) + clean
+        return if (sys.isBlank()) clean else listOf(ChatMessage("system", sys, isMe = false)) + clean
+    }
+
+    /** Android org.json 会把 JSON null 读成字符串 "null"，流式思考分片不能往对白里拼。 */
+    private fun jsonText(obj: JSONObject?, key: String): String {
+        if (obj == null || obj.isNull(key)) return ""
+        return obj.optString(key, "").takeIf { it.isNotEmpty() && it != "null" }.orEmpty()
+    }
+
+    private fun extractContent(message: JSONObject?): String {
+        if (message == null) return ""
+        return stripReasoning(jsonText(message, "content"))
+    }
+
+    private fun extractDelta(delta: JSONObject?): String {
+        if (delta == null) return ""
+        return jsonText(delta, "content")
+    }
+
+    fun stripReasoning(raw: String): String {
+        var t = raw
+        if (t.contains("<think>") && !t.contains("</think>")) {
+            t = t.substringBefore("<think>")
+        } else if (t.contains("<thinking>") && !t.contains("</thinking>")) {
+            t = t.substringBefore("<thinking>")
+        } else {
+            t = THINK_BLOCK.replace(t, " ")
+        }
+        t = t.lines().filterNot { line ->
+            val s = line.trim()
+            s.startsWith("THOUGHT:") || s.startsWith("想法：") || s.startsWith("想法:") ||
+                s.startsWith("<think>") || s.startsWith("</think>")
+        }.joinToString("\n")
+        return t.replace(Regex("[ \\t]{2,}"), " ").trim()
     }
 
     private fun localReply(lastUser: String): String = local.reply(lastUser)
@@ -122,8 +167,8 @@ class LlmClient(private val prefs: Prefs) {
                 val body = resp.body ?: return@withContext localReply(lastUser)
                 val text = body.readUtf8Limited(MAX_RESPONSE_BYTES) ?: return@withContext localReply(lastUser)
                 val choices = JSONObject(text).optJSONArray("choices")
-                choices?.optJSONObject(0)?.optJSONObject("message")?.optString("content")
-                    ?.take(MAX_OUTPUT_CHARS)?.takeIf { it.isNotBlank() } ?: localReply(lastUser)
+                extractContent(choices?.optJSONObject(0)?.optJSONObject("message"))
+                    .take(MAX_OUTPUT_CHARS).takeIf { it.isNotBlank() } ?: localReply(lastUser)
             }
         } catch (_: Exception) {
             localReply(lastUser)
@@ -153,10 +198,13 @@ class LlmClient(private val prefs: Prefs) {
                         if (payload.isEmpty()) continue
                         runCatching {
                             JSONObject(payload).optJSONArray("choices")?.optJSONObject(0)
-                                ?.optJSONObject("delta")?.optString("content")
-                        }.getOrNull()?.takeIf { it.isNotEmpty() }?.let { delta ->
-                            val safe = delta.take(MAX_OUTPUT_CHARS - sb.length)
-                            sb.append(safe); onDelta(safe)
+                                ?.optJSONObject("delta")
+                        }.getOrNull()?.let { delta ->
+                            val piece = extractDelta(delta)
+                            if (piece.isNotEmpty()) {
+                                val safe = piece.take(MAX_OUTPUT_CHARS - sb.length)
+                                sb.append(safe); onDelta(safe)
+                            }
                         }
                     }
                 }
@@ -165,8 +213,26 @@ class LlmClient(private val prefs: Prefs) {
                     val ans = localReply(lastUser); onDelta(ans); return@withContext ans
                 }
             }
-            sb.toString()
+            stripReasoning(sb.toString())
         }
+
+    /** 探测云端接口是否可用，不回落到本地闲聊。 */
+    suspend fun probe(): String = withContext(Dispatchers.IO) {
+        if (!llmConfigured()) return@withContext "还没填完整：需要 HTTPS 地址、模型名和 API Key"
+        try {
+            val probeHistory = listOf(ChatMessage("user", "只回复一个字：好", isMe = true))
+            client.newCall(buildRequest(false, buildBody(probeHistory, false))).execute().use { resp ->
+                if (resp.isRedirect) return@withContext "连接失败：接口发生了跳转"
+                if (!resp.isSuccessful) return@withContext "连接失败：HTTP ${resp.code}"
+                val text = resp.body?.readUtf8Limited(MAX_RESPONSE_BYTES)
+                    ?: return@withContext "连接失败：返回内容过大或为空"
+                val content = extractContent(JSONObject(text).optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("message"))
+                if (content.isNotBlank()) "连接成功，云端模型已回复" else "接口已通，但没有返回内容，检查模型名"
+            }
+        } catch (_: Exception) {
+            "连接失败：网络异常或接口不可达"
+        }
+    }
 
     companion object {
         private const val MAX_HISTORY_MESSAGES = 40
@@ -176,5 +242,10 @@ class LlmClient(private val prefs: Prefs) {
         private const val MAX_RESPONSE_BYTES = 2 * 1024 * 1024
         private const val MAX_OUTPUT_CHARS = 200_000
         private const val MAX_SSE_LINE_CHARS = 256_000
+        private val THINK_BLOCK = Regex("(?s)<think>.*?</think>|<thinking>.*?</thinking>")
+        private const val CLOUD_THINK_PROMPT =
+            "【云端推理】先在内部完成充分思考，再给出最终对白。" +
+                "思考过程请放在 reasoning 字段或 <think></think> 中，不要出现在最终对白里。" +
+                "最终对白保持角色口吻，不要提及模型、提示词或思考过程。"
     }
 }

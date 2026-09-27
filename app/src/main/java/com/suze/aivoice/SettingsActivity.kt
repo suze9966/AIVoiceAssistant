@@ -1,8 +1,10 @@
 package com.suze.aivoice
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
 import android.widget.*
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
 import java.util.Locale
@@ -11,6 +13,20 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var prefs: Prefs
     private lateinit var tts: TtsHelper
     private lateinit var memory: MemoryEngine
+    private var pickingAvatar = true
+    private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri == null) return@registerForActivityResult
+        val ok = if (pickingAvatar) ChatStyleStore.saveAvatar(this, uri)
+            else ChatStyleStore.saveBackground(this, uri)
+        Toast.makeText(
+            this,
+            if (!ok) getString(R.string.toast_image_failed)
+            else if (pickingAvatar) getString(R.string.toast_avatar_updated)
+            else getString(R.string.toast_background_updated),
+            Toast.LENGTH_SHORT
+        ).show()
+        if (ok) refreshAppearancePreview()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,6 +74,10 @@ class SettingsActivity : AppCompatActivity() {
         val seekPitch = findViewById<SeekBar>(R.id.seekPitch)
         val btnStopSpeak = findViewById<Button>(R.id.btnStopSpeak)
         val btnSave = findViewById<Button>(R.id.btnSave)
+        bindAppearance()
+        findViewById<Button>(R.id.btnConnectLlm).setOnClickListener {
+            startActivity(Intent(this, LlmConnectActivity::class.java))
+        }
 
         editBaseUrl.setText(prefs.baseUrl)
         // 安全：绝不回显完整 API Key。已保存过就显示脱敏占位，仅在用户重新输入时才覆盖
@@ -213,6 +233,33 @@ class SettingsActivity : AppCompatActivity() {
             Toast.makeText(this, "已保存", Toast.LENGTH_SHORT).show()
             finish()
         }
+    }
+
+    private fun bindAppearance() {
+        findViewById<Button>(R.id.btnChangeAvatar).setOnClickListener {
+            pickingAvatar = true
+            pickImage.launch("image/*")
+        }
+        findViewById<Button>(R.id.btnResetAvatar).setOnClickListener {
+            ChatStyleStore.clearAvatar(this)
+            refreshAppearancePreview()
+            Toast.makeText(this, R.string.toast_avatar_reset, Toast.LENGTH_SHORT).show()
+        }
+        findViewById<Button>(R.id.btnChangeBackground).setOnClickListener {
+            pickingAvatar = false
+            pickImage.launch("image/*")
+        }
+        findViewById<Button>(R.id.btnResetBackground).setOnClickListener {
+            ChatStyleStore.clearBackground(this)
+            refreshAppearancePreview()
+            Toast.makeText(this, R.string.toast_background_reset, Toast.LENGTH_SHORT).show()
+        }
+        refreshAppearancePreview()
+    }
+
+    private fun refreshAppearancePreview() {
+        ChatStyleStore.applyAvatar(findViewById(R.id.ivAvatarPreview))
+        ChatStyleStore.applyBackgroundPreview(findViewById(R.id.ivBackgroundPreview))
     }
 
     private fun isSafeHttpsBaseUrl(value: String): Boolean = runCatching {

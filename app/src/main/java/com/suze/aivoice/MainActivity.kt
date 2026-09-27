@@ -42,6 +42,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var editInput: EditText
     private lateinit var tvStatus: TextView
     private lateinit var micHalo: View
+    private lateinit var ivChatBackground: android.widget.ImageView
+    private lateinit var chatBgScrim: View
+    private lateinit var ivHeaderAvatar: android.widget.ImageView
 
     private var recognizer: SpeechRecognizer? = null
     private var wakeHelper: WakeWordHelper? = null
@@ -54,6 +57,8 @@ class MainActivity : AppCompatActivity() {
     private var isListening = false
     // 语音聆听开关：开启后持续识别主人的话并自动发送
     private var listeningEnabled = false
+    // 只有点了麦克风才在授权后自动开启聆听；启动时申请权限不能顺带开麦。
+    private var waitingMicForListen = false
 
     private val REQ_AUDIO = 1001
 
@@ -73,18 +78,26 @@ class MainActivity : AppCompatActivity() {
 
         tvStatus = findViewById(R.id.tvStatus)
         micHalo = findViewById(R.id.micHalo)
+        ivChatBackground = findViewById(R.id.ivChatBackground)
+        chatBgScrim = findViewById(R.id.chatBgScrim)
+        ivHeaderAvatar = findViewById(R.id.ivHeaderAvatar)
+        applyChatStyle()
         val btnMenu = findViewById<ImageButton>(R.id.btnMenu)
         btnMenu.setOnClickListener { v ->
             val pop = PopupMenu(this, v)
             pop.menu.add(0, 1, 0, getString(R.string.btn_settings))
             pop.menu.add(0, 5, 1, getString(R.string.menu_weather))
-            pop.menu.add(0, 2, 2, getString(R.string.menu_clear))
-            pop.menu.add(0, 4, 3, getString(R.string.menu_stop_speak))
-            pop.menu.add(0, 3, 4, getString(R.string.menu_wake))
+            pop.menu.add(0, 6, 2, getString(R.string.menu_role_lounge))
+            pop.menu.add(0, 7, 3, getString(R.string.menu_connect_llm))
+            pop.menu.add(0, 2, 4, getString(R.string.menu_clear))
+            pop.menu.add(0, 4, 5, getString(R.string.menu_stop_speak))
+            pop.menu.add(0, 3, 6, getString(R.string.menu_wake))
             pop.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     1 -> { startActivity(Intent(this, SettingsActivity::class.java)); true }
                     5 -> { askCityAndShowWeather(); true }
+                    6 -> { startActivity(Intent(this, RoleLoungeActivity::class.java)); true }
+                    7 -> { startActivity(Intent(this, LlmConnectActivity::class.java)); true }
                     2 -> {
                         history.clear()
                         adapter.notifyDataSetChanged()
@@ -262,6 +275,16 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         // 情感引擎：随时间自然回落/亲密度增长
         if (::emotion.isInitialized) { emotion.tick(); refreshMoodSubtitle() }
+        applyChatStyle()
+        if (::adapter.isInitialized) adapter.notifyDataSetChanged()
+    }
+
+    /** 应用可更换的小沫头像和聊天背景 */
+    private fun applyChatStyle() {
+        if (!::ivChatBackground.isInitialized) return
+        ChatStyleStore.applyBackground(ivChatBackground)
+        chatBgScrim.visibility = if (ChatStyleStore.hasBackground(this)) View.VISIBLE else View.GONE
+        ChatStyleStore.applyAvatar(ivHeaderAvatar)
     }
 
     private fun ensureAudioPermission() {
@@ -283,9 +306,14 @@ class MainActivity : AppCompatActivity() {
             val granted = grantResults.isNotEmpty() &&
                 grantResults[0] == PackageManager.PERMISSION_GRANTED
             if (granted) {
-                // 授权成功：自动开启聆听
-                startListeningMode()
+                // 仅当用户点了麦克风才自动开启聆听
+                if (waitingMicForListen || listeningEnabled) {
+                    waitingMicForListen = false
+                    startListeningMode()
+                }
             } else {
+                waitingMicForListen = false
+                listeningEnabled = false
                 Toast.makeText(this, "未授予麦克风权限，无法聆听", Toast.LENGTH_SHORT).show()
             }
         }
@@ -366,7 +394,7 @@ class MainActivity : AppCompatActivity() {
     private fun startListeningMode() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
             != PackageManager.PERMISSION_GRANTED) {
-            // 自动向系统申请麦克风权限，授权后会回调 onRequestPermissionsResult 继续开启
+            waitingMicForListen = true
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), REQ_AUDIO)
             Toast.makeText(this, "请授予麦克风权限，之后会自动开始聆听", Toast.LENGTH_LONG).show()
             return
@@ -397,7 +425,10 @@ class MainActivity : AppCompatActivity() {
     private fun sendToLlm(userText: String) {
         // 防重复：2 秒内完全相同的文本只处理一次（语音引擎双回调 / 双击发送按钮）
         val now = System.currentTimeMillis()
-        if (userText == lastSentText && now - lastSentAt < 2000L) return
+        if (userText == lastSentText && now - lastSentAt < 2000L) {
+            isSending = false
+            return
+        }
         lastSentText = userText
         lastSentAt = now
 
@@ -422,6 +453,7 @@ class MainActivity : AppCompatActivity() {
         if (prefs.mindEnabled) mind.record("主人说：" + userText.take(50))
 
         // ③ 人设：台湾腔优先，其次默认系统提示
+        llm.applyCloudThink = false
         llm.systemPromptOverride = if (prefs.taiwanVoice) prefs.effectiveTaiwanPrompt() else null
 
         // ④ 拼接“动态提示”：独立思考 + 情绪状态（注入 system prompt，是关键）
@@ -450,6 +482,7 @@ class MainActivity : AppCompatActivity() {
         scrollToBottom()
 
         lifecycleScope.launch {
+          try {
             val requestHistory = history.dropLast(1).filter { it.content.isNotBlank() }
             val rawText: String
 
@@ -457,8 +490,10 @@ class MainActivity : AppCompatActivity() {
                 // 流式：逐字显示（打字机）
                 rawText = llm.chatStream(requestHistory) { delta ->
                     runOnUiThread {
-                        val cur = history.last().content + delta
-                        history[history.size - 1] = ChatMessage("assistant", cur, isMe = false)
+                        if (isFinishing || isDestroyed || history.isEmpty()) return@runOnUiThread
+                        val last = history.last()
+                        val cur = last.content + delta
+                        history[history.size - 1] = last.copy(content = cur)
                         adapter.updateLast(cur)
                         scrollToBottom()
                     }
@@ -466,9 +501,11 @@ class MainActivity : AppCompatActivity() {
             } else {
                 val reply = llm.chat(requestHistory)
                 runOnUiThread {
-                    history[history.size - 1] = ChatMessage("assistant", reply, isMe = false)
-                    adapter.updateLast(reply)
-                    scrollToBottom()
+                    if (history.isNotEmpty()) {
+                        history[history.size - 1] = history.last().copy(content = reply)
+                        adapter.updateLast(reply)
+                        scrollToBottom()
+                    }
                 }
                 rawText = reply
             }
@@ -487,8 +524,10 @@ class MainActivity : AppCompatActivity() {
             finalText = if (stickerUrl != null) {
                 if (textNoSticker.isNotBlank()) textNoSticker else "（发了一张表情包）"
             } else finalText
-            history[history.size - 1] = ChatMessage("assistant", finalText, isMe = false)
-            adapter.updateLast(finalText)
+            if (history.isNotEmpty()) {
+                history[history.size - 1] = history.last().copy(content = finalText)
+                adapter.updateLast(finalText)
+            }
             // 有贴图时，额外追加一条图片消息
             if (stickerUrl != null) {
                 val imgMsg = ChatMessage("assistant", stickerUrl, isMe = false, type = ChatMessage.TYPE_IMAGE)
@@ -534,6 +573,15 @@ class MainActivity : AppCompatActivity() {
                     mind.applyReflection(r)
                 }
             }
+          } catch (_: Exception) {
+            if (history.isNotEmpty() && history.last().role == "assistant" && history.last().content.isBlank()) {
+                val fallback = getString(R.string.role_empty_reply)
+                history[history.size - 1] = history.last().copy(content = fallback)
+                adapter.updateLast(fallback)
+            }
+          } finally {
+            isSending = false
+          }
         }
     }
 

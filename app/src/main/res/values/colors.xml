@@ -1,13 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="purple_500">#7467F0</color><color name="purple_700">#5746D8</color><color name="purple_deep2">#4433BF</color>
-    <color name="teal_200">#30C7B5</color><color name="accent_pink">#F06491</color><color name="white">#FFFFFF</color><color name="black">#171621</color>
-    <color name="gray_bg">#F7F7FC</color><color name="surface_soft">#F1F0FA</color><color name="card_white">#FFFFFF</color>
-    <color name="card_stroke">#E8E6F2</color><color name="divider">#EEECF5</color><color name="input_bg">#F3F2F9</color><color name="ghost_bg">#F1F0FA</color>
-    <color name="text_primary">#242231</color><color name="text_secondary">#77748A</color><color name="text_tertiary">#A09DAF</color>
-    <color name="bubble_me">#6B5CE7</color><color name="bubble_me_text">#FFFFFF</color><color name="bubble_ai">#FFFFFF</color><color name="bubble_ai_text">#292735</color>
-    <color name="bg_top">#6657E7</color><color name="bg_top_end">#9A72EE</color><color name="header_top">#6657E7</color><color name="header_end">#9A72EE</color>
-    <color name="halo_inner">#3DFFFFFF</color><color name="halo_outer">#20FFFFFF</color><color name="halo_idle">#D7D1FF</color>
-    <color name="halo_listening">#5B45DD</color><color name="halo_listening_fill">#305B45DD</color><color name="halo_speaking">#30C7B5</color>
+    <color name="purple_500">#7467F0</color>
+    <color name="purple_700">#5746D8</color>
+    <color name="purple_deep2">#4433BF</color>
+    <color name="teal_200">#30C7B5</color>
+    <color name="accent_pink">#F06491</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#171621</color>
+    <color name="gray_bg">#EDE9FF</color>
+    <color name="surface_soft">#F4F1FF</color>
+    <color name="card_white">#E6FFFFFF</color>
+    <color name="card_stroke">#88FFFFFF</color>
+    <color name="divider">#33FFFFFF</color>
+    <color name="input_bg">#B8FFFFFF</color>
+    <color name="ghost_bg">#66FFFFFF</color>
+    <color name="text_primary">#242231</color>
+    <color name="text_secondary">#5C5878</color>
+    <color name="text_tertiary">#8A86A3</color>
+    <color name="bubble_me">#A8786BFF</color>
+    <color name="bubble_me_text">#FFFFFF</color>
+    <color name="bubble_ai">#CCFFFFFF</color>
+    <color name="bubble_ai_text">#292735</color>
+    <color name="bg_top">#9B8CFF</color>
+    <color name="bg_top_end">#C9B8FF</color>
+    <color name="header_top">#9B8CFF</color>
+    <color name="header_end">#C9B8FF</color>
+    <color name="halo_inner">#55FFFFFF</color>
+    <color name="halo_outer">#28FFFFFF</color>
+    <color name="halo_idle">#D7D1FF</color>
+    <color name="halo_listening">#5B45DD</color>
+    <color name="halo_listening_fill">#305B45DD</color>
+    <color name="halo_speaking">#30C7B5</color>
     <color name="ic_launcher_background">#6657E7</color>
+    <color name="glass_fill">#99FFFFFF</color>
+    <color name="glass_fill_strong">#CCFFFFFF</color>
+    <color name="glass_stroke">#88FFFFFF</color>
+    <color name="glass_tint">#33746BFF</color>
+    <color name="glass_me_start">#C47A6BFF</color>
+    <color name="glass_me_end">#C45B49D8</color>
 </resources>

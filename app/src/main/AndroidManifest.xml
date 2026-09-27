@@ -16,6 +16,14 @@
         <intent>
             <action android:name="android.speech.tts.engine.TTS_SERVICE" />
         </intent>
+        <intent>
+            <action android:name="android.intent.action.GET_CONTENT" />
+            <data android:mimeType="image/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.OPEN_DOCUMENT" />
+            <data android:mimeType="image/*" />
+        </intent>
     </queries>
 
     <application
@@ -32,6 +40,26 @@
             android:name=".WeatherActivity"
             android:exported="false"
             android:screenOrientation="unspecified"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".RoleLoungeActivity"
+            android:exported="false"
+            android:label="@string/role_lounge_title"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".RoleChatActivity"
+            android:exported="false"
+            android:label="@string/role_lounge_title"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".RoleEditActivity"
+            android:exported="false"
+            android:label="@string/role_edit_title"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".LlmConnectActivity"
+            android:exported="false"
+            android:label="@string/llm_connect_title"
             android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".MainActivity"

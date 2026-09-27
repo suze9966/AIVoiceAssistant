@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="@drawable/glass_page_bg">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:background="@drawable/glass_header" android:elevation="10dp"
+        android:paddingStart="14dp" android:paddingEnd="10dp" android:paddingTop="16dp" android:paddingBottom="16dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:gravity="center_vertical">
+            <TextView android:id="@+id/btnRoleChatBack" android:layout_width="48dp" android:layout_height="48dp"
+                android:gravity="center" android:background="@drawable/icon_touch_bg" android:text="‹"
+                android:textColor="@color/purple_700" android:textSize="28sp" android:textStyle="bold"
+                android:contentDescription="@string/role_back"/>
+            <TextView android:id="@+id/tvRoleChatEmoji" android:layout_width="40dp" android:layout_height="40dp"
+                android:gravity="center" android:textSize="22sp" android:background="@drawable/glass_avatar"/>
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                android:layout_marginStart="10dp" android:orientation="vertical">
+                <TextView android:id="@+id/tvRoleChatName" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:textColor="@color/purple_700" android:textSize="20sp" android:textStyle="bold"/>
+                <TextView android:id="@+id/tvRoleChatStatus" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp" android:text="@string/role_chat_ready"
+                    android:textColor="@color/text_secondary" android:textSize="12sp" android:maxLines="1" android:ellipsize="end"/>
+            </LinearLayout>
+            <ImageButton android:id="@+id/btnRoleChatMenu" android:layout_width="48dp" android:layout_height="48dp"
+                android:background="@drawable/icon_touch_bg" android:src="@drawable/ic_star" android:tint="@color/purple_700"
+                android:contentDescription="@string/btn_more" android:padding="12dp"/>
+        </LinearLayout>
+    </LinearLayout>
+    <androidx.recyclerview.widget.RecyclerView android:id="@+id/recyclerRoleChat"
+        android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+        android:clipToPadding="false" android:paddingStart="8dp" android:paddingEnd="8dp"
+        android:paddingTop="14dp" android:paddingBottom="16dp" android:scrollbars="none"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="bottom" android:background="@drawable/glass_bottom"
+        android:elevation="12dp" android:paddingStart="12dp" android:paddingEnd="12dp" android:paddingTop="10dp" android:paddingBottom="12dp">
+        <EditText android:id="@+id/editRoleInput" android:layout_width="0dp" android:layout_height="wrap_content"
+            android:minHeight="48dp" android:maxHeight="112dp" android:layout_weight="1" android:layout_marginEnd="8dp"
+            android:background="@drawable/input_bg" android:hint="@string/role_hint_input" android:textColorHint="@color/text_secondary"
+            android:textColor="@color/text_primary" android:textSize="15sp" android:gravity="center_vertical"
+            android:paddingStart="16dp" android:paddingEnd="16dp" android:paddingTop="12dp" android:paddingBottom="12dp"
+            android:maxLines="4" android:inputType="textCapSentences|textMultiLine" android:imeOptions="actionSend"/>
+        <ImageButton android:id="@+id/btnRoleSend" android:layout_width="48dp" android:layout_height="48dp"
+            android:background="@drawable/btn_send_bg" android:src="@drawable/ic_send" android:padding="12dp"
+            android:contentDescription="@string/btn_send"/>
+    </LinearLayout>
+</LinearLayout>
