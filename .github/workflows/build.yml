@@ -24,16 +24,28 @@ jobs:
           cache-disabled: true
 
       - name: Build Debug APK
+        id: debug_build
         shell: bash
         run: |
           gradle assembleDebug --no-daemon --stacktrace 2>&1 | tee build-debug.log
           rc=${PIPESTATUS[0]}
-          if [ "$rc" -ne 0 ]; then
-            grep -E '(^e: |error:|Android resource linking failed|Unresolved reference|Compilation error|FAILURE:|What went wrong:|Execution failed for task)' build-debug.log | tail -80 | while IFS= read -r line; do
-              echo "::error title=Android build detail::$line"
-            done
-          fi
-          exit "$rc"
+          echo "$rc" > build-debug.exit
+          echo '## Android build tail' >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          tail -120 build-debug.log >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+
+      - name: Upload compiler log
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiler-log
+          path: build-debug.log
+
+      - name: Stop after failed debug build
+        shell: bash
+        run: |
+          test "$(cat build-debug.exit)" = "0"
 
       - name: Build Release APK (unsigned)
         run: gradle assembleRelease --no-daemon --stacktrace
