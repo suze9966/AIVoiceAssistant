@@ -15,7 +15,11 @@
     <string name="label_api_key">API Key</string>
     <string name="label_model">模型名称</string>
     <string name="label_system">系统提示词（人设）</string>
-    <string name="label_voice">语音音色</string>
+    <string name="label_voice">Edge 备用音色</string>
+    <string name="label_tts_engine">语音引擎（小智同款）</string>
+    <string name="label_siliconflow_key">硅基流动 Key（CosyVoice 更真人，加密保存在本机）</string>
+    <string name="label_siliconflow_hint">留空不修改；填了就能用小智 CosyVoice</string>
+    <string name="label_cosy_voice">CosyVoice 音色</string>
     <string name="label_locale">语音区域（普通话/台湾腔/粤语）</string>
     <string name="label_taiwan_voice">台湾腔语音（改成台湾腔音色，默认为普通话）</string>
     <string name="label_taiwan_prompt">小智式机车台湾腔（可追加自定义人设）</string>

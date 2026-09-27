@@ -27,7 +27,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun initView() {
         prefs = Prefs(this)
-        tts = TtsHelper(this)
+        tts = TtsHelper(this, prefs)
         memory = MemoryEngine(this)
 
         val editBaseUrl = findViewById<EditText>(R.id.editBaseUrl)
@@ -38,6 +38,9 @@ class SettingsActivity : AppCompatActivity() {
         val switchTaiwan = findViewById<SwitchCompat>(R.id.switchTaiwan)
         val editTaiwanPrompt = findViewById<EditText>(R.id.editTaiwanPrompt)
         val spinnerVoice = findViewById<Spinner>(R.id.spinnerVoice)
+        val spinnerTtsEngine = findViewById<Spinner>(R.id.spinnerTtsEngine)
+        val spinnerCosyVoice = findViewById<Spinner>(R.id.spinnerCosyVoice)
+        val editSiliconflowKey = findViewById<EditText>(R.id.editSiliconflowKey)
         val editCaiyunKey = findViewById<EditText>(R.id.editCaiyunKey)
         val editCaiyunSecret = findViewById<EditText>(R.id.editCaiyunSecret)
         val editCaiyunToken = findViewById<EditText>(R.id.editCaiyunToken)
@@ -61,9 +64,11 @@ class SettingsActivity : AppCompatActivity() {
         val hasKey = prefs.apiKey.isNotBlank()
         editApiKey.setText("")
         editApiKey.hint = if (hasKey) "已加密保存（留空则不修改）" else getString(R.string.label_apikey_hint)
-        listOf(editApiKey, editCaiyunKey, editCaiyunSecret, editCaiyunToken).forEach {
+        listOf(editApiKey, editCaiyunKey, editCaiyunSecret, editCaiyunToken, editSiliconflowKey).forEach {
             it.filterTouchesWhenObscured = true
         }
+        editSiliconflowKey.setText("")
+        editSiliconflowKey.hint = if (prefs.siliconflowKey.isNotBlank()) "已加密保存 · 留空不修改" else "硅基流动 API Key（cloud.siliconflow.cn）"
         editModel.setText(prefs.model)
         editSystem.setText(prefs.systemPrompt)
         editCaiyunKey.hint = if (prefs.caiyunAppKey.isNotBlank()) "已加密保存 · 留空不修改" else "请输入彩云 App Key"
@@ -109,6 +114,16 @@ class SettingsActivity : AppCompatActivity() {
                 refreshVoices(spinnerVoice)
             }
         }
+
+        val engineLabels = Prefs.TTS_ENGINE_OPTIONS.map { it.second }
+        spinnerTtsEngine.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, engineLabels)
+        val engineIdx = Prefs.TTS_ENGINE_OPTIONS.indexOfFirst { it.first == prefs.ttsEngine }
+        if (engineIdx >= 0) spinnerTtsEngine.setSelection(engineIdx)
+
+        val cosyLabels = Prefs.COSY_VOICE_OPTIONS.map { it.second }
+        spinnerCosyVoice.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, cosyLabels)
+        val cosyIdx = Prefs.COSY_VOICE_OPTIONS.indexOfFirst { it.first == prefs.cosyVoice }
+        if (cosyIdx >= 0) spinnerCosyVoice.setSelection(cosyIdx)
 
         val weatherLabels = Prefs.WEATHER_SOURCE_OPTIONS.map { it.second }
         spinnerWeatherSource.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, weatherLabels)
@@ -185,6 +200,10 @@ class SettingsActivity : AppCompatActivity() {
             prefs.voiceLocaleName = localeLabels.getOrNull(locIdx) ?: "普通话（大陆）"
             prefs.voiceIndex = spinnerVoice.selectedItemPosition
             prefs.weatherSource = Prefs.WEATHER_SOURCE_OPTIONS.getOrNull(spinnerWeatherSource.selectedItemPosition)?.first ?: "auto"
+            prefs.ttsEngine = Prefs.TTS_ENGINE_OPTIONS.getOrNull(spinnerTtsEngine.selectedItemPosition)?.first ?: "auto"
+            prefs.cosyVoice = Prefs.COSY_VOICE_OPTIONS.getOrNull(spinnerCosyVoice.selectedItemPosition)?.first ?: prefs.cosyVoice
+            editSiliconflowKey.text.toString().trim().takeIf { it.isNotEmpty() }?.let { prefs.siliconflowKey = it }
+            editSiliconflowKey.setText("")
             prefs.ttsRate = 0.5f + seekRate.progress / 100f
             prefs.ttsPitch = 0.5f + seekPitch.progress / 100f
             val vName = spinnerVoice.selectedItem?.toString()

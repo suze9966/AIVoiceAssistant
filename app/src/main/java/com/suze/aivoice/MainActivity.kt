@@ -63,7 +63,7 @@ class MainActivity : AppCompatActivity() {
 
         prefs = Prefs(this)
         llm = LlmClient(prefs)
-        tts = TtsHelper(this)
+        tts = TtsHelper(this, prefs)
         store = HistoryStore(this)
         emotion = EmotionEngine(this)
         llm.bindEmotion(emotion)

@@ -7,12 +7,18 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.os.Handler
 import android.os.Looper
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import okio.ByteString
+import org.json.JSONObject
+import java.io.IOException
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -26,9 +32,10 @@ import java.util.concurrent.TimeUnit
 /**
  * 语音合成助手（小智 AI 同款方案）。
  *
- * 原实现基于系统 TextToSpeech（台湾腔效果差），现改为 **EdgeTTS**：
- * 即微软 Edge「大声朗读」所用的在线神经网络语音——正是小智 xiaozhi-server
- * 默认且免费的 TTS 引擎。音色自然、支持中英文与多地区（大陆/台湾/香港）。
+ * 对齐开源小智 xiaozhi-esp32-server 的 TTS 方案：
+ * - 默认免费引擎仍是 EdgeTTS（小智 selected_module.TTS=EdgeTTS）
+ * - 更真人的方案是小智同款 CosyVoiceSiliconflow（硅基流动 CosyVoice2）
+ * 有 Key 时优先 CosyVoice，失败自动回退 Edge，再失败才用系统 TTS。
  *
  * 实现方式（严格对齐 EdgeTTS 协议）：
  * 1. 通过 WebSocket 连接 wss://speech.platform.bing.com/.../edge/v1
@@ -39,7 +46,8 @@ import java.util.concurrent.TimeUnit
  *
  * 对外方法签名与旧版保持一致，MainActivity 基本无需改动。
  */
-class TtsHelper(private val context: Context) {
+class TtsHelper(private val context: Context, prefs: Prefs? = null) {
+    private val prefs: Prefs = prefs ?: Prefs(context)
 
     private val main = Handler(Looper.getMainLooper())
     private var player: MediaPlayer? = null
@@ -55,8 +63,13 @@ class TtsHelper(private val context: Context) {
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(25, TimeUnit.SECONDS)
-            .build()
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .callTimeout(40, TimeUnit.SECONDS)
+        .build()
+    private var httpCall: Call? = null
+    /** CosyVoice 本轮已经成功播放或已经回退，防止超时与失败回调重复切到 Edge。 */
+    private var engineSettled: Boolean = false
 
     init {
         fallbackTts = TextToSpeech(context.applicationContext) { status ->
@@ -236,6 +249,7 @@ class TtsHelper(private val context: Context) {
         val generation = speechGeneration
         currentText = text
         fallbackStarted = false
+        engineSettled = false
         isSpeaking = true
 
         val voice = voiceForLocale(currentLocale)
@@ -243,6 +257,118 @@ class TtsHelper(private val context: Context) {
         val pitch = edgePitch()
 
         val out = File(context.cacheDir, "tts_" + System.currentTimeMillis() + ".mp3")
+        if (shouldUseCosyVoice()) {
+            speakCosyVoice(text, taiwan, generation, out)
+            return
+        }
+        speakEdge(text, taiwan, generation, out, voice, rate, pitch)
+    }
+
+    private fun shouldUseCosyVoice(): Boolean {
+        val key = prefs.siliconflowKey
+        if (key.isBlank()) return false
+        return prefs.ttsEngine != "edge"
+    }
+
+    /** 小智 CosyVoiceSiliconflow：POST https://api.siliconflow.cn/v1/audio/speech */
+    private fun speakCosyVoice(text: String, taiwan: Boolean, generation: Long, out: File) {
+        val key = prefs.siliconflowKey
+        if (key.isBlank()) {
+            speakEdge(text, taiwan, generation, out, voiceForLocale(currentLocale), edgeRate(), edgePitch())
+            return
+        }
+        val speed = (emotionRate * userRate * (if (isTaiwan()) 0.98f else 1.0f)).coerceIn(0.5f, 1.6f)
+        val spoken = if (taiwan || isTaiwan()) {
+            "请用自然的台湾国语口音来说。<|endofprompt|>" + text
+        } else {
+            text
+        }
+        val json = JSONObject()
+            .put("model", "FunAudioLLM/CosyVoice2-0.5B")
+            .put("input", spoken)
+            .put("voice", prefs.cosyVoice)
+            .put("response_format", "mp3")
+            .put("speed", speed.toDouble())
+            .toString()
+        val body = json.toRequestBody("application/json; charset=utf-8".toMediaType())
+        val req = Request.Builder()
+            .url("https://api.siliconflow.cn/v1/audio/speech")
+            .header("Authorization", "Bearer " + key)
+            .header("Content-Type", "application/json")
+            .post(body)
+            .build()
+        val call = client.newCall(req)
+        httpCall = call
+        call.enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                main.post {
+                    if (generation != speechGeneration) return@post
+                    if (httpCall === call) httpCall = null
+                    fallbackFromCosy(text, taiwan, generation)
+                }
+            }
+            override fun onResponse(call: Call, response: Response) {
+                response.use { res ->
+                    val bytes = try { res.body?.bytes() } catch (_: Exception) { null }
+                    if (!res.isSuccessful || bytes == null || bytes.isEmpty()) {
+                        main.post {
+                            if (generation != speechGeneration) return@post
+                            if (httpCall === call) httpCall = null
+                            fallbackFromCosy(text, taiwan, generation)
+                        }
+                        return
+                    }
+                    try {
+                        FileOutputStream(out).use { it.write(bytes) }
+                    } catch (_: Exception) {
+                        main.post {
+                            if (generation != speechGeneration) return@post
+                            if (httpCall === call) httpCall = null
+                            fallbackFromCosy(text, taiwan, generation)
+                        }
+                        return
+                    }
+                    main.post {
+                        if (generation != speechGeneration) return@post
+                        if (httpCall === call) httpCall = null
+                        playFile(out, text, generation)
+                    }
+                }
+            }
+        })
+        main.postDelayed({
+            // 成功播放后必须先清空 httpCall，避免 18 秒超时把正在播的 CosyVoice 误切到 Edge。
+            if (generation == speechGeneration && isSpeaking && httpCall === call && player?.isPlaying != true && !fallbackStarted) {
+                try { call.cancel() } catch (_: Exception) { }
+                httpCall = null
+                fallbackFromCosy(text, taiwan, generation)
+            }
+        }, 18_000L)
+    }
+
+    private fun fallbackFromCosy(text: String, taiwan: Boolean, generation: Long) {
+        if (generation != speechGeneration || fallbackStarted || engineSettled) return
+        engineSettled = true
+        speakEdge(
+            text,
+            taiwan,
+            generation,
+            File(context.cacheDir, "tts_" + System.currentTimeMillis() + ".mp3"),
+            voiceForLocale(currentLocale),
+            edgeRate(),
+            edgePitch()
+        )
+    }
+
+    private fun speakEdge(
+        text: String,
+        taiwan: Boolean,
+        generation: Long,
+        out: File,
+        voice: String,
+        rate: String,
+        pitch: String
+    ) {
         val audio = FileOutputStream(out)
 
         // Edge 现行协议要求 Sec-MS-GEC 签名、版本参数及新版扩展 Origin；
@@ -365,6 +491,7 @@ class TtsHelper(private val context: Context) {
         try {
             currentFile?.delete()
             currentFile = file
+            engineSettled = true
 
             player?.release()
             player = MediaPlayer().apply {
@@ -447,6 +574,8 @@ class TtsHelper(private val context: Context) {
         try { fallbackTts?.stop() } catch (_: Exception) { }
         try { socket?.cancel() } catch (_: Exception) { }
         socket = null
+        try { httpCall?.cancel() } catch (_: Exception) { }
+        httpCall = null
         try {
             player?.stop()
             player?.release()

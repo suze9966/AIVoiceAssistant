@@ -69,6 +69,21 @@ class Prefs(context: Context) {
             "不要刻意解释自己在说台湾腔。禁止恶意侮辱、歧视、霸凌或攻击主人；" +
             "主人认真求助或难过时立刻停止吐槽，改为温柔可靠。尽量使用繁体口语常见措辞，" +
             "例如软体、网路、影片、资讯、品质，但不要为了转换而影响信息准确性。"
+        val TTS_ENGINE_OPTIONS = listOf(
+            "auto" to "自动（有 CosyVoice Key 用小智同款，否则 Edge）",
+            "cosyvoice" to "小智 CosyVoice（更真人，需硅基流动 Key）",
+            "edge" to "EdgeTTS（小智默认免费方案）"
+        )
+        val COSY_VOICE_OPTIONS = listOf(
+            "FunAudioLLM/CosyVoice2-0.5B:claire" to "Claire（温柔女声·台湾腔推荐）",
+            "FunAudioLLM/CosyVoice2-0.5B:diana" to "Diana（欢快女声）",
+            "FunAudioLLM/CosyVoice2-0.5B:bella" to "Bella（激情女声）",
+            "FunAudioLLM/CosyVoice2-0.5B:anna" to "Anna（沉稳女声）",
+            "FunAudioLLM/CosyVoice2-0.5B:alex" to "Alex（沉稳男声）",
+            "FunAudioLLM/CosyVoice2-0.5B:benjamin" to "Benjamin（低沉男声）",
+            "FunAudioLLM/CosyVoice2-0.5B:charles" to "Charles（磁性男声）",
+            "FunAudioLLM/CosyVoice2-0.5B:david" to "David（欢快男声）"
+        )
         val WEATHER_SOURCE_OPTIONS = listOf(
             "auto" to "自动（免费优先）",
             "openmeteo" to "Open-Meteo（免费免 Key）",
@@ -149,6 +164,28 @@ class Prefs(context: Context) {
             return if (saved in setOf("auto", "openmeteo", "wttr", "xiaomi", "caiyun")) saved else "auto"
         }
         set(v) = sp.edit().putString("weatherSource", v).apply()
+
+    /** TTS 引擎：auto / cosyvoice / edge。auto 时有硅基流动 Key 就走小智 CosyVoice。 */
+    var ttsEngine: String
+        get() {
+            val saved = sp.getString("ttsEngine", "auto") ?: "auto"
+            return if (saved in setOf("auto", "cosyvoice", "edge")) saved else "auto"
+        }
+        set(v) = sp.edit().putString("ttsEngine", v).apply()
+
+    /** 硅基流动 CosyVoice Key，走 KeyVault 加密。 */
+    var siliconflowKey: String
+        get() = KeyVault.readNamed(sp, "siliconflowKeyEnc")
+        set(v) = KeyVault.writeNamed(sp, "siliconflowKeyEnc", v)
+
+    var cosyVoice: String
+        get() {
+            val saved = sp.getString("cosyVoice", "FunAudioLLM/CosyVoice2-0.5B:claire")
+                ?: "FunAudioLLM/CosyVoice2-0.5B:claire"
+            return if (COSY_VOICE_OPTIONS.any { it.first == saved }) saved
+            else "FunAudioLLM/CosyVoice2-0.5B:claire"
+        }
+        set(v) = sp.edit().putString("cosyVoice", v).apply()
 
     fun weatherSourceLabel(): String =
         WEATHER_SOURCE_OPTIONS.firstOrNull { it.first == weatherSource }?.second ?: "自动（免费优先）"
