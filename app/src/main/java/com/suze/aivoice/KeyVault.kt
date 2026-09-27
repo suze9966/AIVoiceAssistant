@@ -35,29 +35,33 @@ object KeyVault {
         }
     } catch (_: Throwable) { null }
 
-    private fun encryptFor(slot: String, plain: String): String? = try {
-        if (plain.isEmpty()) return ""
-        val key = getOrCreateKey() ?: return null
-        val cipher = Cipher.getInstance(TRANSFORM)
-        cipher.init(Cipher.ENCRYPT_MODE, key)
-        cipher.updateAAD(slot.toByteArray(Charsets.UTF_8))
-        val encrypted = cipher.doFinal(plain.toByteArray(Charsets.UTF_8))
-        val output = ByteArray(cipher.iv.size + encrypted.size)
-        System.arraycopy(cipher.iv, 0, output, 0, cipher.iv.size)
-        System.arraycopy(encrypted, 0, output, cipher.iv.size, encrypted.size)
-        Base64.encodeToString(output, Base64.NO_WRAP)
-    } catch (_: Throwable) { null }
+    private fun encryptFor(slot: String, plain: String): String? {
+        return try {
+            if (plain.isEmpty()) return ""
+            val key = getOrCreateKey() ?: return null
+            val cipher = Cipher.getInstance(TRANSFORM)
+            cipher.init(Cipher.ENCRYPT_MODE, key)
+            cipher.updateAAD(slot.toByteArray(Charsets.UTF_8))
+            val encrypted = cipher.doFinal(plain.toByteArray(Charsets.UTF_8))
+            val output = ByteArray(cipher.iv.size + encrypted.size)
+            System.arraycopy(cipher.iv, 0, output, 0, cipher.iv.size)
+            System.arraycopy(encrypted, 0, output, cipher.iv.size, encrypted.size)
+            Base64.encodeToString(output, Base64.NO_WRAP)
+        } catch (_: Throwable) { null }
+    }
 
-    private fun decryptFor(slot: String, stored: String): String? = try {
-        if (stored.isEmpty()) return ""
-        val raw = Base64.decode(stored, Base64.NO_WRAP)
-        if (raw.size <= IV_LEN) return null
-        val key = getOrCreateKey() ?: return null
-        val cipher = Cipher.getInstance(TRANSFORM)
-        cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(GCM_TAG_BITS, raw.copyOfRange(0, IV_LEN)))
-        cipher.updateAAD(slot.toByteArray(Charsets.UTF_8))
-        String(cipher.doFinal(raw.copyOfRange(IV_LEN, raw.size)), Charsets.UTF_8)
-    } catch (_: Throwable) { null }
+    private fun decryptFor(slot: String, stored: String): String? {
+        return try {
+            if (stored.isEmpty()) return ""
+            val raw = Base64.decode(stored, Base64.NO_WRAP)
+            if (raw.size <= IV_LEN) return null
+            val key = getOrCreateKey() ?: return null
+            val cipher = Cipher.getInstance(TRANSFORM)
+            cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(GCM_TAG_BITS, raw.copyOfRange(0, IV_LEN)))
+            cipher.updateAAD(slot.toByteArray(Charsets.UTF_8))
+            String(cipher.doFinal(raw.copyOfRange(IV_LEN, raw.size)), Charsets.UTF_8)
+        } catch (_: Throwable) { null }
+    }
 
     /** 读取 API Key；可迁移旧版明文，但拒绝用途不明的旧版无 AAD 密文。 */
     fun readMigrated(sp: SharedPreferences): String {

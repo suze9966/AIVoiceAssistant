@@ -1,62 +1,51 @@
 name: Build APK
-
 on:
   push:
     branches: [ main, master ]
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-disabled: true
-
       - name: Build Debug APK
         id: debug_build
         shell: bash
         run: |
           set +e
-          gradle assembleDebug --no-daemon --stacktrace 2>&1 | tee build-debug.log
+          gradle assembleDebug --no-daemon --stacktrace --info 2>&1 | tee build-debug.log
           rc=${PIPESTATUS[0]}
           echo "$rc" > build-debug.exit
-          echo '## Android build tail' >> "$GITHUB_STEP_SUMMARY"
-          echo '```text' >> "$GITHUB_STEP_SUMMARY"
-          tail -120 build-debug.log >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo '## Android compiler diagnostics' >> "$GITHUB_STEP_SUMMARY"
+          echo ' ```text' >> "$GITHUB_STEP_SUMMARY"
+          grep -nE 'e: |error: |Error |unresolved|expecting|none of the following candidates|cannot be called|AAPT|Execution failed for task' build-debug.log | head -400 >> "$GITHUB_STEP_SUMMARY" || true
+          echo ' ```' >> "$GITHUB_STEP_SUMMARY"
           exit 0
-
       - name: Upload compiler log
         uses: actions/upload-artifact@v4
         with:
           name: compiler-log
           path: build-debug.log
-
       - name: Stop after failed debug build
         shell: bash
-        run: |
-          test "$(cat build-debug.exit)" = "0"
-
+        run: test "$(cat build-debug.exit)" = "0"
       - name: Build Release APK (unsigned)
         run: gradle assembleRelease --no-daemon --stacktrace
-
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
-          path: app/build/outputs/apk/debug/*.apk
-
+          path: app/build/outputs/apk/debug/*apk
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:

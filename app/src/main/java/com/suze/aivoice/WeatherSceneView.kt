@@ -89,7 +89,7 @@ class WeatherSceneView @JvmOverloads constructor(
         paint.color = 0xDDFFFFFF.toInt()
         seeds.forEachIndexed { i, s ->
             val y = ((s.second + progress * (.25f + s.third * .2f)) % 1f) * h
-            val x = (s.first * w + sin(progress * 6.28 + i) * 18f)
+            val x = s.first * w + sin(progress * 6.28f + i) * 18f
             c.drawCircle(x, y, 2f + s.third * 5f, paint)
         }
     }
