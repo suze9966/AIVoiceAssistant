@@ -35,7 +35,7 @@ object RolePrompt {
         val greet = character.greeting.trim()
         if (greet.isNotEmpty()) return greet
         val user = character.userName.ifBlank { "你" }
-        return "我是${character.name}。等云端模型接上之后，才能按人设好好聊。$user先说一句也行。"
+        return "我是${character.name}。等云端模型接上之后，才能按人设好好聊。${user}先说一句也行。"
     }
 
     private fun formatExamples(character: RoleCharacter): String {
