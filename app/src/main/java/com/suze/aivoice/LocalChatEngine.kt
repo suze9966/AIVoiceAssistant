@@ -147,7 +147,7 @@ class LocalChatEngine(private val prefs: Prefs) {
                 "你好$who，我有点懒，但还是想听你说。"
             )
             EmotionEngine.Mood.SAD -> pick(
-                "我在…$who要是想聊，我听着。",
+                "我在…${who}要是想聊，我听着。",
                 "你好$who。不着急，我在。"
             )
             EmotionEngine.Mood.ANNOYED -> pick(
