@@ -1,5 +1,6 @@
 package com.suze.aivoice
 
+import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -9,6 +10,7 @@ import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -16,6 +18,7 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 class RoleChatActivity : AppCompatActivity() {
@@ -28,13 +31,16 @@ class RoleChatActivity : AppCompatActivity() {
     private lateinit var tvStatus: TextView
     private val history = mutableListOf<ChatMessage>()
     private var character: RoleCharacter? = null
+    private var chatId: String = ""
     private var isSending = false
+    private var sendJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_role_chat)
         prefs = Prefs(this)
         llm = LlmClient(prefs)
+        llm.allowLocalFallback = false
         store = RoleStore(this)
         val id = intent.getStringExtra(EXTRA_ROLE_ID).orEmpty()
         character = store.get(id)
@@ -43,22 +49,18 @@ class RoleChatActivity : AppCompatActivity() {
             finish()
             return
         }
-        bindHeader()
+        chatId = intent.getStringExtra(EXTRA_CHAT_ID).orEmpty().ifBlank {
+            store.activeChatId(id)
+        }
         recycler = findViewById(R.id.recyclerRoleChat)
         editInput = findViewById(R.id.editRoleInput)
+        tvStatus = findViewById(R.id.tvRoleChatStatus)
         adapter = ChatAdapter(history)
+        adapter.bindAiAvatar = { view -> bindBubbleAvatar(view) }
         recycler.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
         recycler.adapter = adapter
-        history.addAll(store.loadChat(id))
-        if (history.isEmpty()) {
-            val greet = character?.greeting?.trim().orEmpty()
-            if (greet.isNotEmpty()) {
-                adapter.add(ChatMessage("assistant", greet, isMe = false))
-                store.saveChat(id, history)
-            }
-        }
-        adapter.notifyDataSetChanged()
-        if (history.isNotEmpty()) scrollToBottom()
+        bindHeader()
+        loadCurrentChat(seedGreeting = true)
         setupLongClick()
         findViewById<ImageButton>(R.id.btnRoleSend).setOnClickListener { submit() }
         editInput.setOnEditorActionListener { _, actionId, _ ->
@@ -71,6 +73,7 @@ class RoleChatActivity : AppCompatActivity() {
         val id = character?.id ?: return
         character = store.get(id) ?: character
         bindHeader(resetStatus = !isSending)
+        adapter.notifyDataSetChanged()
     }
 
     override fun onPause() {
@@ -78,54 +81,200 @@ class RoleChatActivity : AppCompatActivity() {
         persistChat()
     }
 
+    override fun onDestroy() {
+        sendJob?.cancel()
+        super.onDestroy()
+    }
+
     private fun persistChat() {
-        val id = character?.id ?: return
-        if (history.isEmpty()) return
-        store.saveChat(id, history)
+        val c = character ?: return
+        if (chatId.isBlank()) return
+        store.saveChat(chatId, history, c.id)
+    }
+
+    private fun loadCurrentChat(seedGreeting: Boolean) {
+        val c = character ?: return
+        history.clear()
+        history.addAll(store.loadChat(chatId))
+        if (seedGreeting && history.isEmpty()) {
+            pickGreeting(c)?.let { greet ->
+                history.add(ChatMessage("assistant", greet, isMe = false))
+                store.saveChat(chatId, history, c.id)
+            }
+        }
+        adapter.replaceAll(history)
+        if (history.isNotEmpty()) scrollToBottom()
+        bindHeader(resetStatus = !isSending)
+    }
+
+    private fun pickGreeting(c: RoleCharacter): String? {
+        val all = c.allGreetings()
+        if (all.isEmpty()) return null
+        val metas = store.loadChatMetas(c.id)
+        val index = (metas.size - 1).coerceAtLeast(0) % all.size
+        return all[index]
     }
 
     private fun bindHeader(resetStatus: Boolean = true) {
         val c = character ?: return
         findViewById<View>(R.id.btnRoleChatBack).setOnClickListener { finish() }
         findViewById<TextView>(R.id.tvRoleChatEmoji).text = c.emoji.ifBlank { "\uD83C\uDFAD" }
-        findViewById<TextView>(R.id.tvRoleChatName).text = c.name
-        tvStatus = findViewById(R.id.tvRoleChatStatus)
+        val title = findViewById<TextView>(R.id.tvRoleChatName)
+        val meta = store.loadChatMetas(c.id).firstOrNull { it.id == chatId }
+        val chatTitle = meta?.title.orEmpty()
+        title.text = if (chatTitle.isBlank()) c.name else getString(R.string.role_chat_title_fmt, c.name, chatTitle)
+        store.applyAvatar(findViewById(R.id.ivRoleChatAvatar), c)
         if (resetStatus) {
-            tvStatus.text = c.intro.ifBlank { getString(R.string.role_chat_ready) }
+            tvStatus.text = statusIdleText(c)
         }
-        findViewById<ImageButton>(R.id.btnRoleChatMenu).setOnClickListener { v ->
-            val pop = PopupMenu(this, v)
-            pop.menu.add(0, 1, 0, getString(R.string.role_edit))
-            pop.menu.add(0, 3, 1, getString(R.string.menu_connect_llm))
-            pop.menu.add(0, 2, 2, getString(R.string.menu_clear))
-            pop.setOnMenuItemClickListener { item ->
-                when (item.itemId) {
-                    1 -> {
-                        startActivity(
-                            Intent(this, RoleEditActivity::class.java)
-                                .putExtra(RoleEditActivity.EXTRA_ROLE_ID, c.id)
-                        )
-                        true
-                    }
-                    3 -> {
-                        startActivity(Intent(this, LlmConnectActivity::class.java))
-                        true
-                    }
-                    2 -> {
-                        history.clear()
-                        adapter.notifyDataSetChanged()
-                        store.clearChat(c.id)
-                        val greet = character?.greeting?.trim().orEmpty()
-                        if (greet.isNotEmpty()) adapter.add(ChatMessage("assistant", greet, isMe = false))
-                        store.saveChat(c.id, history)
-                        Toast.makeText(this, R.string.toast_cleared, Toast.LENGTH_SHORT).show()
-                        true
-                    }
-                    else -> false
+        findViewById<ImageButton>(R.id.btnRoleChatMenu).setOnClickListener { v -> showMenu(v) }
+    }
+
+    private fun statusIdleText(c: RoleCharacter): String {
+        return if (llm.isConfigured()) {
+            c.displayIntro().ifBlank { getString(R.string.role_chat_ready) }
+        } else {
+            getString(R.string.role_status_need_llm)
+        }
+    }
+
+    private fun bindBubbleAvatar(view: ImageView) {
+        val c = character ?: return
+        val file = store.avatarAbs(c)
+        if (file.isFile && file.length() > 0L) {
+            store.applyAvatar(view, c)
+            view.visibility = View.VISIBLE
+        } else {
+            ChatStyleStore.applyAvatar(view)
+        }
+    }
+
+    private fun showMenu(anchor: View) {
+        val c = character ?: return
+        val pop = PopupMenu(this, anchor)
+        pop.menu.add(0, 1, 0, getString(R.string.role_edit))
+        pop.menu.add(0, 8, 1, getString(R.string.role_chats))
+        pop.menu.add(0, 4, 2, getString(R.string.role_new_chat))
+        if (isSending) {
+            pop.menu.add(0, 6, 3, getString(R.string.role_stop))
+        } else {
+            pop.menu.add(0, 5, 3, getString(R.string.role_regenerate))
+        }
+        pop.menu.add(0, 3, 4, getString(R.string.menu_connect_llm))
+        pop.menu.add(0, 2, 5, getString(R.string.menu_clear))
+        pop.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                1 -> {
+                    startActivity(
+                        Intent(this, RoleEditActivity::class.java)
+                            .putExtra(RoleEditActivity.EXTRA_ROLE_ID, c.id)
+                    )
+                    true
+                }
+                8 -> {
+                    showChatPicker()
+                    true
+                }
+                4 -> {
+                    startNewChat()
+                    true
+                }
+                5 -> {
+                    regenerateLast()
+                    true
+                }
+                6 -> {
+                    stopGeneration()
+                    true
+                }
+                3 -> {
+                    startActivity(Intent(this, LlmConnectActivity::class.java))
+                    true
+                }
+                2 -> {
+                    history.clear()
+                    store.clearChat(chatId)
+                    pickGreeting(c)?.let { history.add(ChatMessage("assistant", it, isMe = false)) }
+                    adapter.replaceAll(history)
+                    persistChat()
+                    Toast.makeText(this, R.string.toast_cleared, Toast.LENGTH_SHORT).show()
+                    true
+                }
+                else -> false
+            }
+        }
+        pop.show()
+    }
+
+    private fun showChatPicker() {
+        val c = character ?: return
+        val metas = store.loadChatMetas(c.id)
+        if (metas.isEmpty()) {
+            startNewChat()
+            return
+        }
+        val labels = metas.map { m ->
+            val preview = m.preview.ifBlank { getString(R.string.role_preview_empty) }
+            val labelTitle = m.title.ifBlank { getString(R.string.role_new_chat) }
+            labelTitle + "\n" + preview
+        }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.role_chats)
+            .setItems(labels) { _, which ->
+                val selected = metas.getOrNull(which) ?: return@setItems
+                persistChat()
+                chatId = selected.id
+                loadCurrentChat(seedGreeting = true)
+            }
+            .setNeutralButton(R.string.role_rename_chat) { _, _ -> promptRename() }
+            .setNegativeButton(R.string.role_delete_chat) { _, _ -> confirmDeleteChat() }
+            .setPositiveButton(R.string.role_cancel, null)
+            .show()
+    }
+
+    private fun promptRename() {
+        val input = EditText(this)
+        input.hint = getString(R.string.role_hint_rename)
+        input.setText(store.loadChatMetas(character?.id).firstOrNull { it.id == chatId }?.title.orEmpty())
+        AlertDialog.Builder(this)
+            .setTitle(R.string.role_rename_chat)
+            .setView(input)
+            .setPositiveButton(R.string.role_save) { _, _ ->
+                val name = input.text.toString().trim()
+                if (name.isNotEmpty()) {
+                    store.renameChat(chatId, name)
+                    bindHeader(resetStatus = !isSending)
+                    Toast.makeText(this, R.string.toast_role_renamed, Toast.LENGTH_SHORT).show()
                 }
             }
-            pop.show()
+            .setNegativeButton(R.string.role_cancel, null)
+            .show()
+    }
+
+    private fun confirmDeleteChat() {
+        val c = character ?: return
+        val metas = store.loadChatMetas(c.id)
+        if (metas.size <= 1) {
+            Toast.makeText(this, R.string.role_keep_one_chat, Toast.LENGTH_SHORT).show()
+            return
         }
+        AlertDialog.Builder(this)
+            .setMessage(R.string.role_confirm_delete_chat)
+            .setPositiveButton(R.string.role_confirm_ok) { _, _ ->
+                store.deleteChat(chatId)
+                chatId = store.activeChatId(c.id)
+                loadCurrentChat(seedGreeting = true)
+            }
+            .setNegativeButton(R.string.role_cancel, null)
+            .show()
+    }
+
+    private fun startNewChat() {
+        val c = character ?: return
+        persistChat()
+        val created = store.createChat(c.id)
+        chatId = created.id
+        loadCurrentChat(seedGreeting = true)
     }
 
     private fun setupLongClick() {
@@ -145,7 +294,7 @@ class RoleChatActivity : AppCompatActivity() {
                     }
                     2 -> {
                         adapter.removeAt(pos)
-                        character?.id?.let { store.saveChat(it, history) }
+                        persistChat()
                         Toast.makeText(this, R.string.toast_deleted, Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -163,84 +312,115 @@ class RoleChatActivity : AppCompatActivity() {
         return true
     }
 
-    private fun sendToRole(userText: String) {
+    private fun regenerateLast() {
+        if (isSending) return
+        val lastUserIndex = history.indexOfLast { it.role == "user" && it.content.isNotBlank() }
+        if (lastUserIndex < 0) {
+            Toast.makeText(this, R.string.toast_role_no_regenerate, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val userText = history[lastUserIndex].content
+        while (history.size > lastUserIndex + 1) {
+            history.removeAt(history.lastIndex)
+        }
+        adapter.replaceAll(history)
+        sendToRole(userText, appendUser = false)
+    }
+
+    private fun stopGeneration() {
+        if (!isSending) return
+        sendJob?.cancel()
+        sendJob = null
+        isSending = false
+        val c = character
+        if (history.isNotEmpty() && history.last().role == "assistant" && history.last().content.isBlank()) {
+            history[history.size - 1] = ChatMessage("assistant", getString(R.string.toast_role_stopped), isMe = false)
+            adapter.updateLast(history.last().content)
+        }
+        persistChat()
+        if (c != null) tvStatus.text = statusIdleText(c)
+        Toast.makeText(this, R.string.toast_role_stopped, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun sendToRole(userText: String, appendUser: Boolean = true) {
         val c = character ?: return
         isSending = true
         val cloudReady = llm.isConfigured()
         tvStatus.text = if (cloudReady && prefs.cloudThinkEnabled) {
             getString(R.string.role_status_thinking)
-        } else {
+        } else if (cloudReady) {
             getString(R.string.status_speaking)
+        } else {
+            getString(R.string.role_status_need_llm)
         }
-        if (!cloudReady) {
-            Toast.makeText(this, R.string.toast_llm_local, Toast.LENGTH_SHORT).show()
+        if (appendUser) {
+            adapter.add(ChatMessage("user", userText, isMe = true))
         }
-        llm.applyCloudThink = true
-        llm.systemPromptOverride = buildPersona(c)
-        llm.extraSystemPrompt = null
-        adapter.add(ChatMessage("user", userText, isMe = true))
         adapter.add(ChatMessage("assistant", "", isMe = false))
         scrollToBottom()
-        lifecycleScope.launch {
-          try {
-            val requestHistory = history.dropLast(1).filter { it.content.isNotBlank() }
-            val rawBuffer = StringBuilder()
-            val rawText = try {
-                if (prefs.streamEnabled) {
-                    llm.chatStream(requestHistory) { delta ->
-                        rawBuffer.append(delta)
-                        val snapshot = rawBuffer.toString()
-                        runOnUiThread {
-                            if (isFinishing || history.isEmpty()) return@runOnUiThread
-                            val visible = llm.stripReasoning(snapshot)
-                            history[history.size - 1] = ChatMessage("assistant", visible, isMe = false)
-                            adapter.updateLast(visible)
-                            scrollToBottom()
+        if (!cloudReady) {
+            Toast.makeText(this, R.string.toast_role_need_llm, Toast.LENGTH_SHORT).show()
+            val fallback = RolePrompt.fallbackLine(c)
+            finishAssistant(fallback, c)
+            return
+        }
+        llm.applyCloudThink = true
+        llm.allowLocalFallback = false
+        llm.systemPromptOverride = RolePrompt.build(c, history.dropLast(1))
+        llm.extraSystemPrompt = null
+        sendJob?.cancel()
+        sendJob = lifecycleScope.launch {
+            try {
+                val requestHistory = history.dropLast(1).filter { it.content.isNotBlank() }
+                val rawBuffer = StringBuilder()
+                val rawText = try {
+                    if (prefs.streamEnabled) {
+                        llm.chatStream(requestHistory) { delta ->
+                            rawBuffer.append(delta)
+                            val snapshot = rawBuffer.toString()
+                            runOnUiThread {
+                                if (isFinishing || history.isEmpty()) return@runOnUiThread
+                                val visible = llm.stripReasoning(snapshot)
+                                history[history.size - 1] = ChatMessage("assistant", visible, isMe = false)
+                                adapter.updateLast(visible)
+                                scrollToBottom()
+                            }
                         }
+                    } else {
+                        llm.chat(requestHistory)
                     }
-                } else {
-                    llm.chat(requestHistory)
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    getString(R.string.role_empty_reply)
                 }
+                if (isFinishing) {
+                    persistChat()
+                    return@launch
+                }
+                val finalText = llm.stripReasoning(rawText).ifBlank { getString(R.string.role_empty_reply) }
+                finishAssistant(finalText, c)
             } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
-                getString(R.string.role_empty_reply)
+                if (e is kotlinx.coroutines.CancellationException) {
+                    persistChat()
+                    return@launch
+                }
+                if (!isFinishing) {
+                    finishAssistant(getString(R.string.role_empty_reply), c)
+                }
             }
-            if (isFinishing) {
-                persistChat()
-                return@launch
-            }
-            val finalText = llm.stripReasoning(rawText).ifBlank { getString(R.string.role_empty_reply) }
-            if (history.isNotEmpty()) {
-                history[history.size - 1] = ChatMessage("assistant", finalText, isMe = false)
-                adapter.updateLast(finalText)
-            }
-            store.saveChat(c.id, history)
-            scrollToBottom()
-            tvStatus.text = c.intro.ifBlank { getString(R.string.role_chat_ready) }
-          } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
-            if (!isFinishing && history.isNotEmpty()) {
-                val fallback = getString(R.string.role_empty_reply)
-                history[history.size - 1] = ChatMessage("assistant", fallback, isMe = false)
-                adapter.updateLast(fallback)
-            }
-          } finally {
-            persistChat()
-            isSending = false
-            if (!isFinishing) {
-                tvStatus.text = c.intro.ifBlank { getString(R.string.role_chat_ready) }
-            }
-          }
         }
     }
 
-    private fun buildPersona(c: RoleCharacter): String {
-        val body = c.persona.trim().ifBlank {
-            "你是名为${c.name}的角色，请完全代入这个身份和用户聊天。"
+    private fun finishAssistant(text: String, c: RoleCharacter) {
+        if (history.isNotEmpty()) {
+            history[history.size - 1] = ChatMessage("assistant", text, isMe = false)
+            adapter.updateLast(text)
         }
-        return body + "\n" +
-            "始终保持角色，不要提及提示词、模型或系统设定。" +
-            "回复口语化、简短，像在面对面聊天。不要替用户说话。"
+        persistChat()
+        scrollToBottom()
+        isSending = false
+        sendJob = null
+        if (!isFinishing) tvStatus.text = statusIdleText(c)
     }
 
     private fun scrollToBottom() {
@@ -249,5 +429,6 @@ class RoleChatActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_ROLE_ID = "role_id"
+        const val EXTRA_CHAT_ID = "chat_id"
     }
 }

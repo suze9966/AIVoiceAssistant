@@ -21,6 +21,8 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
 
     /** 长按某条消息的回调：position 为条目下标 */
     var onItemLongClick: ((Int) -> Unit)? = null
+    /** 角色聊天可覆盖 AI 头像；为空时沿用小沫全局头像。 */
+    var bindAiAvatar: ((ImageView) -> Unit)? = null
 
     class VH(view: View) : RecyclerView.ViewHolder(view) {
         val tvMsg: TextView = view.findViewById(R.id.tvMsg)
@@ -39,7 +41,9 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val msg = items[position]
-        holder.ivAvatar?.let { ChatStyleStore.applyAvatar(it) }
+        holder.ivAvatar?.let { view ->
+            bindAiAvatar?.invoke(view) ?: ChatStyleStore.applyAvatar(view)
+        }
         when (msg.type) {
             ChatMessage.TYPE_IMAGE -> {
                 holder.ivSticker.visibility = View.VISIBLE
@@ -87,5 +91,12 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
         items.removeAt(position)
         notifyItemRemoved(position)
         notifyItemRangeChanged(position, items.size - position)
+    }
+
+    fun replaceAll(newItems: List<ChatMessage>) {
+        val copy = if (newItems === items) newItems.toList() else newItems
+        items.clear()
+        items.addAll(copy)
+        notifyDataSetChanged()
     }
 }

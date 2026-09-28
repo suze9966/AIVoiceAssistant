@@ -1,56 +1,46 @@
 package com.suze.aivoice
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
+import android.net.Uri
+import android.view.View
+import android.view.ViewOutlineProvider
+import android.graphics.Outline
+import android.widget.ImageView
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.FileOutputStream
 import java.util.UUID
 
-/** 简化版角色卡与分角色聊天记录，不做人设书 / 插件 / 世界书。 */
+/** 角色卡、世界书、分角色多对话。兼容旧版单文件 chat_{角色id}.json。 */
 class RoleStore(context: Context) {
     private val dir = File(context.filesDir, "roles").apply { mkdirs() }
+    private val avatarDir = File(dir, "avatars").apply { mkdirs() }
     private val charFile = File(dir, "characters.json")
+    private val chatIndexFile = File(dir, "chats.json")
     private val maxKeep = 200
+    private val appContext = context.applicationContext
 
     fun loadCharacters(): MutableList<RoleCharacter> {
-        // 只有首次安装（文件还不存在）才种默认角色。
-        // 用户删光后 characters.json 为 []，不要把默认四角色冲回来。
         if (!charFile.exists()) return seedDefaults()
         val list = mutableListOf<RoleCharacter>()
         try {
             val arr = JSONArray(charFile.readText())
             for (i in 0 until arr.length()) {
-                val o = arr.getJSONObject(i)
-                val item = RoleCharacter(
-                    id = o.optString("id").ifBlank { UUID.randomUUID().toString() },
-                    name = o.optString("name").ifBlank { "未命名角色" },
-                    emoji = o.optString("emoji").ifBlank { "\uD83C\uDFAD" },
-                    intro = o.optString("intro"),
-                    greeting = o.optString("greeting"),
-                    persona = o.optString("persona")
-                )
-                list.add(item)
+                parseCharacter(arr.optJSONObject(i))?.let { list.add(it) }
             }
-        } catch (_: Exception) {
-            // 文件损坏时不覆盖用户数据，返回已读到的内容（可能为空）。
-        }
+        } catch (_: Exception) { }
         return list
     }
 
     fun saveCharacters(items: List<RoleCharacter>) {
         try {
             val arr = JSONArray()
-            items.forEach { c ->
-                arr.put(
-                    JSONObject()
-                        .put("id", c.id)
-                        .put("name", c.name)
-                        .put("emoji", c.emoji)
-                        .put("intro", c.intro)
-                        .put("greeting", c.greeting)
-                        .put("persona", c.persona)
-                )
-            }
+            items.forEach { arr.put(toJson(it)) }
             charFile.writeText(arr.toString())
         } catch (_: Exception) { }
     }
@@ -60,23 +50,128 @@ class RoleStore(context: Context) {
     fun upsert(character: RoleCharacter) {
         val list = loadCharacters()
         val idx = list.indexOfFirst { it.id == character.id }
-        if (idx >= 0) list[idx] = character else list.add(character)
+        val now = character.copy(updatedAt = if (character.updatedAt == 0L) System.currentTimeMillis() else character.updatedAt)
+        if (idx >= 0) list[idx] = now else list.add(now)
         saveCharacters(list)
     }
 
     fun delete(id: String) {
+        val avatar = avatarFile(id)
         saveCharacters(loadCharacters().filterNot { it.id == id })
-        chatFile(id).delete()
+        loadChatMetas().filter { it.characterId == id }.forEach { deleteChat(it.id) }
+        legacyChatFile(id).delete()
+        avatar.delete()
     }
 
-    fun loadChat(id: String): MutableList<ChatMessage> {
+    fun duplicate(id: String): RoleCharacter? {
+        val src = get(id) ?: return null
+        val copy = src.copy(
+            id = newId(),
+            name = src.name + " 副本",
+            avatarFile = "",
+            updatedAt = System.currentTimeMillis()
+        )
+        upsert(copy)
+        val srcAvatar = avatarAbs(src)
+        if (srcAvatar.isFile) {
+            runCatching { srcAvatar.copyTo(avatarFile(copy.id), overwrite = true) }
+            upsert(copy.copy(avatarFile = avatarFile(copy.id).name))
+            return get(copy.id)
+        }
+        return copy
+    }
+
+    fun loadChatMetas(characterId: String? = null): MutableList<RoleChatMeta> {
+        val list = mutableListOf<RoleChatMeta>()
+        try {
+            if (chatIndexFile.exists()) {
+                val arr = JSONArray(chatIndexFile.readText())
+                for (i in 0 until arr.length()) {
+                    val o = arr.optJSONObject(i) ?: continue
+                    list.add(
+                        RoleChatMeta(
+                            id = o.optString("id").ifBlank { newId() },
+                            characterId = o.optString("characterId"),
+                            title = o.optString("title"),
+                            updatedAt = o.optLong("updatedAt"),
+                            preview = o.optString("preview")
+                        )
+                    )
+                }
+            }
+        } catch (_: Exception) { }
+        migrateLegacyChats(list)
+        val filtered = if (characterId.isNullOrBlank()) list
+        else list.filter { it.characterId == characterId }.toMutableList()
+        return filtered.sortedByDescending { it.updatedAt }.toMutableList()
+    }
+
+    fun saveChatMetas(items: List<RoleChatMeta>) {
+        try {
+            val arr = JSONArray()
+            items.forEach { m ->
+                arr.put(
+                    JSONObject()
+                        .put("id", m.id)
+                        .put("characterId", m.characterId)
+                        .put("title", m.title)
+                        .put("updatedAt", m.updatedAt)
+                        .put("preview", m.preview.take(80))
+                )
+            }
+            chatIndexFile.writeText(arr.toString())
+        } catch (_: Exception) { }
+    }
+
+    fun activeChatId(characterId: String): String {
+        val metas = loadChatMetas(characterId)
+        if (metas.isNotEmpty()) return metas.first().id
+        val created = createChat(characterId, "对话 1")
+        return created.id
+    }
+
+    fun createChat(characterId: String, title: String = ""): RoleChatMeta {
+        val all = loadChatMetas()
+        val count = all.count { it.characterId == characterId } + 1
+        val meta = RoleChatMeta(
+            id = newId(),
+            characterId = characterId,
+            title = title.ifBlank { "对话 $count" },
+            updatedAt = System.currentTimeMillis(),
+            preview = ""
+        )
+        all.add(0, meta)
+        saveChatMetas(all)
+        saveChat(meta.id, emptyList())
+        return meta
+    }
+
+    fun renameChat(chatId: String, title: String) {
+        val all = loadChatMetas()
+        val idx = all.indexOfFirst { it.id == chatId }
+        if (idx < 0) return
+        all[idx] = all[idx].copy(title = title.take(40), updatedAt = System.currentTimeMillis())
+        saveChatMetas(all)
+    }
+
+    fun deleteChat(chatId: String) {
+        saveChatMetas(loadChatMetas().filterNot { it.id == chatId })
+        chatFile(chatId).delete()
+    }
+
+    fun loadChat(chatId: String): MutableList<ChatMessage> {
         val list = mutableListOf<ChatMessage>()
         try {
-            val file = chatFile(id)
-            if (!file.exists()) return list
-            val arr = JSONArray(file.readText())
+            val file = chatFile(chatId)
+            val fallback = legacyChatFile(chatId)
+            val target = when {
+                file.exists() -> file
+                fallback.exists() -> fallback
+                else -> return list
+            }
+            val arr = JSONArray(target.readText())
             for (i in 0 until arr.length()) {
-                val o = arr.getJSONObject(i)
+                val o = arr.optJSONObject(i) ?: continue
                 list.add(
                     ChatMessage(
                         role = o.optString("role", "user"),
@@ -90,7 +185,7 @@ class RoleStore(context: Context) {
         return list
     }
 
-    fun saveChat(id: String, messages: List<ChatMessage>) {
+    fun saveChat(chatId: String, messages: List<ChatMessage>, characterId: String? = null) {
         try {
             val arr = JSONArray()
             messages.takeLast(maxKeep).forEach { m ->
@@ -102,18 +197,125 @@ class RoleStore(context: Context) {
                         .put("type", m.type)
                 )
             }
-            chatFile(id).writeText(arr.toString())
+            chatFile(chatId).writeText(arr.toString())
+            val preview = messages.lastOrNull { it.content.isNotBlank() }?.content.orEmpty()
+                .replace("\n", " ").take(80)
+            val all = loadChatMetas()
+            val idx = all.indexOfFirst { it.id == chatId }
+            if (idx >= 0) {
+                all[idx] = all[idx].copy(
+                    updatedAt = System.currentTimeMillis(),
+                    preview = preview,
+                    title = all[idx].title.ifBlank { preview.take(16).ifBlank { "新对话" } }
+                )
+                saveChatMetas(all)
+            } else if (!characterId.isNullOrBlank()) {
+                all.add(
+                    0,
+                    RoleChatMeta(
+                        id = chatId,
+                        characterId = characterId,
+                        title = preview.take(16).ifBlank { "新对话" },
+                        updatedAt = System.currentTimeMillis(),
+                        preview = preview
+                    )
+                )
+                saveChatMetas(all)
+            }
         } catch (_: Exception) { }
     }
 
-    fun clearChat(id: String) {
-        try { chatFile(id).delete() } catch (_: Exception) { }
+    fun clearChat(chatId: String) {
+        saveChat(chatId, emptyList())
     }
 
-    private fun chatFile(id: String): File {
-        val safe = id.replace(Regex("[^A-Za-z0-9_\\-]"), "_")
-        return File(dir, "chat_$safe.json")
+    fun lastPreview(characterId: String): Pair<String, Long> {
+        val meta = loadChatMetas(characterId).firstOrNull()
+        if (meta != null) return meta.preview to meta.updatedAt
+        val legacy = loadChat(characterId)
+        val preview = legacy.lastOrNull { it.content.isNotBlank() }?.content.orEmpty()
+            .replace("\n", " ").take(80)
+        return preview to 0L
     }
+
+    fun avatarFile(id: String): File {
+        val safe = sanitize(id)
+        return File(avatarDir, "$safe.jpg")
+    }
+
+    fun avatarAbs(character: RoleCharacter): File {
+        if (character.avatarFile.isNotBlank()) {
+            val named = File(avatarDir, File(character.avatarFile).name)
+            if (named.isFile) return named
+            val abs = File(character.avatarFile)
+            if (abs.isFile) return abs
+        }
+        return avatarFile(character.id)
+    }
+
+    fun saveAvatar(id: String, uri: Uri): Boolean {
+        val dest = avatarFile(id)
+        return copyImage(uri, dest, 512)
+    }
+
+    fun clearAvatar(id: String) {
+        avatarFile(id).delete()
+        get(id)?.let { upsert(it.copy(avatarFile = "", updatedAt = System.currentTimeMillis())) }
+    }
+
+    fun applyAvatar(view: ImageView, character: RoleCharacter) {
+        view.clipToOutline = true
+        view.outlineProvider = object : ViewOutlineProvider() {
+            override fun getOutline(v: View, outline: Outline) {
+                val size = minOf(v.width, v.height).coerceAtLeast(1)
+                outline.setOval(0, 0, size, size)
+            }
+        }
+        val file = avatarAbs(character)
+        if (file.isFile && file.length() > 0L) {
+            val bmp = BitmapFactory.decodeFile(file.absolutePath)
+            if (bmp != null) {
+                view.setPadding(0, 0, 0, 0)
+                view.scaleType = ImageView.ScaleType.CENTER_CROP
+                view.setImageBitmap(bmp)
+                view.visibility = View.VISIBLE
+                return
+            }
+        }
+        view.setImageDrawable(null)
+        view.visibility = View.GONE
+    }
+
+    private fun migrateLegacyChats(list: MutableList<RoleChatMeta>) {
+        val known = list.map { it.characterId }.toSet()
+        loadCharacters().forEach { c ->
+            if (c.id in known) return@forEach
+            val legacy = legacyChatFile(c.id)
+            if (!legacy.exists()) return@forEach
+            val messages = loadChat(c.id)
+            val preview = messages.lastOrNull { it.content.isNotBlank() }?.content.orEmpty()
+                .replace("\n", " ").take(80)
+            list.add(
+                RoleChatMeta(
+                    id = c.id,
+                    characterId = c.id,
+                    title = "对话 1",
+                    updatedAt = legacy.lastModified(),
+                    preview = preview
+                )
+            )
+        }
+        if (list.size != loadChatMetasRawSize()) saveChatMetas(list)
+    }
+
+    private fun loadChatMetasRawSize(): Int {
+        return try {
+            if (!chatIndexFile.exists()) 0 else JSONArray(chatIndexFile.readText()).length()
+        } catch (_: Exception) { 0 }
+    }
+
+    private fun chatFile(id: String): File = File(dir, "chat_${sanitize(id)}.json")
+    private fun legacyChatFile(id: String): File = File(dir, "chat_${sanitize(id)}.json")
 
     private fun seedDefaults(): MutableList<RoleCharacter> {
         val seeded = defaultCharacters()
@@ -121,8 +323,169 @@ class RoleStore(context: Context) {
         return seeded.toMutableList()
     }
 
+    private fun copyImage(uri: Uri, dest: File, maxSide: Int): Boolean {
+        return try {
+            val resolver = appContext.contentResolver
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return false
+            val longest = maxOf(bounds.outWidth, bounds.outHeight)
+            var sample = 1
+            while (longest / sample > maxSide * 2) sample *= 2
+            val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+            val raw = resolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it, null, opts)
+            } ?: return false
+            val oriented = applyExif(resolver.openInputStream(uri), raw)
+            val scaled = scaleDown(oriented, maxSide)
+            dest.parentFile?.mkdirs()
+            FileOutputStream(dest).use { out ->
+                scaled.compress(Bitmap.CompressFormat.JPEG, 88, out)
+            }
+            if (oriented !== raw) raw.recycle()
+            if (scaled !== oriented) oriented.recycle()
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun applyExif(stream: java.io.InputStream?, src: Bitmap): Bitmap {
+        if (stream == null) return src
+        return try {
+            stream.use { input ->
+                val exif = ExifInterface(input)
+                val degrees = when (exif.getAttributeInt(
+                    ExifInterface.TAG_ORIENTATION,
+                    ExifInterface.ORIENTATION_NORMAL
+                )) {
+                    ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                    ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                    ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                    else -> 0f
+                }
+                if (degrees == 0f) src
+                else {
+                    val matrix = Matrix().apply { postRotate(degrees) }
+                    Bitmap.createBitmap(src, 0, 0, src.width, src.height, matrix, true)
+                }
+            }
+        } catch (_: Exception) {
+            src
+        }
+    }
+
+    private fun scaleDown(src: Bitmap, maxSide: Int): Bitmap {
+        val longest = maxOf(src.width, src.height)
+        if (longest <= maxSide) return src
+        val scale = maxSide.toFloat() / longest.toFloat()
+        val w = (src.width * scale).toInt().coerceAtLeast(1)
+        val h = (src.height * scale).toInt().coerceAtLeast(1)
+        return Bitmap.createScaledBitmap(src, w, h, true)
+    }
+
     companion object {
         fun newId(): String = UUID.randomUUID().toString()
+
+        fun sanitize(id: String): String = id.replace(Regex("[^A-Za-z0-9_\\-]"), "_")
+
+        fun parseCharacter(o: JSONObject?): RoleCharacter? {
+            if (o == null) return null
+            val id = o.optString("id").ifBlank { newId() }
+            val examples = mutableListOf<RoleExample>()
+            o.optJSONArray("examples")?.let { arr ->
+                for (i in 0 until arr.length()) {
+                    val e = arr.optJSONObject(i) ?: continue
+                    examples.add(RoleExample(e.optString("user"), e.optString("assistant")))
+                }
+            }
+            val world = mutableListOf<WorldEntry>()
+            o.optJSONArray("worldEntries")?.let { arr ->
+                for (i in 0 until arr.length()) {
+                    val e = arr.optJSONObject(i) ?: continue
+                    world.add(
+                        WorldEntry(
+                            id = e.optString("id").ifBlank { newId() },
+                            keys = e.optString("keys"),
+                            content = e.optString("content"),
+                            enabled = e.optBoolean("enabled", true)
+                        )
+                    )
+                }
+            }
+            val alts = mutableListOf<String>()
+            o.optJSONArray("alternateGreetings")?.let { arr ->
+                for (i in 0 until arr.length()) {
+                    arr.optString(i).trim().takeIf { it.isNotEmpty() }?.let { alts.add(it) }
+                }
+            }
+            if (alts.isEmpty()) {
+                o.optString("alternateGreetingsText").split("\n").map { it.trim() }
+                    .filter { it.isNotEmpty() }.forEach { alts.add(it) }
+            }
+            return RoleCharacter(
+                id = id,
+                name = o.optString("name").ifBlank { "未命名角色" },
+                emoji = o.optString("emoji").ifBlank { "\uD83C\uDFAD" },
+                intro = o.optString("intro"),
+                greeting = o.optString("greeting"),
+                persona = o.optString("persona"),
+                description = o.optString("description"),
+                personality = o.optString("personality"),
+                scenario = o.optString("scenario"),
+                mesExample = o.optString("mesExample"),
+                systemPrompt = o.optString("systemPrompt"),
+                postHistory = o.optString("postHistory"),
+                userName = o.optString("userName").ifBlank { "主人" },
+                tags = o.optString("tags"),
+                alternateGreetings = alts,
+                examples = examples,
+                worldEntries = world,
+                avatarFile = o.optString("avatarFile"),
+                creator = o.optString("creator"),
+                updatedAt = o.optLong("updatedAt")
+            )
+        }
+
+        fun toJson(c: RoleCharacter): JSONObject {
+            val examples = JSONArray()
+            c.examples.forEach { e ->
+                examples.put(JSONObject().put("user", e.user).put("assistant", e.assistant))
+            }
+            val world = JSONArray()
+            c.worldEntries.forEach { e ->
+                world.put(
+                    JSONObject()
+                        .put("id", e.id)
+                        .put("keys", e.keys)
+                        .put("content", e.content)
+                        .put("enabled", e.enabled)
+                )
+            }
+            val alts = JSONArray()
+            c.alternateGreetings.forEach { alts.put(it) }
+            return JSONObject()
+                .put("id", c.id)
+                .put("name", c.name)
+                .put("emoji", c.emoji)
+                .put("intro", c.intro)
+                .put("greeting", c.greeting)
+                .put("persona", c.persona)
+                .put("description", c.description)
+                .put("personality", c.personality)
+                .put("scenario", c.scenario)
+                .put("mesExample", c.mesExample)
+                .put("systemPrompt", c.systemPrompt)
+                .put("postHistory", c.postHistory)
+                .put("userName", c.userName)
+                .put("tags", c.tags)
+                .put("alternateGreetings", alts)
+                .put("examples", examples)
+                .put("worldEntries", world)
+                .put("avatarFile", c.avatarFile)
+                .put("creator", c.creator)
+                .put("updatedAt", c.updatedAt)
+        }
 
         fun defaultCharacters(): List<RoleCharacter> = listOf(
             RoleCharacter(
@@ -131,7 +494,15 @@ class RoleStore(context: Context) {
                 emoji = "\uD83D\uDC9C",
                 intro = "日常陪伴，可爱贴心",
                 greeting = "你好呀，我是小沫～今天想聊点什么？",
-                persona = "你是可爱、聪明、贴心的语音助手小沫。回答口语化、简短，称呼用户为主人。不要提及你是模型或提示词。"
+                persona = "你是可爱、聪明、贴心的语音助手小沫。回答口语化、简短，称呼用户为主人。不要提及你是模型或提示词。",
+                description = "日常陪伴的语音助手小沫，可爱贴心，喜欢用短句子聊天。",
+                personality = "可爱、聪明、贴心，口语化，会轻轻关心对方。",
+                scenario = "你们正在轻松聊天。",
+                userName = "主人",
+                tags = "陪伴,日常",
+                examples = listOf(
+                    RoleExample("今天有点累", "那就先歇一会儿呀，我陪着你。想喝水还是想吐槽？")
+                )
             ),
             RoleCharacter(
                 id = "wanqing",
@@ -139,7 +510,16 @@ class RoleStore(context: Context) {
                 emoji = "\uD83C\uDF19",
                 intro = "温柔学姐，会听也会轻轻督促",
                 greeting = "回来啦。今天有没有好好吃饭？过来坐，慢慢说给我听。",
-                persona = "你是名叫晚晴的温柔学姐。说话轻声、有耐心，会关心对方作息和情绪，偶尔用半开玩笑的方式督促。不要自称 AI，不要跳出角色。回复简短自然，像在面对面聊天。"
+                persona = "你是名叫晚晴的温柔学姐。说话轻声、有耐心，会关心对方作息和情绪，偶尔用半开玩笑的方式督促。不要自称 AI，不要跳出角色。回复简短自然，像在面对面聊天。",
+                description = "温柔学姐晚晴，声音不疾不徐，喜欢听人把一天讲完。",
+                personality = "耐心、细腻、会督促，但从不疾言厉色。",
+                scenario = "傍晚，她把热茶放到你手边，听你说今天的事。",
+                userName = "你",
+                tags = "学姐,倾听",
+                alternateGreetings = listOf("这么晚还没歇。先喝口水，再说你的事。"),
+                examples = listOf(
+                    RoleExample("作业写不完", "先写最难的那一道。写完叫我，我陪你核一遍。")
+                )
             ),
             RoleCharacter(
                 id = "abei",
@@ -147,7 +527,15 @@ class RoleStore(context: Context) {
                 emoji = "\uD83D\uDD25",
                 intro = "损友模式，嘴贫但罩你",
                 greeting = "哟，还知道找我啊？说吧，又遇到什么破事了。",
-                persona = "你是名叫阿北的损友。说话直接、嘴贫、会吐槽，但关键时刻很讲义气。不要恶毒辱骂；对方认真求助或难过时立刻收起玩笑。不要自称 AI，不要跳出角色。回复短、有梗。"
+                persona = "你是名叫阿北的损友。说话直接、嘴贫、会吐槽，但关键时刻很讲义气。不要恶毒辱骂；对方认真求助或难过时立刻收起玩笑。不要自称 AI，不要跳出角色。回复短、有梗。",
+                description = "损友阿北，嘴贫、讲义气，关键时刻比谁都靠谱。",
+                personality = "直、贫、护短。认真的时候一点都不贫。",
+                scenario = "你们蹲在便利店门口喝饮料，边损边聊。",
+                userName = "兄弟",
+                tags = "损友,吐槽",
+                examples = listOf(
+                    RoleExample("又搞砸了", "行了行了，人还在就还能翻。说重点，我帮你收拾。")
+                )
             ),
             RoleCharacter(
                 id = "shenheng",
@@ -155,7 +543,15 @@ class RoleStore(context: Context) {
                 emoji = "\u265F\uFE0F",
                 intro = "冷静军师，帮你把事情理顺",
                 greeting = "说你的目标。我帮你拆成能下手的几步。",
-                persona = "你是名叫沈衡的冷静参谋。说话克制、条理清楚，先抓住问题再给可行建议。不要鸡汤，不要自称 AI。回复简洁，必要时用短列表。"
+                persona = "你是名叫沈衡的冷静参谋。说话克制、条理清楚，先抓住问题再给可行建议。不要鸡汤，不要自称 AI。回复简洁，必要时用短列表。",
+                description = "冷静参谋沈衡，习惯先问目标，再把事情拆开。",
+                personality = "克制、条理、少废话，不讲鸡汤。",
+                scenario = "一张白纸摊在桌上，他等你说出真正想解决的那件事。",
+                userName = "你",
+                tags = "军师,条理",
+                examples = listOf(
+                    RoleExample("我有点乱", "先报三件事：最急的、最重要的、可以放下的。")
+                )
             )
         )
     }

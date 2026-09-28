@@ -93,7 +93,8 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
                 })
                 pendingFallback?.let { text ->
                     pendingFallback = null
-                    main.post { speakFallback(text, speechGeneration) }
+                    val generation = speechGeneration
+                    main.post { speakFallback(text, generation) }
                 }
             }
         }
@@ -274,7 +275,8 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
             }
         }
         speakingTaiwan = taiwan
-        if (interrupt) stopInternal()
+        // Each chunk gets its own generation; late callbacks cannot advance another chunk.
+        stopInternal()
         val generation = speechGeneration
         currentText = text
         fallbackStarted = false
@@ -322,6 +324,7 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
 
     private fun playNextOrFinish(generation: Long) {
         if (generation != speechGeneration) return
+        stopInternal()
         val next = if (speakQueue.isEmpty()) null else speakQueue.removeFirst()
         if (next != null) {
             startSpeakChunk(next, speakingTaiwan, interrupt = false)
@@ -398,6 +401,7 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
                     }
                     main.post {
                         if (generation != speechGeneration) return@post
+                        if (engineSettled || fallbackStarted) { out.delete(); return@post }
                         if (httpCall === call) httpCall = null
                         playFile(out, text, generation)
                     }
@@ -437,6 +441,7 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
         rate: String,
         pitch: String
     ) {
+        val settled = java.util.concurrent.atomic.AtomicBoolean(false)
         val audio = FileOutputStream(out)
 
         // Edge 现行协议要求 Sec-MS-GEC 签名、版本参数及新版扩展 Origin；
@@ -505,23 +510,26 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
             }
 
             override fun onMessage(ws: WebSocket, frameText: String) {
-                if (frameText.contains("Path:turn.end")) {
+                if (frameText.contains("Path:turn.end") && settled.compareAndSet(false, true)) {
                     try { audio.flush(); audio.close() } catch (_: Exception) { }
-                    if (generation != speechGeneration) { out.delete(); return }
-                    socket = null
                     ws.close(1000, null)
-                    main.post { if (generation == speechGeneration) playFile(out, text, generation) }
+                    main.post {
+                        if (generation != speechGeneration || fallbackStarted) { out.delete(); return@post }
+                        if (socket === ws) socket = null
+                        playFile(out, text, generation)
+                    }
                 }
             }
 
             override fun onFailure(ws: WebSocket, t: Throwable, response: Response?) {
+                if (!settled.compareAndSet(false, true)) return
                 try { audio.close() } catch (_: Exception) { }
                 out.delete()
                 main.post {
                     if (generation != speechGeneration) return@post
                     if (voice.contains("DragonHD")) {
                         explicitVoice = "zh-TW-HsiaoChenNeural"
-                        speak(text, taiwan = false)
+                        startSpeakChunk(text, taiwan = false, interrupt = false)
                     } else {
                         speakFallback(text, generation)
                     }
@@ -534,14 +542,14 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
         socket = ws
         // Edge 服务偶尔可能连接成功但不返回 turn.end；超时后自动切到系统 TTS。
         main.postDelayed({
-            if (generation == speechGeneration && isSpeaking && socket === ws && !fallbackStarted) {
+            if (generation == speechGeneration && isSpeaking && socket === ws && !fallbackStarted && settled.compareAndSet(false, true)) {
                 try { ws.cancel() } catch (_: Exception) { }
                 socket = null
                 try { audio.close() } catch (_: Exception) { }
                 out.delete()
                 if (voice.contains("DragonHD")) {
                     explicitVoice = "zh-TW-HsiaoChenNeural"
-                    speak(text, taiwan = false)
+                    startSpeakChunk(text, taiwan = false, interrupt = false)
                 } else {
                     speakFallback(text, generation)
                 }
@@ -591,6 +599,10 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
     private fun speakFallback(text: String, generation: Long = speechGeneration) {
         if (generation != speechGeneration || text.isBlank() || fallbackStarted) return
         fallbackStarted = true
+        try { player?.stop(); player?.release() } catch (_: Exception) { }
+        player = null
+        try { httpCall?.cancel() } catch (_: Exception) { }
+        httpCall = null
         try { socket?.cancel() } catch (_: Exception) { }
         socket = null
         val engine = fallbackTts

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <files-path name="roles" path="roles/" />
+    <cache-path name="role_export" path="role_export/" />
+</paths>

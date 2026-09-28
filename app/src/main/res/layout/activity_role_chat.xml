@@ -11,8 +11,13 @@
                 android:gravity="center" android:background="@drawable/icon_touch_bg" android:text="‹"
                 android:textColor="@color/purple_700" android:textSize="28sp" android:textStyle="bold"
                 android:contentDescription="@string/role_back"/>
-            <TextView android:id="@+id/tvRoleChatEmoji" android:layout_width="40dp" android:layout_height="40dp"
-                android:gravity="center" android:textSize="22sp" android:background="@drawable/glass_avatar"/>
+            <FrameLayout android:layout_width="40dp" android:layout_height="40dp">
+                <TextView android:id="@+id/tvRoleChatEmoji" android:layout_width="40dp" android:layout_height="40dp"
+                    android:gravity="center" android:textSize="22sp" android:background="@drawable/glass_avatar"/>
+                <ImageView android:id="@+id/ivRoleChatAvatar" android:layout_width="40dp" android:layout_height="40dp"
+                    android:scaleType="centerCrop" android:background="@drawable/glass_avatar"
+                    android:visibility="gone" android:contentDescription="@string/role_label_emoji"/>
+            </FrameLayout>
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
                 android:layout_marginStart="10dp" android:orientation="vertical">
                 <TextView android:id="@+id/tvRoleChatName" android:layout_width="wrap_content" android:layout_height="wrap_content"

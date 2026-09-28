@@ -1,24 +1,50 @@
 package com.suze.aivoice
 
+import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
+import android.text.format.DateFormat
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import java.util.Date
 
 class RoleLoungeActivity : AppCompatActivity() {
     private lateinit var store: RoleStore
     private lateinit var prefs: Prefs
     private lateinit var llm: LlmClient
     private lateinit var adapter: RoleCardAdapter
+    private lateinit var emptyView: TextView
     private val items = mutableListOf<RoleCharacter>()
+
+    private val importCard = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) return@registerForActivityResult
+        runCatching {
+            contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        }
+        val imported = TavernCardIO.importUri(this, uri)
+        if (imported == null) {
+            Toast.makeText(this, R.string.toast_role_import_failed, Toast.LENGTH_SHORT).show()
+            return@registerForActivityResult
+        }
+        store.upsert(imported.copy(updatedAt = System.currentTimeMillis()))
+        reload()
+        Toast.makeText(this, R.string.toast_role_imported, Toast.LENGTH_SHORT).show()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,15 +52,20 @@ class RoleLoungeActivity : AppCompatActivity() {
         store = RoleStore(this)
         prefs = Prefs(this)
         llm = LlmClient(prefs)
+        emptyView = findViewById(R.id.tvRoleEmpty)
         findViewById<View>(R.id.btnRoleBack).setOnClickListener { finish() }
         findViewById<View>(R.id.btnRoleAdd).setOnClickListener {
             startActivity(Intent(this, RoleEditActivity::class.java))
+        }
+        findViewById<View>(R.id.btnRoleImport).setOnClickListener {
+            importCard.launch(arrayOf("application/json", "image/png", "image/*", "*/*"))
         }
         findViewById<Button>(R.id.btnConnectLlm).setOnClickListener {
             startActivity(Intent(this, LlmConnectActivity::class.java))
         }
         adapter = RoleCardAdapter(
             items,
+            store,
             onClick = { openChat(it) },
             onLongClick = { view, character -> showCardMenu(view, character) }
         )
@@ -53,6 +84,7 @@ class RoleLoungeActivity : AppCompatActivity() {
         items.clear()
         items.addAll(store.loadCharacters())
         adapter.notifyDataSetChanged()
+        emptyView.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
     }
 
     private fun refreshLlmStatus() {
@@ -79,7 +111,8 @@ class RoleLoungeActivity : AppCompatActivity() {
     private fun showCardMenu(anchor: View, character: RoleCharacter) {
         val pop = PopupMenu(this, anchor)
         pop.menu.add(0, 1, 0, getString(R.string.role_edit))
-        pop.menu.add(0, 2, 1, getString(R.string.role_delete))
+        pop.menu.add(0, 3, 1, getString(R.string.role_duplicate))
+        pop.menu.add(0, 2, 2, getString(R.string.role_delete))
         pop.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 1 -> {
@@ -89,10 +122,16 @@ class RoleLoungeActivity : AppCompatActivity() {
                     )
                     true
                 }
+                3 -> {
+                    val copy = store.duplicate(character.id)
+                    if (copy != null) {
+                        reload()
+                        Toast.makeText(this, R.string.toast_role_duplicated, Toast.LENGTH_SHORT).show()
+                    }
+                    true
+                }
                 2 -> {
-                    store.delete(character.id)
-                    reload()
-                    Toast.makeText(this, R.string.toast_role_deleted, Toast.LENGTH_SHORT).show()
+                    confirmDelete(character)
                     true
                 }
                 else -> false
@@ -101,15 +140,31 @@ class RoleLoungeActivity : AppCompatActivity() {
         pop.show()
     }
 
+    private fun confirmDelete(character: RoleCharacter) {
+        AlertDialog.Builder(this)
+            .setMessage(R.string.role_confirm_delete)
+            .setPositiveButton(R.string.role_confirm_ok) { _, _ ->
+                store.delete(character.id)
+                reload()
+                Toast.makeText(this, R.string.toast_role_deleted, Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(R.string.role_cancel, null)
+            .show()
+    }
+
     private class RoleCardAdapter(
         private val items: List<RoleCharacter>,
+        private val store: RoleStore,
         private val onClick: (RoleCharacter) -> Unit,
         private val onLongClick: (View, RoleCharacter) -> Unit
     ) : RecyclerView.Adapter<RoleCardAdapter.VH>() {
         class VH(view: View) : RecyclerView.ViewHolder(view) {
             val emoji: TextView = view.findViewById(R.id.tvRoleEmoji)
+            val avatar: ImageView = view.findViewById(R.id.ivRoleAvatar)
             val name: TextView = view.findViewById(R.id.tvRoleName)
             val intro: TextView = view.findViewById(R.id.tvRoleIntro)
+            val preview: TextView = view.findViewById(R.id.tvRolePreview)
+            val time: TextView = view.findViewById(R.id.tvRoleTime)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
@@ -119,11 +174,17 @@ class RoleLoungeActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(holder: VH, position: Int) {
             val item = items[position]
+            val ctx = holder.itemView.context
             holder.emoji.text = item.emoji.ifBlank { "\uD83C\uDFAD" }
             holder.name.text = item.name
-            holder.intro.text = item.intro.ifBlank {
-                holder.itemView.context.getString(R.string.role_intro_empty)
+            holder.intro.text = item.displayIntro().ifBlank {
+                ctx.getString(R.string.role_intro_empty)
             }
+            val (preview, updatedAt) = store.lastPreview(item.id)
+            holder.preview.text = preview.ifBlank { ctx.getString(R.string.role_preview_empty) }
+            holder.time.text = if (updatedAt > 0L) formatTime(updatedAt) else ""
+            store.applyAvatar(holder.avatar, item)
+            holder.avatar.visibility = if (store.avatarAbs(item).isFile) View.VISIBLE else View.GONE
             holder.itemView.setOnClickListener { onClick(item) }
             holder.itemView.setOnLongClickListener {
                 onLongClick(holder.itemView, item)
@@ -132,5 +193,15 @@ class RoleLoungeActivity : AppCompatActivity() {
         }
 
         override fun getItemCount(): Int = items.size
+
+        private fun formatTime(ms: Long): String {
+            val now = System.currentTimeMillis()
+            val diff = now - ms
+            return when {
+                diff < 60_000L -> "刚刚"
+                diff < 3_600_000L -> "${diff / 60_000L}分钟前"
+                else -> DateFormat.format("MM-dd HH:mm", Date(ms)).toString()
+            }
+        }
     }
 }

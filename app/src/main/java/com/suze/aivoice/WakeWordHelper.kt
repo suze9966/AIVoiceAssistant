@@ -35,6 +35,7 @@ class WakeWordHelper(
             override fun onEndOfSpeech() {}
             override fun onError(error: Int) { restartIfRunning() }
             override fun onResults(results: Bundle?) {
+                if (!running) return
                 val list = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 val text = list?.joinToString(" ") ?: ""
                 if (text.contains(wakeWord) || text.replace(" ", "").contains(wakeWord)) {
@@ -46,6 +47,7 @@ class WakeWordHelper(
                 }
             }
             override fun onPartialResults(partialResults: Bundle?) {
+                if (!running) return
                 val list = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 val text = list?.joinToString(" ") ?: ""
                 if (text.contains(wakeWord) || text.replace(" ", "").contains(wakeWord)) {

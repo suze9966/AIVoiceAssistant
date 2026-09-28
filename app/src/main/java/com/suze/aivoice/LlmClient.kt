@@ -25,6 +25,8 @@ class LlmClient(private val prefs: Prefs) {
     var extraSystemPrompt: String? = null
     /** 只有角色聊天在开关打开时才追加云端推理提示，主聊天不套用。 */
     var applyCloudThink: Boolean = false
+    /** 角色聊天关闭后，未接模型或云端失败时不要用小沫本地闲聊顶替。 */
+    var allowLocalFallback: Boolean = true
 
     fun isConfigured(): Boolean = llmConfigured()
 
@@ -135,7 +137,8 @@ class LlmClient(private val prefs: Prefs) {
         return t.replace(Regex("[ \\t]{2,}"), " ").trim()
     }
 
-    private fun localReply(lastUser: String): String = local.reply(lastUser)
+    private fun localReply(lastUser: String): String =
+        if (allowLocalFallback) local.reply(lastUser) else ""
 
     private fun ResponseBody.readUtf8Limited(maxBytes: Int): String? {
         if (contentLength() > maxBytes.toLong()) return null
@@ -157,7 +160,9 @@ class LlmClient(private val prefs: Prefs) {
     suspend fun chat(history: List<ChatMessage>): String = withContext(Dispatchers.IO) {
         val lastUser = history.lastOrNull { it.role == "user" }?.content.orEmpty()
         if (!llmConfigured()) {
-            if (freeChatEnabled()) free.reply(freeHistory(history))?.takeIf { it.isNotBlank() }?.let { return@withContext it }
+            if (allowLocalFallback && freeChatEnabled()) {
+                free.reply(freeHistory(history))?.takeIf { it.isNotBlank() }?.let { return@withContext it }
+            }
             return@withContext localReply(lastUser)
         }
         try {
@@ -180,9 +185,10 @@ class LlmClient(private val prefs: Prefs) {
             val sb = StringBuilder()
             val lastUser = history.lastOrNull { it.role == "user" }?.content.orEmpty()
             if (!llmConfigured()) {
-                val online = if (freeChatEnabled()) free.reply(freeHistory(history)) else null
+                val online = if (allowLocalFallback && freeChatEnabled()) free.reply(freeHistory(history)) else null
                 val ans = online?.takeIf { it.isNotBlank() } ?: localReply(lastUser)
-                onDelta(ans); return@withContext ans
+                if (ans.isNotEmpty()) onDelta(ans)
+                return@withContext ans
             }
             try {
                 client.newCall(buildRequest(true, buildBody(history, true))).execute().use { resp ->

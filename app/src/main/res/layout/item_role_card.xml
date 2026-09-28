@@ -4,15 +4,28 @@
     android:orientation="horizontal" android:gravity="center_vertical"
     android:background="@drawable/glass_card" android:elevation="2dp"
     android:padding="16dp" android:layout_marginBottom="10dp">
-    <TextView android:id="@+id/tvRoleEmoji" android:layout_width="48dp" android:layout_height="48dp"
-        android:gravity="center" android:textSize="26sp" android:background="@drawable/glass_avatar"/>
+    <FrameLayout android:layout_width="48dp" android:layout_height="48dp">
+        <TextView android:id="@+id/tvRoleEmoji" android:layout_width="48dp" android:layout_height="48dp"
+            android:gravity="center" android:textSize="26sp" android:background="@drawable/glass_avatar"/>
+        <ImageView android:id="@+id/ivRoleAvatar" android:layout_width="48dp" android:layout_height="48dp"
+            android:scaleType="centerCrop" android:background="@drawable/glass_avatar"
+            android:visibility="gone" android:contentDescription="@string/role_label_emoji"/>
+    </FrameLayout>
     <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
         android:layout_marginStart="12dp" android:orientation="vertical">
-        <TextView android:id="@+id/tvRoleName" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:textColor="@color/text_primary" android:textSize="17sp" android:textStyle="bold"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:gravity="center_vertical">
+            <TextView android:id="@+id/tvRoleName" android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:textColor="@color/text_primary" android:textSize="17sp" android:textStyle="bold"/>
+            <TextView android:id="@+id/tvRoleTime" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginStart="8dp" android:textColor="@color/text_tertiary" android:textSize="11sp"/>
+        </LinearLayout>
         <TextView android:id="@+id/tvRoleIntro" android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_marginTop="3dp" android:textColor="@color/text_secondary" android:textSize="13sp"
-            android:maxLines="2" android:ellipsize="end"/>
+            android:maxLines="1" android:ellipsize="end"/>
+        <TextView android:id="@+id/tvRolePreview" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="2dp" android:textColor="@color/text_tertiary" android:textSize="12sp"
+            android:maxLines="1" android:ellipsize="end"/>
     </LinearLayout>
     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
         android:text="›" android:textColor="@color/purple_700" android:textSize="22sp"/>

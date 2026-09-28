@@ -55,6 +55,8 @@ class MainActivity : AppCompatActivity() {
     private var lastSentAt: Long = 0L
     // 是否正在识别中（防止重复启动语音识别）
     private var isListening = false
+    private var acceptingRecognition = false
+    private var streamSpeechCancelled = false
     // 语音聆听开关：开启后持续识别主人的话并自动发送
     private var listeningEnabled = false
     // 只有点了麦克风才在授权后自动开启聆听；启动时申请权限不能顺带开麦。
@@ -62,6 +64,8 @@ class MainActivity : AppCompatActivity() {
     /** 流式回复里已经开口朗读到的位置，避免整段合成完才出声。 */
     private var streamSpokenUntil = 0
     private var streamSpeakStarted = false
+    private var speechSession = 0L
+    private var notBeforeListenAt = 0L
 
     private val REQ_AUDIO = 1001
 
@@ -252,6 +256,7 @@ class MainActivity : AppCompatActivity() {
             val word = prefs.wakeWord.ifBlank { "你好小沫" }
             wakeHelper = WakeWordHelper(this, word) {
                 runOnUiThread {
+                    if (tts.isSpeaking || isSending) return@runOnUiThread
                     Toast.makeText(this, "唤醒成功，请说话", Toast.LENGTH_SHORT).show()
                     startListening()
                 }
@@ -286,7 +291,11 @@ class MainActivity : AppCompatActivity() {
                     tts.setEmotion(emotion.ttsRate(), emotion.ttsPitch())
                     tts.setRate(prefs.ttsRate)
                     tts.setPitch(prefs.ttsPitch)
-                    tts.speak(care, prefs.taiwanVoice)
+                    if (!isSending && !tts.isSpeaking) {
+                        suspendRecognitionForSpeech()
+                        bindListenAfterSpeak()
+                        tts.speak(care, prefs.taiwanVoice)
+                    }
                 }
             }
         }
@@ -359,12 +368,16 @@ class MainActivity : AppCompatActivity() {
             override fun onReadyForSpeech(params: Bundle?) {}
             override fun onBeginningOfSpeech() {
                 // 主人开口就打断朗读，但不能边播边听：手机没有小智那种 AEC，会把自己的声音当输入。
-                if (tts.isSpeaking) abortSpeech()
+                if (tts.isSpeaking || System.currentTimeMillis() < notBeforeListenAt) {
+                    suspendRecognitionForSpeech()
+                }
             }
             override fun onRmsChanged(rmsdB: Float) {}
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() { isListening = false }
             override fun onError(error: Int) {
+                if (!acceptingRecognition) return
+                acceptingRecognition = false
                 isListening = false
                 // 聆听模式：出错后稍等重试（如未检测到语音、超时等，属正常情况不打扰用户）
                 if (listeningEnabled) {
@@ -377,20 +390,24 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             override fun onResults(results: Bundle?) {
+                if (!acceptingRecognition) return
+                acceptingRecognition = false
                 isListening = false
+                if (tts.isSpeaking || isSending || System.currentTimeMillis() < notBeforeListenAt) {
+                    if (listeningEnabled) scheduleRestartListening()
+                    return
+                }
                 val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     ?.firstOrNull()?.trim()
-                if (!text.isNullOrEmpty() && !isSending) {
-                    // 立刻上锁，防止同一轮识别被回调两次时两条都穿透
-                    isSending = true
+                if (!text.isNullOrEmpty()) {
                     editInput.setText("")
                     sendToLlm(text)
                 } else if (listeningEnabled) {
-                    // 没识别到有效内容：继续听下一句
                     scheduleRestartListening()
                 }
             }
             override fun onPartialResults(partialResults: Bundle?) {
+                if (!acceptingRecognition || tts.isSpeaking || isSending) return
                 val text = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     ?.firstOrNull()
                 if (!text.isNullOrEmpty()) editInput.setText(text)
@@ -405,7 +422,12 @@ class MainActivity : AppCompatActivity() {
             return
         }
         // 已在识别/发送中就不重复启动，避免一次说话产生两份结果
-        if (isListening || isSending) return
+        if (isListening || isSending || tts.isSpeaking || isFinishing || isDestroyed) return
+        if (System.currentTimeMillis() < notBeforeListenAt) {
+            scheduleRestartListening()
+            return
+        }
+        acceptingRecognition = true
         isListening = true
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -419,11 +441,12 @@ class MainActivity : AppCompatActivity() {
     /** 聆听模式的“续听”：识别一轮结束后，稍等片刻自动开始听下一句 */
     private fun scheduleRestartListening() {
         if (!listeningEnabled) return
+        val wait = (notBeforeListenAt - System.currentTimeMillis()).coerceAtLeast(280L)
         recycler.postDelayed({
-            if (listeningEnabled && !isListening && !isSending) {
+            if (listeningEnabled && !isListening && !isSending && !tts.isSpeaking && System.currentTimeMillis() >= notBeforeListenAt) {
                 startListening()
             }
-        }, 280L)
+        }, wait)
     }
 
     /** 开启语音聆听：申请麦克风权限 → 持续识别主人的话并自动发送 */
@@ -449,6 +472,7 @@ class MainActivity : AppCompatActivity() {
     /** 关闭语音聆听 */
     private fun stopListeningMode() {
         listeningEnabled = false
+        acceptingRecognition = false
         isListening = false
         runCatching { recognizer?.stopListening() }
         runCatching { recognizer?.cancel() }
@@ -458,17 +482,22 @@ class MainActivity : AppCompatActivity() {
 
     // ---------------- 发送：流式 / 非流式 ----------------
     private fun sendToLlm(userText: String) {
+        if (isSending) return
         // 防重复：2 秒内完全相同的文本只处理一次（语音引擎双回调 / 双击发送按钮）
         val now = System.currentTimeMillis()
         if (userText == lastSentText && now - lastSentAt < 2000L) {
-            isSending = false
+            scheduleRestartListening()
             return
         }
         lastSentText = userText
         lastSentAt = now
 
         isSending = true
+        speechSession += 1L
+        val session = speechSession
+        suspendRecognitionForSpeech()
         abortSpeech()
+        streamSpeechCancelled = false
         streamSpokenUntil = 0
         streamSpeakStarted = false
 
@@ -528,7 +557,7 @@ class MainActivity : AppCompatActivity() {
                 // 流式：逐字显示（打字机）
                 rawText = llm.chatStream(requestHistory) { delta ->
                     runOnUiThread {
-                        if (isFinishing || isDestroyed || history.isEmpty()) return@runOnUiThread
+                        if (session != speechSession || isFinishing || isDestroyed || history.isEmpty()) return@runOnUiThread
                         val last = history.last()
                         val cur = last.content + delta
                         history[history.size - 1] = last.copy(content = cur)
@@ -543,7 +572,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 val reply = llm.chat(requestHistory)
                 runOnUiThread {
-                    if (history.isNotEmpty()) {
+                    if (session == speechSession && history.isNotEmpty()) {
                         history[history.size - 1] = history.last().copy(content = reply)
                         adapter.updateLast(reply)
                         scrollToBottom()
@@ -585,13 +614,15 @@ class MainActivity : AppCompatActivity() {
             isSending = false
 
             // 小智式：第一句已经开口就只补后面；否则整段分句后先说第一句。
-            val speakable = visibleSpeakable(finalText)
+            if (session == speechSession && !streamSpeechCancelled) {
+            val speakable = visibleSpeakable(if (streamSpeakStarted) rawText else finalText)
             val remain = if (streamSpeakStarted) {
                 if (streamSpokenUntil in 0 until speakable.length) speakable.substring(streamSpokenUntil).trim() else ""
             } else {
                 speakable
             }
             if (remain.isNotBlank()) startOrQueueSpeak(remain)
+            }
 
             // 思考引擎：到反射周期就发起一次反思（异步，不阻塞）
             if (prefs.mindEnabled && mind.shouldReflect()) {
@@ -615,6 +646,7 @@ class MainActivity : AppCompatActivity() {
           } finally {
             isSending = false
             if (::store.isInitialized && history.isNotEmpty()) store.save(history)
+            if (!tts.isSpeaking) scheduleRestartListening()
           }
         }
     }
@@ -703,6 +735,8 @@ class MainActivity : AppCompatActivity() {
             }
             tts.setRate(prefs.ttsRate)
             tts.setPitch(prefs.ttsPitch)
+            suspendRecognitionForSpeech()
+            bindListenAfterSpeak()
             tts.speak(text, prefs.taiwanVoice)
           } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
@@ -738,18 +772,25 @@ class MainActivity : AppCompatActivity() {
     }
 
 
+    private fun suspendRecognitionForSpeech() {
+        acceptingRecognition = false
+        isListening = false
+        runCatching { recognizer?.cancel() }
+    }
+
     private fun abortSpeech() {
+        streamSpeechCancelled = true
         if (!::tts.isInitialized) return
         tts.onSpeakDone = null
         tts.stop()
-        streamSpeakStarted = false
-        streamSpokenUntil = 0
+        // Keep the spoken cursor: stopping must not cause a later full replay.
     }
 
     private fun bindListenAfterSpeak() {
         if (listeningEnabled) {
             tts.onSpeakDone = {
                 runOnUiThread {
+                    notBeforeListenAt = System.currentTimeMillis() + 700L
                     if (listeningEnabled && !isSending) scheduleRestartListening()
                 }
             }
@@ -767,15 +808,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startOrQueueSpeak(text: String) {
-        if (text.isBlank() || !::tts.isInitialized) return
+        if (text.isBlank() || !::tts.isInitialized || streamSpeechCancelled) return
+        suspendRecognitionForSpeech()
         applySpeakVoice()
         bindListenAfterSpeak()
         if (streamSpeakStarted || tts.isSpeaking) {
             tts.enqueueSpeak(text, prefs.taiwanVoice)
         } else {
             tts.speak(text, prefs.taiwanVoice)
-            streamSpeakStarted = true
         }
+        streamSpeakStarted = true
     }
 
     /** 去掉内心独白和表情包标记，只留真正要读出口的字。 */
