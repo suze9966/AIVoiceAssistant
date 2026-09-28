@@ -201,7 +201,8 @@ class RoleChatActivity : AppCompatActivity() {
                 } else {
                     llm.chat(requestHistory)
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 getString(R.string.role_empty_reply)
             }
             if (isFinishing) {
@@ -216,7 +217,8 @@ class RoleChatActivity : AppCompatActivity() {
             store.saveChat(c.id, history)
             scrollToBottom()
             tvStatus.text = c.intro.ifBlank { getString(R.string.role_chat_ready) }
-          } catch (_: Exception) {
+          } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             if (!isFinishing && history.isNotEmpty()) {
                 val fallback = getString(R.string.role_empty_reply)
                 history[history.size - 1] = ChatMessage("assistant", fallback, isMe = false)

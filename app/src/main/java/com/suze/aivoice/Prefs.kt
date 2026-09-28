@@ -192,6 +192,22 @@ class Prefs(context: Context) {
         }
         set(v) = sp.edit().putString("cosyVoice", v).apply()
 
+    /** 已上传到硅基流动的克隆音色 URI（speech:...）。 */
+    var cloneVoiceUri: String
+        get() = sp.getString("cloneVoiceUri", "") ?: ""
+        set(v) = sp.edit().putString("cloneVoiceUri", v).apply()
+
+    var cloneVoiceName: String
+        get() = sp.getString("cloneVoiceName", "") ?: ""
+        set(v) = sp.edit().putString("cloneVoiceName", v).apply()
+
+    var cloneVoiceEnabled: Boolean
+        get() = sp.getBoolean("cloneVoiceEnabled", false) && cloneVoiceUri.startsWith("speech:")
+        set(v) = sp.edit().putBoolean("cloneVoiceEnabled", v).apply()
+
+    fun effectiveCosyVoice(): String =
+        if (cloneVoiceEnabled) cloneVoiceUri else cosyVoice
+
     fun weatherSourceLabel(): String =
         WEATHER_SOURCE_OPTIONS.firstOrNull { it.first == weatherSource }?.second ?: "自动（免费优先）"
 

@@ -31,7 +31,7 @@
     <color name="halo_listening">#5B45DD</color>
     <color name="halo_listening_fill">#305B45DD</color>
     <color name="halo_speaking">#30C7B5</color>
-    <color name="ic_launcher_background">#6657E7</color>
+    <color name="ic_launcher_background">#FEFEFC</color>
     <color name="glass_fill">#99FFFFFF</color>
     <color name="glass_fill_strong">#CCFFFFFF</color>
     <color name="glass_stroke">#88FFFFFF</color>

@@ -26,6 +26,7 @@ import java.security.MessageDigest
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import java.util.ArrayDeque
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
@@ -60,6 +61,9 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
     private var currentText: String = ""
     /** 每次开始/停止朗读都会递增；旧网络回调不得影响新朗读。 */
     private var speechGeneration: Long = 0L
+    /** 小智式分句队列：先播第一句，其余排在后面。 */
+    private val speakQueue: ArrayDeque<String> = ArrayDeque()
+    private var speakingTaiwan: Boolean = false
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
@@ -237,6 +241,31 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
      */
     fun speak(text: String, taiwan: Boolean = false) {
         if (text.isBlank()) return
+        speakQueue.clear()
+        val chunks = splitSpeakChunks(text)
+        if (chunks.size > 1) {
+            for (i in 1 until chunks.size) speakQueue.addLast(chunks[i])
+        }
+        startSpeakChunk(chunks[0], taiwan, interrupt = true)
+    }
+
+    /** 上一句还在播时，把后续句子排进队列，不打断。 */
+    fun enqueueSpeak(text: String, taiwan: Boolean = false) {
+        if (text.isBlank()) return
+        val chunks = splitSpeakChunks(text)
+        if (!isSpeaking && speakQueue.isEmpty()) {
+            speak(text, taiwan)
+            return
+        }
+        speakingTaiwan = taiwan
+        chunks.forEach { speakQueue.addLast(it) }
+    }
+
+    fun hasQueuedSpeech(): Boolean = speakQueue.isNotEmpty()
+
+    fun speakingText(): String = currentText
+
+    private fun startSpeakChunk(text: String, taiwan: Boolean, interrupt: Boolean) {
         if (taiwan) {
             currentLocale = Locale.TAIWAN
             val current = explicitVoice.orEmpty()
@@ -244,18 +273,16 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
                 explicitVoice = "zh-TW-HsiaoChenNeural"
             }
         }
-
-        stopInternal()
+        speakingTaiwan = taiwan
+        if (interrupt) stopInternal()
         val generation = speechGeneration
         currentText = text
         fallbackStarted = false
         engineSettled = false
         isSpeaking = true
-
         val voice = voiceForLocale(currentLocale)
         val rate = edgeRate()
         val pitch = edgePitch()
-
         val out = File(context.cacheDir, "tts_" + System.currentTimeMillis() + ".mp3")
         if (shouldUseCosyVoice()) {
             speakCosyVoice(text, taiwan, generation, out)
@@ -264,9 +291,50 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
         speakEdge(text, taiwan, generation, out, voice, rate, pitch)
     }
 
+    private fun splitSpeakChunks(text: String): List<String> {
+        val t = text.trim()
+        if (t.length <= 18) return listOf(t)
+        val out = ArrayList<String>()
+        val buf = StringBuilder()
+        fun flush() {
+            val s = buf.toString().trim()
+            if (s.isNotEmpty()) out.add(s)
+            buf.setLength(0)
+        }
+        for (ch in t) {
+            buf.append(ch)
+            val hitEnd = ch == '。' || ch == '！' || ch == '？' || ch == '!' || ch == '?' || ch.code == 10 || ch == '；'
+            val hitComma = ch == '，' || ch == ',' || ch == '、'
+            when {
+                hitEnd && buf.toString().trim().length >= 6 -> flush()
+                hitComma && buf.length >= 42 -> flush()
+                buf.length >= 72 -> flush()
+            }
+        }
+        flush()
+        if (out.isEmpty()) return listOf(t)
+        if (out.size >= 2 && out[0].length < 6) {
+            out[1] = out[0] + out[1]
+            out.removeAt(0)
+        }
+        return out
+    }
+
+    private fun playNextOrFinish(generation: Long) {
+        if (generation != speechGeneration) return
+        val next = if (speakQueue.isEmpty()) null else speakQueue.removeFirst()
+        if (next != null) {
+            startSpeakChunk(next, speakingTaiwan, interrupt = false)
+        } else {
+            isSpeaking = false
+            onSpeakDone?.invoke()
+        }
+    }
+
     private fun shouldUseCosyVoice(): Boolean {
         val key = prefs.siliconflowKey
         if (key.isBlank()) return false
+        if (prefs.cloneVoiceEnabled) return true
         return prefs.ttsEngine != "edge"
     }
 
@@ -286,7 +354,7 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
         val json = JSONObject()
             .put("model", "FunAudioLLM/CosyVoice2-0.5B")
             .put("input", spoken)
-            .put("voice", prefs.cosyVoice)
+            .put("voice", prefs.effectiveCosyVoice())
             .put("response_format", "mp3")
             .put("speed", speed.toDouble())
             .toString()
@@ -503,9 +571,8 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
                 )
                 setDataSource(file.absolutePath)
                 setOnCompletionListener {
-                    if (generation == speechGeneration) {
-                        isSpeaking = false
-                        onSpeakDone?.invoke()
+                    main.post {
+                        if (generation == speechGeneration) playNextOrFinish(generation)
                     }
                 }
                 setOnErrorListener { _, _, _ ->
@@ -535,8 +602,7 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
             main.postDelayed({
                 if (generation == speechGeneration && pendingFallback == text) {
                     pendingFallback = null
-                    isSpeaking = false
-                    onSpeakDone?.invoke()
+                    playNextOrFinish(generation)
                 }
             }, 5_000L)
             return
@@ -549,21 +615,20 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
         isSpeaking = true
         val result = engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "fallback_" + generation)
         if (result == TextToSpeech.ERROR) {
-            isSpeaking = false
-            onSpeakDone?.invoke()
+            main.post { playNextOrFinish(generation) }
         }
     }
 
     private fun finishFallback(utteranceId: String?) {
         main.post {
             if (utteranceId == "fallback_" + speechGeneration) {
-                isSpeaking = false
-                onSpeakDone?.invoke()
+                playNextOrFinish(speechGeneration)
             }
         }
     }
 
     fun stop() {
+        speakQueue.clear()
         stopInternal()
         isSpeaking = false
     }
@@ -584,6 +649,7 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
     }
 
     fun shutdown() {
+        speakQueue.clear()
         stopInternal()
         currentFile?.delete()
         currentFile = null

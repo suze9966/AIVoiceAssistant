@@ -141,6 +141,18 @@ class MemoryEngine(context: Context) {
         if (t.contains("记住") || t.contains("别忘")) {
             remember(TYPE_FACT, "主人要求记住：" + t.take(50))
         }
+
+        // 4) 情绪事件：下次还能自然接上，不靠挂机涨好感
+        when {
+            listOf("好累", "累死", "加班", "失眠", "睡不着", "太累", "熬夜").any { t.contains(it) } ->
+                remember(TYPE_FACT, "主人最近很累：" + t.take(24))
+            listOf("难过", "伤心", "想哭", "不开心", "委屈", "心情不好").any { t.contains(it) } ->
+                remember(TYPE_FACT, "主人心情低落过：" + t.take(24))
+            listOf("想你了", "有点想你", "想小沫").any { t.contains(it) } ->
+                remember(TYPE_PREF, "主人会想念小沫")
+            listOf("好孤独", "好寂寞", "没人陪", "好孤单").any { t.contains(it) } ->
+                remember(TYPE_FACT, "主人说过自己有点孤单")
+        }
     }
 
     /** 当 AI 学到新知识时调用 */

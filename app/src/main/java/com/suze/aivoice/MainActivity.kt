@@ -59,6 +59,9 @@ class MainActivity : AppCompatActivity() {
     private var listeningEnabled = false
     // 只有点了麦克风才在授权后自动开启聆听；启动时申请权限不能顺带开麦。
     private var waitingMicForListen = false
+    /** 流式回复里已经开口朗读到的位置，避免整段合成完才出声。 */
+    private var streamSpokenUntil = 0
+    private var streamSpeakStarted = false
 
     private val REQ_AUDIO = 1001
 
@@ -105,7 +108,7 @@ class MainActivity : AppCompatActivity() {
                         Toast.makeText(this, R.string.toast_cleared, Toast.LENGTH_SHORT).show()
                         true
                     }
-                    4 -> { tts.stop(); Toast.makeText(this, R.string.toast_stopped, Toast.LENGTH_SHORT).show(); true }
+                    4 -> { abortSpeech(); Toast.makeText(this, R.string.toast_stopped, Toast.LENGTH_SHORT).show(); true }
                     3 -> { toggleWake(true); true }
                     else -> false
                 }
@@ -148,8 +151,15 @@ class MainActivity : AppCompatActivity() {
             if (actionId == EditorInfo.IME_ACTION_SEND) submitInput() else false
         }
         btnMic.setOnClickListener {
-            // 语音聆听开关：开 → 关闭；关 → 开启（自动申请权限并持续识别）
-            if (listeningEnabled) stopListeningMode() else startListeningMode()
+            // 小智式打断：说话中点麦克风先停播，再继续听；没在说话才切换聆听开关。
+            if (tts.isSpeaking || tts.hasQueuedSpeech()) {
+                abortSpeech()
+                if (listeningEnabled) startListening() else startListeningMode()
+            } else if (listeningEnabled) {
+                stopListeningMode()
+            } else {
+                startListeningMode()
+            }
         }
 
         // ===== 表情：emoji 面板 + 图片表情包 =====
@@ -159,19 +169,7 @@ class MainActivity : AppCompatActivity() {
         initRecognizer()
         refreshMoodSubtitle()
         // 恢复用户保存的音色、区域、语速和音调。
-        if (prefs.taiwanVoice) {
-            tts.applyTaiwanVoice()
-        } else {
-            val savedVoice = tts.availableVoices().getOrNull(prefs.voiceIndex)
-            if (savedVoice != null) tts.setVoiceByName(savedVoice)
-            else when {
-                prefs.voiceLocaleName.contains("台湾") -> tts.setLocale(Locale.TAIWAN)
-                prefs.voiceLocaleName.contains("香港") -> tts.setLocale(Locale("zh", "HK"))
-                else -> tts.setLocale(Locale.CHINA)
-            }
-        }
-        tts.setRate(prefs.ttsRate)
-        tts.setPitch(prefs.ttsPitch)
+        applySavedVoice()
     }
 
     /**
@@ -273,13 +271,48 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // 情感引擎：随时间自然回落/亲密度增长
-        if (::emotion.isInitialized) { emotion.tick(); refreshMoodSubtitle() }
+        applySavedVoice()
+        if (::emotion.isInitialized) {
+            val care = if (prefs.emotionEnabled) emotion.resumeCare() else {
+                emotion.tick()
+                null
+            }
+            refreshMoodSubtitle()
+            if (!care.isNullOrBlank() && ::adapter.isInitialized && ::store.isInitialized) {
+                adapter.add(ChatMessage("assistant", care, isMe = false))
+                store.save(history)
+                scrollToBottom()
+                if (::tts.isInitialized) {
+                    tts.setEmotion(emotion.ttsRate(), emotion.ttsPitch())
+                    tts.setRate(prefs.ttsRate)
+                    tts.setPitch(prefs.ttsPitch)
+                    tts.speak(care, prefs.taiwanVoice)
+                }
+            }
+        }
         applyChatStyle()
         if (::adapter.isInitialized) adapter.notifyDataSetChanged()
     }
 
     /** 应用可更换的小沫头像和聊天背景 */
+
+    /** 从设置页回来时重载 Edge 音色/语速/音调；CosyVoice 读 Prefs，不走这里。 */
+    private fun applySavedVoice() {
+        if (!::tts.isInitialized || !::prefs.isInitialized) return
+        if (prefs.taiwanVoice) {
+            tts.applyTaiwanVoice()
+        } else {
+            val savedVoice = tts.availableVoices().getOrNull(prefs.voiceIndex)
+            if (savedVoice != null) tts.setVoiceByName(savedVoice)
+            else when {
+                prefs.voiceLocaleName.contains("台湾") -> tts.setLocale(Locale.TAIWAN)
+                prefs.voiceLocaleName.contains("香港") -> tts.setLocale(Locale("zh", "HK"))
+                else -> tts.setLocale(Locale.CHINA)
+            }
+        }
+        tts.setRate(prefs.ttsRate)
+        tts.setPitch(prefs.ttsPitch)
+    }
     private fun applyChatStyle() {
         if (!::ivChatBackground.isInitialized) return
         ChatStyleStore.applyBackground(ivChatBackground)
@@ -324,7 +357,10 @@ class MainActivity : AppCompatActivity() {
         recognizer = SpeechRecognizer.createSpeechRecognizer(this)
         recognizer?.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) {}
-            override fun onBeginningOfSpeech() {}
+            override fun onBeginningOfSpeech() {
+                // 主人开口就打断朗读，但不能边播边听：手机没有小智那种 AEC，会把自己的声音当输入。
+                if (tts.isSpeaking) abortSpeech()
+            }
             override fun onRmsChanged(rmsdB: Float) {}
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() { isListening = false }
@@ -387,7 +423,7 @@ class MainActivity : AppCompatActivity() {
             if (listeningEnabled && !isListening && !isSending) {
                 startListening()
             }
-        }, 500L)
+        }, 280L)
     }
 
     /** 开启语音聆听：申请麦克风权限 → 持续识别主人的话并自动发送 */
@@ -404,8 +440,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         listeningEnabled = true
-        tts.onSpeakDone = null   // 清掉旧回调，避免 stop() 触发意外续听
-        tts.stop()
+        abortSpeech()
         setHalo(true)
         startListening()
         Toast.makeText(this, "已开启聆听，直接说话即可；再点一次麦克风可关闭", Toast.LENGTH_LONG).show()
@@ -433,6 +468,9 @@ class MainActivity : AppCompatActivity() {
         lastSentAt = now
 
         isSending = true
+        abortSpeech()
+        streamSpokenUntil = 0
+        streamSpeakStarted = false
 
         // ⚡ 智能天气：主人说“北京天气”之类，直接走天气查询（不耗大模型）
         val wxCity = detectWeatherQuery(userText)
@@ -496,6 +534,10 @@ class MainActivity : AppCompatActivity() {
                         history[history.size - 1] = last.copy(content = cur)
                         adapter.updateLast(cur)
                         scrollToBottom()
+                        while (true) {
+                            val piece = takeCompletedSpeech(cur) ?: break
+                            startOrQueueSpeak(piece)
+                        }
                     }
                 }.ifBlank { "（无回复）" }
             } else {
@@ -542,25 +584,14 @@ class MainActivity : AppCompatActivity() {
             if (prefs.growEnabled) refreshGrowthSubtitle()
             isSending = false
 
-            // 情感化 TTS：语速/音调随情绪变化
-            if (prefs.emotionEnabled) {
-                tts.setEmotion(emotion.ttsRate(), emotion.ttsPitch())
-            }
-            // 应用用户设定的语速/音调（在情感引擎基础上叠加）
-            tts.setRate(prefs.ttsRate)
-            tts.setPitch(prefs.ttsPitch)
-            // 聆听模式：等 TTS 播报完再续听（避免把朗读声当输入造成自问自答）
-            if (listeningEnabled) {
-                tts.onSpeakDone = {
-                    runOnUiThread {
-                        if (listeningEnabled && !isSending) scheduleRestartListening()
-                    }
-                }
+            // 小智式：第一句已经开口就只补后面；否则整段分句后先说第一句。
+            val speakable = visibleSpeakable(finalText)
+            val remain = if (streamSpeakStarted) {
+                if (streamSpokenUntil in 0 until speakable.length) speakable.substring(streamSpokenUntil).trim() else ""
             } else {
-                tts.onSpeakDone = null
+                speakable
             }
-            // 用 EdgeTTS 普通话音色朗读（台湾腔已改为可选，默认关闭）
-            tts.speak(finalText, prefs.taiwanVoice)
+            if (remain.isNotBlank()) startOrQueueSpeak(remain)
 
             // 思考引擎：到反射周期就发起一次反思（异步，不阻塞）
             if (prefs.mindEnabled && mind.shouldReflect()) {
@@ -573,14 +604,17 @@ class MainActivity : AppCompatActivity() {
                     mind.applyReflection(r)
                 }
             }
-          } catch (_: Exception) {
-            if (history.isNotEmpty() && history.last().role == "assistant" && history.last().content.isBlank()) {
+          } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            if (!isFinishing && !isDestroyed && history.isNotEmpty() && history.last().role == "assistant" && history.last().content.isBlank()) {
                 val fallback = getString(R.string.role_empty_reply)
                 history[history.size - 1] = history.last().copy(content = fallback)
                 adapter.updateLast(fallback)
+                store.save(history)
             }
           } finally {
             isSending = false
+            if (::store.isInitialized && history.isNotEmpty()) store.save(history)
           }
         }
     }
@@ -641,38 +675,44 @@ class MainActivity : AppCompatActivity() {
         val c = city.trim().ifBlank { prefs.lastCity }
         prefs.lastCity = c
         isSending = true
+        abortSpeech()
         tvStatus.text = "🌤 正在查询【" + c + "】天气…"
         lifecycleScope.launch {
+          try {
             val info = weather.query(c)
+            if (isFinishing || isDestroyed) return@launch
             if (info == null) {
-                runOnUiThread {
-                    isSending = false
-                    tvStatus.text = getString(R.string.status_idle)
-                    val message = getString(R.string.weather_fail)
-                    Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
-                    // 打开天气页展示完整处理建议；页面会再尝试一次，便于系统天气刚完成刷新时恢复。
-                    startActivity(Intent(this@MainActivity, WeatherActivity::class.java)
-                        .putExtra(WeatherActivity.EXTRA_CITY, c))
-                }
+                tvStatus.text = getString(R.string.status_idle)
+                val message = getString(R.string.weather_fail)
+                Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
+                // 打开天气页展示完整处理建议；页面会再尝试一次，便于系统天气刚完成刷新时恢复。
+                startActivity(Intent(this@MainActivity, WeatherActivity::class.java)
+                    .putExtra(WeatherActivity.EXTRA_CITY, c))
                 return@launch
             }
             val text = info.toSpeakText()
-            runOnUiThread {
-                WeatherActivity.pendingInfo = info
-                startActivity(Intent(this@MainActivity, WeatherActivity::class.java).putExtra(WeatherActivity.EXTRA_CITY, c))
-                adapter.add(ChatMessage("user", c + "\u5929\u6c14", isMe = true))
-                adapter.add(ChatMessage("assistant", text, isMe = false))
-                scrollToBottom()
-                store.save(history)
-                isSending = false
-                tvStatus.text = getString(R.string.status_idle)
-                if (prefs.emotionEnabled) {
-                    tts.setEmotion(emotion.ttsRate(), emotion.ttsPitch())
-                }
-                tts.setRate(prefs.ttsRate)
-                tts.setPitch(prefs.ttsPitch)
-                tts.speak(text, prefs.taiwanVoice)
+            WeatherActivity.pendingInfo = info
+            startActivity(Intent(this@MainActivity, WeatherActivity::class.java).putExtra(WeatherActivity.EXTRA_CITY, c))
+            adapter.add(ChatMessage("user", c + "天气", isMe = true))
+            adapter.add(ChatMessage("assistant", text, isMe = false))
+            scrollToBottom()
+            store.save(history)
+            tvStatus.text = getString(R.string.status_idle)
+            if (prefs.emotionEnabled) {
+                tts.setEmotion(emotion.ttsRate(), emotion.ttsPitch())
             }
+            tts.setRate(prefs.ttsRate)
+            tts.setPitch(prefs.ttsPitch)
+            tts.speak(text, prefs.taiwanVoice)
+          } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            if (!(isFinishing || isDestroyed)) {
+                tvStatus.text = getString(R.string.status_idle)
+                Toast.makeText(this@MainActivity, getString(R.string.weather_fail), Toast.LENGTH_LONG).show()
+            }
+          } finally {
+            isSending = false
+          }
         }
     }
 
@@ -697,6 +737,75 @@ class MainActivity : AppCompatActivity() {
         return city.ifBlank { prefs.lastCity }
     }
 
+
+    private fun abortSpeech() {
+        if (!::tts.isInitialized) return
+        tts.onSpeakDone = null
+        tts.stop()
+        streamSpeakStarted = false
+        streamSpokenUntil = 0
+    }
+
+    private fun bindListenAfterSpeak() {
+        if (listeningEnabled) {
+            tts.onSpeakDone = {
+                runOnUiThread {
+                    if (listeningEnabled && !isSending) scheduleRestartListening()
+                }
+            }
+        } else {
+            tts.onSpeakDone = null
+        }
+    }
+
+    private fun applySpeakVoice() {
+        if (prefs.emotionEnabled && ::emotion.isInitialized) {
+            tts.setEmotion(emotion.ttsRate(), emotion.ttsPitch())
+        }
+        tts.setRate(prefs.ttsRate)
+        tts.setPitch(prefs.ttsPitch)
+    }
+
+    private fun startOrQueueSpeak(text: String) {
+        if (text.isBlank() || !::tts.isInitialized) return
+        applySpeakVoice()
+        bindListenAfterSpeak()
+        if (streamSpeakStarted || tts.isSpeaking) {
+            tts.enqueueSpeak(text, prefs.taiwanVoice)
+        } else {
+            tts.speak(text, prefs.taiwanVoice)
+            streamSpeakStarted = true
+        }
+    }
+
+    /** 去掉内心独白和表情包标记，只留真正要读出口的字。 */
+    private fun visibleSpeakable(full: String): String {
+        var t = full
+        val sayIdx = t.indexOf("SAY:")
+        if (sayIdx >= 0) {
+            t = t.substring(sayIdx + 4)
+        } else if (prefs.mindEnabled && (t.contains("THOUGHT:") || t.contains("想法：") || t.contains("想法:"))) {
+            return ""
+        }
+        val sticker = t.indexOf("[sticker:")
+        if (sticker >= 0) t = t.substring(0, sticker)
+        return t.trimStart()
+    }
+
+    /** 流式文本里已经成句的部分先送去合成，缩短首句等待。 */
+    private fun takeCompletedSpeech(full: String): String? {
+        val speakable = visibleSpeakable(full)
+        if (streamSpokenUntil >= speakable.length) return null
+        val rest = speakable.substring(streamSpokenUntil)
+        val cut = rest.indexOfFirst { ch ->
+            ch == '。' || ch == '！' || ch == '？' || ch == '!' || ch == '?' || ch.code == 10 || ch == '；'
+        }
+        if (cut < 0) return null
+        val chunk = rest.substring(0, cut + 1).trim()
+        if (chunk.length < 6) return null
+        streamSpokenUntil += cut + 1
+        return chunk
+    }
     private fun scrollToBottom() {
         recycler.post { recycler.scrollToPosition(adapter.itemCount - 1) }
     }
@@ -705,6 +814,7 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
         // 退到后台时关闭聆听，避免持续占用麦克风
         if (listeningEnabled) stopListeningMode()
+        if (::store.isInitialized && history.isNotEmpty()) store.save(history)
     }
 
     override fun onDestroy() {

@@ -24,6 +24,14 @@
             <action android:name="android.intent.action.OPEN_DOCUMENT" />
             <data android:mimeType="image/*" />
         </intent>
+        <intent>
+            <action android:name="android.intent.action.GET_CONTENT" />
+            <data android:mimeType="audio/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.OPEN_DOCUMENT" />
+            <data android:mimeType="audio/*" />
+        </intent>
     </queries>
 
     <application
@@ -32,7 +40,7 @@
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:usesCleartextTraffic="false"
         android:theme="@style/Theme.AIVoice">
@@ -60,6 +68,11 @@
             android:name=".LlmConnectActivity"
             android:exported="false"
             android:label="@string/llm_connect_title"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".VoiceCloneActivity"
+            android:exported="false"
+            android:label="@string/voice_clone_title"
             android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".MainActivity"

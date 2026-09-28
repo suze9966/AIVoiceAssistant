@@ -78,6 +78,9 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnConnectLlm).setOnClickListener {
             startActivity(Intent(this, LlmConnectActivity::class.java))
         }
+        findViewById<Button>(R.id.btnVoiceClone).setOnClickListener {
+            startActivity(Intent(this, VoiceCloneActivity::class.java))
+        }
 
         editBaseUrl.setText(prefs.baseUrl)
         // 安全：绝不回显完整 API Key。已保存过就显示脱敏占位，仅在用户重新输入时才覆盖
@@ -157,9 +160,15 @@ class SettingsActivity : AppCompatActivity() {
                 "欸，主人你好喔！今天过得还好吗？这个真的很可以耶，我陪你一起聊，好不好嘛～"
             else
                 "你好主人，这是当前的语音音色试听效果。"
-            tts.setRate(0.5f + seekRate.progress / 100f)
-            tts.setPitch(0.5f + seekPitch.progress / 100f)
-            tts.speak(demo, switchTaiwan.isChecked)
+            previewCurrentVoice(
+                spinnerVoice,
+                spinnerTtsEngine,
+                spinnerCosyVoice,
+                switchTaiwan.isChecked,
+                0.5f + seekRate.progress / 100f,
+                0.5f + seekPitch.progress / 100f,
+                demo
+            )
         }
 
         btnStopSpeak.setOnClickListener {
@@ -230,11 +239,42 @@ class SettingsActivity : AppCompatActivity() {
             if (vName != null && !vName.startsWith("（")) {
                 tts.setVoiceByName(vName)
             }
-            Toast.makeText(this, "已保存", Toast.LENGTH_SHORT).show()
+            if (prefs.cloneVoiceEnabled) {
+                Toast.makeText(this, getString(R.string.toast_clone_covers_cosy), Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(this, "已保存", Toast.LENGTH_SHORT).show()
+            }
             finish()
         }
     }
 
+
+    private fun previewCurrentVoice(
+        spinnerVoice: Spinner,
+        spinnerTtsEngine: Spinner,
+        spinnerCosyVoice: Spinner,
+        taiwan: Boolean,
+        rate: Float,
+        pitch: Float,
+        demo: String
+    ) {
+        tts.setRate(rate)
+        tts.setPitch(pitch)
+        val vName = spinnerVoice.selectedItem?.toString()
+        if (vName != null && !vName.startsWith("（")) {
+            tts.setVoiceByName(vName)
+        }
+        val prevEngine = prefs.ttsEngine
+        val prevCosy = prefs.cosyVoice
+        prefs.ttsEngine = Prefs.TTS_ENGINE_OPTIONS.getOrNull(spinnerTtsEngine.selectedItemPosition)?.first ?: prevEngine
+        prefs.cosyVoice = Prefs.COSY_VOICE_OPTIONS.getOrNull(spinnerCosyVoice.selectedItemPosition)?.first ?: prevCosy
+        if (prefs.cloneVoiceEnabled) {
+            Toast.makeText(this, getString(R.string.toast_clone_covers_cosy), Toast.LENGTH_LONG).show()
+        }
+        tts.speak(demo, taiwan)
+        prefs.ttsEngine = prevEngine
+        prefs.cosyVoice = prevCosy
+    }
     private fun bindAppearance() {
         findViewById<Button>(R.id.btnChangeAvatar).setOnClickListener {
             pickingAvatar = true

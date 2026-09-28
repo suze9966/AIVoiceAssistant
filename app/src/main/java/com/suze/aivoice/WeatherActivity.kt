@@ -37,7 +37,13 @@ class WeatherActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.tvWeatherUpdated).text = getString(R.string.weather_loading)
         findViewById<View>(R.id.btnWeatherRefresh).animate().rotationBy(360f).setDuration(700L).start()
         lifecycleScope.launch {
-            val info = client.query(city)
+            val info = try {
+                client.query(city)
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                null
+            }
+            if (isFinishing || isDestroyed) return@launch
             if (info == null) {
                 val message = getString(R.string.weather_fail)
                 findViewById<TextView>(R.id.tvWeatherUpdated).text = message
