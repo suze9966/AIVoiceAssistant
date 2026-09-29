@@ -64,10 +64,10 @@ object ChatStyleStore {
             view.setImageBitmap(bmp)
             return
         }
-        val pad = (5 * view.resources.displayMetrics.density).toInt()
-        view.setPadding(pad, pad, pad, pad)
-        view.scaleType = ImageView.ScaleType.CENTER_INSIDE
-        view.setImageResource(defaultRes)
+        val portrait = PortraitLibrary.resFor(Prefs(view.context).portraitId) ?: defaultRes
+        view.setPadding(0, 0, 0, 0)
+        view.scaleType = ImageView.ScaleType.CENTER_CROP
+        view.setImageResource(portrait)
     }
 
     fun applyBackground(view: ImageView) {

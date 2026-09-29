@@ -156,6 +156,11 @@
             android:label="@string/voice_clone_title"
             android:windowSoftInputMode="adjustResize" />
         <activity
+            android:name=".VoiceCallActivity"
+            android:exported="false"
+            android:label="@string/voice_call_title"
+            android:windowSoftInputMode="stateAlwaysHidden" />
+        <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"

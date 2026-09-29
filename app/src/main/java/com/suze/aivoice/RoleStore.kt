@@ -296,6 +296,14 @@ class RoleStore(context: Context) {
                 return
             }
         }
+        val portrait = PortraitLibrary.resFor(character.id)
+        if (portrait != null) {
+            view.setPadding(0, 0, 0, 0)
+            view.scaleType = ImageView.ScaleType.CENTER_CROP
+            view.setImageResource(portrait)
+            view.visibility = View.VISIBLE
+            return
+        }
         view.setImageDrawable(null)
         view.visibility = View.GONE
     }

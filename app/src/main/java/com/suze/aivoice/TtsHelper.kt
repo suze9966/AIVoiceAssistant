@@ -282,6 +282,10 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
         fallbackStarted = false
         engineSettled = false
         isSpeaking = true
+        if (prefs.ttsEngine == "system") {
+            speakFallback(text, generation)
+            return
+        }
         val voice = voiceForLocale(currentLocale)
         val rate = edgeRate()
         val pitch = edgePitch()
@@ -335,6 +339,7 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
     }
 
     private fun shouldUseCosyVoice(): Boolean {
+        if (prefs.ttsEngine == "system" || prefs.ttsEngine == "edge") return false
         val key = prefs.siliconflowKey
         if (key.isBlank()) return false
         if (prefs.cloneVoiceEnabled) return true

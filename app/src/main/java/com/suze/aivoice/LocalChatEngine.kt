@@ -8,8 +8,8 @@ import java.util.Locale
 /**
  * 本地闲聊引擎：不需要任何 API Key、不消耗额度，纯本机生成回复。
  *
- * 先接住主人这句话里的情绪，再按当前心情换整段话术；
- * 不讲自己的数值，不倾诉痛苦，不靠句尾硬贴心情标签。
+ * 先接住主人这句话里的情绪，再按当前心情和刚才的对话往下接；
+ * 不讲自己的数值，不倾诉痛苦，不靠句尾硬贴心情标签，也不把每句都当成新问题。
  */
 class LocalChatEngine(private val prefs: Prefs) {
 
@@ -164,18 +164,18 @@ class LocalChatEngine(private val prefs: Prefs) {
 
     private fun idleByMood(): String = when (currentMood()) {
         EmotionEngine.Mood.HAPPY -> pick(
-            "嗯嗯，我在听～你继续说呀。",
-            "听起来挺有意思的，多跟我说说嘛。",
-            "欸，然后呢？我可认真听着的。"
+            "嗯嗯，我在听。",
+            "听着挺有意思的。",
+            "我可认真听着的。"
         )
         EmotionEngine.Mood.CURIOUS -> pick(
-            "这样子喔，然后咧？",
-            "我有点好奇，你再讲一点？",
-            "嗯，我在听，细节也可以说。"
+            "这样子喔。",
+            "我有点好奇呢。",
+            "嗯，我记下了。"
         )
         EmotionEngine.Mood.SHY -> pick(
             "嗯…我在听。",
-            "这样啊…你继续说，我听着。",
+            "这样啊…我听着。",
             "好的…我记住了。"
         )
         EmotionEngine.Mood.TIRED -> pick(
@@ -189,19 +189,80 @@ class LocalChatEngine(private val prefs: Prefs) {
             "我在的，不打断你。"
         )
         EmotionEngine.Mood.ANNOYED -> pick(
-            "说完了？那我还听着。",
+            "哼，我还听着。",
             "哼，继续讲。",
             "行，我知道了。"
         )
         else -> pick(
-            "嗯嗯，我在听～你继续说呀。",
-            "这样子喔，然后咧？不要讲一半啦～",
-            "听起来挺有意思的，多跟我说说嘛。",
-            "好的呀，记住啦～"
+            "嗯嗯，我在听。",
+            "这样子喔，我跟上了。",
+            "听起来挺有意思的。",
+            "好的呀，记住啦。"
         )
     }
 
-    fun reply(input: String): String {
+    private fun topicSnippet(text: String): String {
+        val cleaned = text.replace(Regex("[\\s　。！？!?～~，,、；;：:「」『』\"']+"), "")
+        if (cleaned.length < 2) return ""
+        return cleaned.take(8)
+    }
+
+    private fun isShortAck(text: String): Boolean {
+        val compact = text.replace(Regex("[\\s～~。！!？?，,、]"), "")
+        return compact in setOf(
+            "嗯", "嗯嗯", "嗯嗯嗯", "哦", "喔", "噢", "对啊", "对呀", "对的", "是的", "是啊",
+            "好啊", "好的", "好", "哈哈", "哈哈哈", "嘿嘿", "呵呵", "行", "好吧", "然后",
+            "接着", "没错", "对对", "对对对", "嗯哼", "喔喔", "哦哦", "是", "对喔", "对啦"
+        )
+    }
+
+    private fun continueChat(text: String, lastAssistant: String): String {
+        val t = text.trim()
+        val prev = lastAssistant.replace('\n', ' ').trim()
+        if (isShortAck(t) && prev.isNotBlank()) {
+            return pick(
+                "那就先这样，我还在听。",
+                "嗯，我懂你意思。",
+                "好，那我们接着聊。",
+                "我还记着你刚才说的。"
+            )
+        }
+        val snippet = topicSnippet(t)
+        if (snippet.isNotBlank()) {
+            return when (currentMood()) {
+                EmotionEngine.Mood.ANNOYED -> "「$snippet」啊…行，我听见了。"
+                EmotionEngine.Mood.SHY -> "你说的「$snippet」…我记下了。"
+                EmotionEngine.Mood.TIRED -> "「$snippet」我听着，不着急。"
+                EmotionEngine.Mood.SAD -> "「$snippet」…我在，你慢慢说。"
+                else -> pick(
+                    "你刚说的「$snippet」，我听进去了。",
+                    "「$snippet」这事我记下了。",
+                    "嗯，关于「$snippet」，我陪你聊。"
+                )
+            }
+        }
+        if (prev.isNotBlank()) {
+            return pick(
+                "我还接着刚才的话。你继续就好。",
+                "嗯，我没换话题，还在听。",
+                "刚才那句我记得，你说下去吧。"
+            )
+        }
+        return idleByMood()
+    }
+
+    fun reply(history: List<ChatMessage>): String {
+        val clean = history.filter {
+            it.type != ChatMessage.TYPE_IMAGE && it.content.isNotBlank()
+        }
+        val lastUser = clean.lastOrNull { it.role == "user" }?.content.orEmpty()
+        val lastAssistant = clean.lastOrNull { it.role == "assistant" }?.content.orEmpty()
+        return replyTurn(lastUser, lastAssistant)
+    }
+
+    fun reply(input: String): String = replyTurn(input, "")
+
+    private fun replyTurn(input: String, lastAssistant: String): String {
         turn++
         val text = input.trim()
         if (text.isEmpty()) {
@@ -209,7 +270,8 @@ class LocalChatEngine(private val prefs: Prefs) {
                 when (currentMood()) {
                     EmotionEngine.Mood.TIRED, EmotionEngine.Mood.SAD -> "我在。想说的时候再说。"
                     EmotionEngine.Mood.SHY -> "我在的呀…"
-                    else -> "我在的呀，主人想说点什么？"
+                    else -> if (lastAssistant.isNotBlank()) "我在的，你接着说就好。"
+                    else "我在的呀，想说就说。"
                 }
             )
         }
@@ -308,8 +370,10 @@ class LocalChatEngine(private val prefs: Prefs) {
             ))
         }
 
-        if (text.endsWith("?") || text.endsWith("？") ||
-            matchAny(lower, "为什么", "怎么", "如何", "什么是", "能不能", "可不可以")) {
+        val quiz = (text.endsWith("?") || text.endsWith("？") ||
+            matchAny(lower, "什么是", "如何", "为什么", "能不能", "可不可以")) &&
+            !matchAny(lower, "怎么了", "怎么样", "怎么说")
+        if (quiz && lastAssistant.isBlank()) {
             return say(
                 when (currentMood()) {
                     EmotionEngine.Mood.TIRED, EmotionEngine.Mood.SAD ->
@@ -317,15 +381,15 @@ class LocalChatEngine(private val prefs: Prefs) {
                     EmotionEngine.Mood.SHY ->
                         "唔…我还在学。你可以先说你怎么想。"
                     else -> pick(
-                        "这个问题有点难，等我接上大模型就懂啦～现在先陪你聊聊别的？",
+                        "这个问题有点难，我先陪你聊聊。你怎么看？",
                         "唔…我还在学习喔，不过你可以先把想法说给我听。",
-                        "这个我暂时答不上来呀，等主人给我配个大脑就厉害啦！"
+                        "这个我暂时答不上来呀，你先讲讲你的想法。"
                     )
                 }
             )
         }
 
-        return say(idleByMood())
+        return say(continueChat(text, lastAssistant))
     }
 
     private fun matchAny(text: String, vararg keys: String): Boolean =

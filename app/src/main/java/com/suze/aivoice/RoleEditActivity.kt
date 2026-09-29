@@ -179,7 +179,7 @@ class RoleEditActivity : AppCompatActivity() {
         }
         val current = store.get(roleId) ?: RoleCharacter(id = roleId, name = "")
         store.applyAvatar(view, current.copy(avatarFile = store.avatarFile(roleId).name))
-        val has = store.avatarFile(roleId).isFile
+        val has = store.avatarFile(roleId).isFile || PortraitLibrary.resFor(roleId) != null
         view.visibility = if (has) View.VISIBLE else View.GONE
         emoji.visibility = if (has) View.GONE else View.VISIBLE
         emoji.text = findViewById<EditText>(R.id.editRoleEmoji).text.toString().ifBlank { "\uD83C\uDFAD" }

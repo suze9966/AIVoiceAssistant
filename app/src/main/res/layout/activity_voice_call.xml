@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/call_page_bg"
+    android:keepScreenOn="true"
+    android:paddingStart="24dp"
+    android:paddingEnd="24dp"
+    android:paddingTop="20dp"
+    android:paddingBottom="28dp">
+
+    <TextView
+        android:id="@+id/btnCallBack"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:gravity="center"
+        android:background="@drawable/icon_touch_bg"
+        android:text="‹"
+        android:textColor="@color/white"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:contentDescription="@string/voice_call_hangup"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center_horizontal">
+
+        <TextView
+            android:id="@+id/tvCallDuration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="00:00"
+            android:textColor="@color/white"
+            android:textSize="14sp"/>
+
+        <FrameLayout
+            android:layout_width="176dp"
+            android:layout_height="176dp"
+            android:layout_marginTop="28dp">
+            <View
+                android:id="@+id/callHalo"
+                android:layout_width="176dp"
+                android:layout_height="176dp"
+                android:background="@drawable/halo_ring"/>
+            <ImageView
+                android:id="@+id/ivCallAvatar"
+                android:layout_width="132dp"
+                android:layout_height="132dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_bot"
+                android:scaleType="centerCrop"
+                android:background="@drawable/glass_avatar"
+                android:contentDescription="@string/app_name"/>
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/tvCallName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="@string/voice_call_name"
+            android:textColor="@color/white"
+            android:textSize="26sp"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/tvCallStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/voice_call_dialing"
+            android:textColor="#E6FFFFFF"
+            android:textSize="15sp"/>
+
+        <TextView
+            android:id="@+id/tvCallCaption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:gravity="center"
+            android:maxLines="4"
+            android:ellipsize="end"
+            android:textColor="#CCFFFFFF"
+            android:textSize="15sp"/>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvCallHint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:layout_marginBottom="16dp"
+        android:text="@string/voice_call_hint"
+        android:textColor="#B3FFFFFF"
+        android:textSize="12sp"/>
+
+    <TextView
+        android:id="@+id/btnHangup"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:layout_gravity="center_horizontal"
+        android:gravity="center"
+        android:background="@drawable/btn_hangup_bg"
+        android:text="@string/voice_call_hangup"
+        android:textColor="@color/white"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:contentDescription="@string/voice_call_hangup"/>
+</LinearLayout>

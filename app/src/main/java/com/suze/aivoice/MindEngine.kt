@@ -58,12 +58,12 @@ class MindEngine(context: Context) {
      */
     fun thinkPrompt(userText: String): String {
         val goalLine = if (goal.isNotBlank()) "你最近自己想做的一件事：$goal。" else ""
-        return "【内心独白任务】在回答主人这句话之前，先用第一人称在心里想一小段（不超过 40 字），" +
-            "内容包括：现在的心情、你怎么看这句话、你想怎么回应、有没有自己的小主意。" +
+        return "【内心独白任务】先用第一人称在心里想一小段（不超过 40 字），" +
+            "内容包括：现在的心情、这句话跟刚才聊的有没有关系、你想怎么接话。" +
             "$goalLine\n" +
             "【主人的话】$userText\n" +
             "【输出格式】只输出两部分，先一行以 THOUGHT: 开头的内心想法，再一行以 SAY: 开头的对主人说的话。" +
-            "SAY 部分要自然、有性格，不要暴露 THOUGHT 格式。"
+            "SAY 要像接着刚才往下聊，不要像答题，也不要每句都以提问结尾，不要暴露 THOUGHT 格式。"
     }
 
     /**

@@ -11,6 +11,10 @@
         android:title="@string/menu_weather"
         app:showAsAction="never" />
     <item
+        android:id="@+id/action_voice_call"
+        android:title="@string/menu_voice_call"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_stop"
         android:title="@string/btn_stop_speak"
         app:showAsAction="never" />

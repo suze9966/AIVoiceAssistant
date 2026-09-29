@@ -17,7 +17,10 @@
     <string name="label_model">模型名称</string>
     <string name="label_system">系统提示词（人设）</string>
     <string name="label_voice">Edge 备用音色</string>
-    <string name="label_tts_engine">语音引擎（小智同款）</string>
+    <string name="label_tts_engine">语音引擎（小智同款 / 系统 TTS 兜底）</string>
+    <string name="label_portrait">精选立绘（内置 6 张矢量，不占体积）</string>
+    <string name="label_local_kws">小型本地唤醒增强（近似匹配；无系统识别时用能量门）</string>
+    <string name="toast_portrait_applied">已换精选立绘</string>
     <string name="label_siliconflow_key">硅基流动 Key（CosyVoice 更真人，加密保存在本机）</string>
     <string name="label_siliconflow_hint">留空不修改；填了就能用小智 CosyVoice</string>
     <string name="label_cosy_voice">CosyVoice 音色</string>
@@ -290,4 +293,19 @@
     <string name="ask_image_camera">拍照</string>
     <string name="ask_image_gallery">相册</string>
     <string name="remind_advance_title">提前提醒</string>
+    <string name="menu_voice_call">语音通话</string>
+    <string name="voice_call_title">语音通话</string>
+    <string name="voice_call_name">小沫</string>
+    <string name="voice_call_dialing">正在接通…</string>
+    <string name="voice_call_listening">你说，我在听</string>
+    <string name="voice_call_thinking">小沫想了一下…</string>
+    <string name="voice_call_speaking">小沫正在说话</string>
+    <string name="voice_call_hangup">挂断</string>
+    <string name="voice_call_hint">说完一句等小沫答；说「挂了」或点红键结束</string>
+    <string name="voice_call_greeting">喂，主人，我是小沫。你说，我听着。</string>
+    <string name="voice_call_bye">好，那先挂啦，想我再打过来。</string>
+    <string name="voice_call_fallback">嗯，我在。你再说一次？</string>
+    <string name="voice_call_need_mic">语音电话要先给我麦克风权限</string>
+    <string name="voice_call_no_asr">这台设备没有系统语音识别，打不了电话</string>
+    <string name="toast_voice_call_ended">通话已结束</string>
 </resources>

@@ -27,7 +27,7 @@ class Prefs(context: Context) {
         set(v) = sp.edit().putString("model", v).apply()
 
     var systemPrompt: String
-        get() = sp.getString("systemPrompt", "你是一个可爱、聪明、贴心的语音助手，回答尽量口语化、简短。") ?: ""
+        get() = sp.getString("systemPrompt", DEFAULT_CHAT_PROMPT) ?: ""
         set(v) = sp.edit().putString("systemPrompt", v).apply()
 
     var voiceIndex: Int
@@ -63,7 +63,20 @@ class Prefs(context: Context) {
      */
     fun effectiveTaiwanPrompt(): String = taiwanPrompt.trim() + "\n" + SASSY_TAIWAN_STYLE
 
+    /** 主聊天/通话共用：接上茬闲聊，而不是每句当新问题。 */
+    fun chattingPersona(): String {
+        val base = if (taiwanVoice) effectiveTaiwanPrompt()
+        else systemPrompt.ifBlank { DEFAULT_CHAT_PROMPT }
+        return base.trim() + "\n" + CHAT_FLOW_STYLE
+    }
+
     companion object {
+        private const val DEFAULT_CHAT_PROMPT =
+            "你是小沫，主人身边可爱、聪明、贴心的语音伙伴。用口语陪他聊天，接上刚才的话，不要像客服答题。"
+        private const val CHAT_FLOW_STYLE =
+            "这是在陪主人聊天，不是答题。要接上刚才的话往下聊：可以附和、吐槽、关心、分享感受，偶尔才追问一句。" +
+                "不要把每句话都当成新问题；不要每句都以提问结尾；不要列点作答，不要说自己是AI。" +
+                "主人认真求助或交代事情时，再把关键信息讲清楚。"
         private const val DEFAULT_TAIWAN_PROMPT =
             "你是来自台湾的可爱语音助手小沫，请使用自然的台湾国语和口语表达。"
         private const val SASSY_TAIWAN_STYLE =
@@ -77,7 +90,8 @@ class Prefs(context: Context) {
         val TTS_ENGINE_OPTIONS = listOf(
             "auto" to "自动（有 CosyVoice Key 用小智同款，否则 Edge）",
             "cosyvoice" to "小智 CosyVoice（更真人，需硅基流动 Key）",
-            "edge" to "EdgeTTS（小智默认免费方案）"
+            "edge" to "EdgeTTS（小智默认免费方案）",
+            "system" to "系统 TTS（离线兜底，不走网络）"
         )
         val COSY_VOICE_OPTIONS = listOf(
             "FunAudioLLM/CosyVoice2-0.5B:claire" to "Claire（温柔女声·台湾腔推荐）",
@@ -170,11 +184,11 @@ class Prefs(context: Context) {
         }
         set(v) = sp.edit().putString("weatherSource", v).apply()
 
-    /** TTS 引擎：auto / cosyvoice / edge。auto 时有硅基流动 Key 就走小智 CosyVoice。 */
+    /** TTS 引擎：auto / cosyvoice / edge / system。auto 时有硅基流动 Key 就走小智 CosyVoice。 */
     var ttsEngine: String
         get() {
             val saved = sp.getString("ttsEngine", "auto") ?: "auto"
-            return if (saved in setOf("auto", "cosyvoice", "edge")) saved else "auto"
+            return if (saved in setOf("auto", "cosyvoice", "edge", "system")) saved else "auto"
         }
         set(v) = sp.edit().putString("ttsEngine", v).apply()
 
@@ -247,5 +261,18 @@ class Prefs(context: Context) {
     var headsetWakeEnabled: Boolean
         get() = sp.getBoolean("headsetWakeEnabled", false)
         set(v) = sp.edit().putBoolean("headsetWakeEnabled", v).apply()
+
+    /** 小型本地唤醒增强：近似匹配 + 无系统识别时的能量门。默认开。 */
+    var localKwsEnabled: Boolean
+        get() = sp.getBoolean("localKwsEnabled", true)
+        set(v) = sp.edit().putBoolean("localKwsEnabled", v).apply()
+
+    /** 主聊天精选立绘 id，对应 PortraitLibrary。 */
+    var portraitId: String
+        get() {
+            val saved = sp.getString("portraitId", PortraitLibrary.DEFAULT_ID) ?: PortraitLibrary.DEFAULT_ID
+            return if (PortraitLibrary.resFor(saved) != null) saved else PortraitLibrary.DEFAULT_ID
+        }
+        set(v) = sp.edit().putString("portraitId", v).apply()
 }
 

@@ -184,7 +184,9 @@ class RoleLoungeActivity : AppCompatActivity() {
             holder.preview.text = preview.ifBlank { ctx.getString(R.string.role_preview_empty) }
             holder.time.text = if (updatedAt > 0L) formatTime(updatedAt) else ""
             store.applyAvatar(holder.avatar, item)
-            holder.avatar.visibility = if (store.avatarAbs(item).isFile) View.VISIBLE else View.GONE
+            val hasArt = store.avatarAbs(item).isFile || PortraitLibrary.resFor(item.id) != null
+            holder.avatar.visibility = if (hasArt) View.VISIBLE else View.GONE
+            holder.emoji.visibility = if (hasArt) View.GONE else View.VISIBLE
             holder.itemView.setOnClickListener { onClick(item) }
             holder.itemView.setOnLongClickListener {
                 onLongClick(holder.itemView, item)

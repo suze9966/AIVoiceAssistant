@@ -175,12 +175,10 @@ class RoleChatActivity : AppCompatActivity() {
 
     private fun bindBubbleAvatar(view: ImageView) {
         val c = character ?: return
-        val file = store.avatarAbs(c)
-        if (file.isFile && file.length() > 0L) {
-            store.applyAvatar(view, c)
-            view.visibility = View.VISIBLE
-        } else {
+        store.applyAvatar(view, c)
+        if (view.visibility != View.VISIBLE) {
             ChatStyleStore.applyAvatar(view)
+            view.visibility = View.VISIBLE
         }
     }
 

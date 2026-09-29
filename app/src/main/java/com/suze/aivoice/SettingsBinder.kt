@@ -49,6 +49,8 @@ class SettingsBinder(
         val switchWebSearch = activity.findViewById<SwitchCompat>(R.id.switchWebSearch)
         val switchNotifySpeak = activity.findViewById<SwitchCompat>(R.id.switchNotifySpeak)
         val switchHeadsetWake = activity.findViewById<SwitchCompat>(R.id.switchHeadsetWake)
+        val switchLocalKws = activity.findViewById<SwitchCompat>(R.id.switchLocalKws)
+        val spinnerPortrait = activity.findViewById<Spinner>(R.id.spinnerPortrait)
         val btnMemorySummary = activity.findViewById<Button>(R.id.btnMemorySummary)
         val btnTest = activity.findViewById<Button>(R.id.btnTestVoice)
         val seekRate = activity.findViewById<SeekBar>(R.id.seekRate)
@@ -87,6 +89,11 @@ class SettingsBinder(
         switchWebSearch.isChecked = prefs.webSearchEnabled
         switchNotifySpeak.isChecked = prefs.notifySpeakEnabled
         switchHeadsetWake.isChecked = prefs.headsetWakeEnabled
+        switchLocalKws.isChecked = prefs.localKwsEnabled
+        val portraitLabels = PortraitLibrary.all().map { it.name }
+        spinnerPortrait.adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item, portraitLabels)
+        val portraitIdx = PortraitLibrary.all().indexOfFirst { it.id == prefs.portraitId }
+        if (portraitIdx >= 0) spinnerPortrait.setSelection(portraitIdx)
         activity.findViewById<Button>(R.id.btnBackupExport).setOnClickListener {
             val file = BackupStore(activity).exportZip()
             if (file == null) {
@@ -214,6 +221,8 @@ class SettingsBinder(
             val turnOnNotify = switchNotifySpeak.isChecked && !prefs.notifySpeakEnabled
             prefs.notifySpeakEnabled = switchNotifySpeak.isChecked
             prefs.headsetWakeEnabled = switchHeadsetWake.isChecked
+            prefs.localKwsEnabled = switchLocalKws.isChecked
+            PortraitLibrary.all().getOrNull(spinnerPortrait.selectedItemPosition)?.id?.let { prefs.portraitId = it }
             if (turnOnNotify) {
                 runCatching {
                     activity.startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
@@ -281,6 +290,13 @@ class SettingsBinder(
             refreshAppearancePreview()
             Toast.makeText(activity, R.string.toast_avatar_reset, Toast.LENGTH_SHORT).show()
         }
+        activity.findViewById<Spinner>(R.id.spinnerPortrait).onItemSelectedListener =
+            object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(p: AdapterView<*>?, v: android.view.View?, pos: Int, id: Long) {
+                    refreshAppearancePreview()
+                }
+                override fun onNothingSelected(p: AdapterView<*>?) {}
+            }
         activity.findViewById<Button>(R.id.btnChangeBackground).setOnClickListener {
             pickImage(false)
         }
@@ -293,7 +309,18 @@ class SettingsBinder(
     }
 
     fun refreshAppearancePreview() {
-        ChatStyleStore.applyAvatar(activity.findViewById(R.id.ivAvatarPreview))
+        val avatar = activity.findViewById<android.widget.ImageView>(R.id.ivAvatarPreview)
+        ChatStyleStore.applyAvatar(avatar)
+        if (!ChatStyleStore.hasAvatar(activity)) {
+            val spinner = activity.findViewById<Spinner>(R.id.spinnerPortrait)
+            val item = PortraitLibrary.all().getOrNull(spinner.selectedItemPosition)
+            val res = item?.resId ?: PortraitLibrary.resFor(prefs.portraitId)
+            if (res != null) {
+                avatar.setPadding(0, 0, 0, 0)
+                avatar.scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
+                avatar.setImageResource(res)
+            }
+        }
         ChatStyleStore.applyBackgroundPreview(activity.findViewById(R.id.ivBackgroundPreview))
     }
 

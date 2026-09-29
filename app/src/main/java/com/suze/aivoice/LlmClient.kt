@@ -137,8 +137,8 @@ class LlmClient(private val prefs: Prefs) {
         return t.replace(Regex("[ \\t]{2,}"), " ").trim()
     }
 
-    private fun localReply(lastUser: String): String =
-        if (allowLocalFallback) local.reply(lastUser) else ""
+    private fun localReply(history: List<ChatMessage>): String =
+        if (allowLocalFallback) local.reply(history) else ""
 
     private fun ResponseBody.readUtf8Limited(maxBytes: Int): String? {
         if (contentLength() > maxBytes.toLong()) return null
@@ -158,42 +158,40 @@ class LlmClient(private val prefs: Prefs) {
     }
 
     suspend fun chat(history: List<ChatMessage>): String = withContext(Dispatchers.IO) {
-        val lastUser = history.lastOrNull { it.role == "user" }?.content.orEmpty()
         if (!llmConfigured()) {
             if (allowLocalFallback && freeChatEnabled()) {
                 free.reply(freeHistory(history))?.takeIf { it.isNotBlank() }?.let { return@withContext it }
             }
-            return@withContext localReply(lastUser)
+            return@withContext localReply(history)
         }
         try {
             client.newCall(buildRequest(false, buildBody(history, false))).execute().use { resp ->
                 // 已配置私有模型后，任何失败都只回本地，不再把对话转交公共免费服务。
-                if (!resp.isSuccessful || resp.isRedirect) return@withContext localReply(lastUser)
-                val body = resp.body ?: return@withContext localReply(lastUser)
-                val text = body.readUtf8Limited(MAX_RESPONSE_BYTES) ?: return@withContext localReply(lastUser)
+                if (!resp.isSuccessful || resp.isRedirect) return@withContext localReply(history)
+                val body = resp.body ?: return@withContext localReply(history)
+                val text = body.readUtf8Limited(MAX_RESPONSE_BYTES) ?: return@withContext localReply(history)
                 val choices = JSONObject(text).optJSONArray("choices")
                 extractContent(choices?.optJSONObject(0)?.optJSONObject("message"))
-                    .take(MAX_OUTPUT_CHARS).takeIf { it.isNotBlank() } ?: localReply(lastUser)
+                    .take(MAX_OUTPUT_CHARS).takeIf { it.isNotBlank() } ?: localReply(history)
             }
         } catch (_: Exception) {
-            localReply(lastUser)
+            localReply(history)
         }
     }
 
     suspend fun chatStream(history: List<ChatMessage>, onDelta: (String) -> Unit): String =
         withContext(Dispatchers.IO) {
             val sb = StringBuilder()
-            val lastUser = history.lastOrNull { it.role == "user" }?.content.orEmpty()
             if (!llmConfigured()) {
                 val online = if (allowLocalFallback && freeChatEnabled()) free.reply(freeHistory(history)) else null
-                val ans = online?.takeIf { it.isNotBlank() } ?: localReply(lastUser)
+                val ans = online?.takeIf { it.isNotBlank() } ?: localReply(history)
                 if (ans.isNotEmpty()) onDelta(ans)
                 return@withContext ans
             }
             try {
                 client.newCall(buildRequest(true, buildBody(history, true))).execute().use { resp ->
                     if (!resp.isSuccessful || resp.isRedirect || resp.body == null) {
-                        val ans = localReply(lastUser); onDelta(ans); return@withContext ans
+                        val ans = localReply(history); onDelta(ans); return@withContext ans
                     }
                     val reader: BufferedReader = resp.body!!.source().inputStream().bufferedReader(Charsets.UTF_8)
                     while (sb.length < MAX_OUTPUT_CHARS) {
@@ -216,7 +214,7 @@ class LlmClient(private val prefs: Prefs) {
                 }
             } catch (_: Exception) {
                 if (sb.isEmpty()) {
-                    val ans = localReply(lastUser); onDelta(ans); return@withContext ans
+                    val ans = localReply(history); onDelta(ans); return@withContext ans
                 }
             }
             stripReasoning(sb.toString())

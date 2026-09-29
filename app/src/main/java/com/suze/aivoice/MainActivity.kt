@@ -166,9 +166,10 @@ class MainActivity : AppCompatActivity() {
             pop.menu.add(0, 5, 6, getString(R.string.menu_weather))
             pop.menu.add(0, 6, 7, getString(R.string.menu_role_lounge))
             pop.menu.add(0, 7, 8, getString(R.string.menu_connect_llm))
-            pop.menu.add(0, 2, 9, getString(R.string.menu_clear))
-            pop.menu.add(0, 4, 10, getString(R.string.menu_stop_speak))
-            pop.menu.add(0, 3, 11, getString(R.string.menu_wake))
+            pop.menu.add(0, 13, 9, getString(R.string.menu_voice_call))
+            pop.menu.add(0, 2, 10, getString(R.string.menu_clear))
+            pop.menu.add(0, 4, 11, getString(R.string.menu_stop_speak))
+            pop.menu.add(0, 3, 12, getString(R.string.menu_wake))
             pop.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     1 -> { openSettingsDrawer(); true }
@@ -180,6 +181,7 @@ class MainActivity : AppCompatActivity() {
                     5 -> { askCityAndShowWeather(); true }
                     6 -> { startActivity(Intent(this, RoleLoungeActivity::class.java)); true }
                     7 -> { startActivity(Intent(this, LlmConnectActivity::class.java)); true }
+                    13 -> { openVoiceCall(); true }
                     2 -> {
                         history.clear()
                         adapter.notifyDataSetChanged()
@@ -388,7 +390,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         applyChatStyle()
-        if (::adapter.isInitialized) adapter.notifyDataSetChanged()
+        reloadHistoryIfIdle()
         maybeGreetOnResume()
     }
 
@@ -705,9 +707,9 @@ class MainActivity : AppCompatActivity() {
         // ② 思考引擎：记录经历（供反思使用）
         if (prefs.mindEnabled) mind.record("主人说：" + userText.take(50))
 
-        // ③ 人设：台湾腔优先，其次默认系统提示
+        // ③ 人设：接上茬闲聊；台湾腔叠在同一套聊天风格上
         llm.applyCloudThink = false
-        llm.systemPromptOverride = if (prefs.taiwanVoice) prefs.effectiveTaiwanPrompt() else null
+        llm.systemPromptOverride = prefs.chattingPersona()
 
         // ④ 拼接“动态提示”：独立思考 + 情绪状态（注入 system prompt，是关键）
         val extra = StringBuilder()
@@ -1070,6 +1072,27 @@ class MainActivity : AppCompatActivity() {
     private fun persistHistory() {
         if (!::store.isInitialized || activeChatId.isBlank()) return
         store.save(activeChatId, history)
+    }
+
+    private fun openVoiceCall() {
+        persistHistory()
+        abortSpeech()
+        if (listeningEnabled) stopListeningMode()
+        wakeHelper?.stop()
+        startActivity(Intent(this, VoiceCallActivity::class.java))
+    }
+
+    private fun reloadHistoryIfIdle() {
+        if (!::adapter.isInitialized || !::store.isInitialized || activeChatId.isBlank()) return
+        if (isSending) {
+            adapter.notifyDataSetChanged()
+            return
+        }
+        val loaded = collapseLegacyDuplicates(store.load(activeChatId))
+        history.clear()
+        history.addAll(loaded)
+        adapter.notifyDataSetChanged()
+        if (history.isNotEmpty()) scrollToBottom()
     }
 
     private fun switchToSession(id: String) {
