@@ -3,9 +3,11 @@ package com.suze.aivoice
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -58,7 +60,9 @@ class RoleEditActivity : AppCompatActivity() {
         val editWorldContent = findViewById<EditText>(R.id.editRoleWorldContent)
         val editPostHistory = findViewById<EditText>(R.id.editRolePostHistory)
         val editTags = findViewById<EditText>(R.id.editRoleTags)
-
+        val spinnerVoice = findViewById<Spinner>(R.id.spinnerRoleVoice)
+        val voiceOptions = listOf(getString(R.string.role_voice_default)) + TtsHelper(this, Prefs(this)).availableVoices()
+        spinnerVoice.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, voiceOptions)
         if (existing != null) {
             editName.setText(existing.name)
             editEmoji.setText(existing.emoji)
@@ -78,6 +82,8 @@ class RoleEditActivity : AppCompatActivity() {
             editWorldContent.setText(world?.content.orEmpty())
             editPostHistory.setText(existing.postHistory)
             editTags.setText(existing.tags)
+            val vIdx = voiceOptions.indexOf(existing.voiceName).takeIf { it >= 0 } ?: 0
+            spinnerVoice.setSelection(vIdx)
         } else {
             editEmoji.setText("\uD83C\uDFAD")
             editUserName.setText("主人")
@@ -108,14 +114,14 @@ class RoleEditActivity : AppCompatActivity() {
             val exampleUser = editExampleUser.text.toString().trim()
             val exampleChar = editExampleChar.text.toString().trim()
             val examples = if (exampleUser.isEmpty() && exampleChar.isEmpty()) {
-                previous?.examples.orEmpty()
+                emptyList()
             } else {
                 listOf(RoleExample(exampleUser, exampleChar))
             }
             val worldKeys = editWorldKeys.text.toString().trim()
             val worldContent = editWorldContent.text.toString().trim()
             val world = if (worldKeys.isEmpty() && worldContent.isEmpty()) {
-                previous?.worldEntries.orEmpty()
+                emptyList()
             } else {
                 listOf(
                     WorldEntry(
@@ -127,18 +133,21 @@ class RoleEditActivity : AppCompatActivity() {
                 )
             }
             val avatarName = store.avatarFile(roleId).takeIf { it.isFile }?.name.orEmpty()
+            val persona = editPersona.text.toString().trim().take(4000)
+            val pickedVoice = spinnerVoice.selectedItem?.toString().orEmpty()
+            val voiceName = if (pickedVoice == getString(R.string.role_voice_default)) "" else pickedVoice
             val saved = RoleCharacter(
                 id = roleId,
                 name = name.take(24),
                 emoji = editEmoji.text.toString().trim().ifBlank { "\uD83C\uDFAD" }.take(8),
                 intro = editIntro.text.toString().trim().take(80),
                 greeting = editGreeting.text.toString().trim().take(400),
-                persona = editPersona.text.toString().trim().take(4000),
+                persona = persona,
                 description = editDescription.text.toString().trim().take(4000),
                 personality = editPersonality.text.toString().trim().take(2000),
                 scenario = editScenario.text.toString().trim().take(2000),
                 mesExample = previous?.mesExample.orEmpty(),
-                systemPrompt = previous?.systemPrompt.orEmpty(),
+                systemPrompt = persona,
                 postHistory = editPostHistory.text.toString().trim().take(1000),
                 userName = editUserName.text.toString().trim().ifBlank { "主人" }.take(24),
                 tags = editTags.text.toString().trim().take(80),
@@ -146,6 +155,7 @@ class RoleEditActivity : AppCompatActivity() {
                 examples = examples,
                 worldEntries = world,
                 avatarFile = avatarName,
+                voiceName = voiceName,
                 creator = previous?.creator.orEmpty(),
                 updatedAt = System.currentTimeMillis()
             )

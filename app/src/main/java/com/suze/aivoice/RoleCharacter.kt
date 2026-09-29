@@ -40,6 +40,7 @@ data class RoleCharacter(
     val examples: List<RoleExample> = emptyList(),
     val worldEntries: List<WorldEntry> = emptyList(),
     val avatarFile: String = "",
+    val voiceName: String = "",
     val creator: String = "",
     val updatedAt: Long = 0L
 ) {

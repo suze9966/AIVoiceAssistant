@@ -1,26 +1,32 @@
 package com.suze.aivoice
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.view.View
+import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -33,6 +39,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var llm: LlmClient
     private lateinit var tts: TtsHelper
     private lateinit var store: HistoryStore
+    private lateinit var reminders: ReminderStore
+    private lateinit var searcher: SearchClient
     private lateinit var emotion: EmotionEngine
     private lateinit var mind: MindEngine
     private lateinit var memory: MemoryEngine
@@ -45,6 +53,25 @@ class MainActivity : AppCompatActivity() {
     private lateinit var ivChatBackground: android.widget.ImageView
     private lateinit var chatBgScrim: View
     private lateinit var ivHeaderAvatar: android.widget.ImageView
+    private lateinit var drawerLayout: DrawerLayout
+    private var pickingAvatar = true
+    private var settingsBinder: SettingsBinder? = null
+    private val pickSettingsImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri == null) return@registerForActivityResult
+        val ok = if (pickingAvatar) ChatStyleStore.saveAvatar(this, uri)
+            else ChatStyleStore.saveBackground(this, uri)
+        Toast.makeText(
+            this,
+            if (!ok) getString(R.string.toast_image_failed)
+            else if (pickingAvatar) getString(R.string.toast_avatar_updated)
+            else getString(R.string.toast_background_updated),
+            Toast.LENGTH_SHORT
+        ).show()
+        if (ok) {
+            settingsBinder?.refreshAppearancePreview()
+            applyChatStyle()
+        }
+    }
 
     private var recognizer: SpeechRecognizer? = null
     private var wakeHelper: WakeWordHelper? = null
@@ -66,8 +93,9 @@ class MainActivity : AppCompatActivity() {
     private var streamSpeakStarted = false
     private var speechSession = 0L
     private var notBeforeListenAt = 0L
-
+    private var activeChatId: String = ""
     private val REQ_AUDIO = 1001
+    private val REQ_NOTIFY = 1002
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,6 +105,8 @@ class MainActivity : AppCompatActivity() {
         llm = LlmClient(prefs)
         tts = TtsHelper(this, prefs)
         store = HistoryStore(this)
+        reminders = ReminderStore(this)
+        searcher = SearchClient()
         emotion = EmotionEngine(this)
         llm.bindEmotion(emotion)
         mind = MindEngine(this)
@@ -89,26 +119,31 @@ class MainActivity : AppCompatActivity() {
         chatBgScrim = findViewById(R.id.chatBgScrim)
         ivHeaderAvatar = findViewById(R.id.ivHeaderAvatar)
         applyChatStyle()
+        setupSettingsDrawer()
         val btnMenu = findViewById<ImageButton>(R.id.btnMenu)
         btnMenu.setOnClickListener { v ->
             val pop = PopupMenu(this, v)
             pop.menu.add(0, 1, 0, getString(R.string.btn_settings))
-            pop.menu.add(0, 5, 1, getString(R.string.menu_weather))
-            pop.menu.add(0, 6, 2, getString(R.string.menu_role_lounge))
-            pop.menu.add(0, 7, 3, getString(R.string.menu_connect_llm))
-            pop.menu.add(0, 2, 4, getString(R.string.menu_clear))
-            pop.menu.add(0, 4, 5, getString(R.string.menu_stop_speak))
-            pop.menu.add(0, 3, 6, getString(R.string.menu_wake))
+            pop.menu.add(0, 8, 1, getString(R.string.menu_sessions))
+            pop.menu.add(0, 9, 2, getString(R.string.menu_new_session))
+            pop.menu.add(0, 5, 3, getString(R.string.menu_weather))
+            pop.menu.add(0, 6, 4, getString(R.string.menu_role_lounge))
+            pop.menu.add(0, 7, 5, getString(R.string.menu_connect_llm))
+            pop.menu.add(0, 2, 6, getString(R.string.menu_clear))
+            pop.menu.add(0, 4, 7, getString(R.string.menu_stop_speak))
+            pop.menu.add(0, 3, 8, getString(R.string.menu_wake))
             pop.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
-                    1 -> { startActivity(Intent(this, SettingsActivity::class.java)); true }
+                    1 -> { openSettingsDrawer(); true }
+                    8 -> { showSessionPicker(); true }
+                    9 -> { startNewSession(); true }
                     5 -> { askCityAndShowWeather(); true }
                     6 -> { startActivity(Intent(this, RoleLoungeActivity::class.java)); true }
                     7 -> { startActivity(Intent(this, LlmConnectActivity::class.java)); true }
                     2 -> {
                         history.clear()
                         adapter.notifyDataSetChanged()
-                        store.clear()
+                        if (activeChatId.isNotBlank()) store.clear(activeChatId)
                         Toast.makeText(this, R.string.toast_cleared, Toast.LENGTH_SHORT).show()
                         true
                     }
@@ -127,18 +162,20 @@ class MainActivity : AppCompatActivity() {
         recycler.adapter = adapter
 
         // 恢复本地历史，并清理旧版本因 history/adapter 共用列表产生的相邻重复项。
-        val loadedHistory = collapseLegacyDuplicates(store.load())
+        activeChatId = store.migrateAndActive(prefs)
+        val loadedHistory = collapseLegacyDuplicates(store.load(activeChatId))
         history.addAll(loadedHistory)
-        if (loadedHistory.isNotEmpty()) store.save(history)
+        if (loadedHistory.isNotEmpty()) store.save(activeChatId, history)
         adapter.notifyDataSetChanged()
         if (history.isNotEmpty()) scrollToBottom()
         // 欢迎语／引导（首次进入且无历史）
         setupChatInteractions()
         if (history.isEmpty() && prefs.welcomeEnabled) {
             adapter.add(ChatMessage(role = "assistant", content = getString(R.string.welcome_msg), isMe = false))
-            store.save(history)
+            persistHistory()
             scrollToBottom()
         }
+        handleRemindIntent(intent)
 
         val btnSend = findViewById<ImageButton>(R.id.btnSend)
         val btnMic = findViewById<ImageButton>(R.id.btnMic)
@@ -228,7 +265,7 @@ class MainActivity : AppCompatActivity() {
                     }
                     2 -> {
                         adapter.removeAt(pos)
-                        store.save(history)
+                        persistHistory()
                         Toast.makeText(this, R.string.toast_deleted, Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -276,6 +313,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (listeningEnabled && !isListening && !isSending && !tts.isSpeaking) {
+            scheduleRestartListening()
+        }
         applySavedVoice()
         if (::emotion.isInitialized) {
             val care = if (prefs.emotionEnabled) emotion.resumeCare() else {
@@ -285,7 +325,7 @@ class MainActivity : AppCompatActivity() {
             refreshMoodSubtitle()
             if (!care.isNullOrBlank() && ::adapter.isInitialized && ::store.isInitialized) {
                 adapter.add(ChatMessage("assistant", care, isMe = false))
-                store.save(history)
+                persistHistory()
                 scrollToBottom()
                 if (::tts.isInitialized) {
                     tts.setEmotion(emotion.ttsRate(), emotion.ttsPitch())
@@ -327,6 +367,67 @@ class MainActivity : AppCompatActivity() {
         ChatStyleStore.applyBackground(ivChatBackground)
         chatBgScrim.visibility = if (ChatStyleStore.hasBackground(this)) View.VISIBLE else View.GONE
         ChatStyleStore.applyAvatar(ivHeaderAvatar)
+    }
+
+    private fun setupSettingsDrawer() {
+        drawerLayout = findViewById(R.id.drawerLayout)
+        findViewById<ImageButton>(R.id.btnDrawer).setOnClickListener {
+            toggleSettingsDrawer()
+        }
+        drawerLayout.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {
+            override fun onDrawerOpened(drawerView: View) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            }
+            override fun onDrawerClosed(drawerView: View) {
+                window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            }
+        })
+        try {
+            settingsBinder = SettingsBinder(
+                activity = this,
+                prefs = prefs,
+                tts = tts,
+                memory = memory,
+                pickImage = { avatar ->
+                    pickingAvatar = avatar
+                    pickSettingsImage.launch("image/*")
+                },
+                onSaved = {
+                    applySavedVoice()
+                    applyChatStyle()
+                    refreshMoodSubtitle()
+                    if (::adapter.isInitialized) adapter.notifyDataSetChanged()
+                    closeSettingsDrawer()
+                }
+            )
+            settingsBinder?.bind()
+        } catch (t: Throwable) {
+            Toast.makeText(this, "设置栏初始化失败：" + t.message, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun toggleSettingsDrawer() {
+        if (!::drawerLayout.isInitialized) return
+        if (drawerLayout.isDrawerOpen(GravityCompat.START)) closeSettingsDrawer()
+        else openSettingsDrawer()
+    }
+
+    private fun openSettingsDrawer() {
+        if (::drawerLayout.isInitialized) drawerLayout.openDrawer(GravityCompat.START)
+    }
+
+    private fun closeSettingsDrawer() {
+        if (::drawerLayout.isInitialized) drawerLayout.closeDrawer(GravityCompat.START)
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        if (::drawerLayout.isInitialized && drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            closeSettingsDrawer()
+            return
+        }
+        @Suppress("DEPRECATION")
+        super.onBackPressed()
     }
 
     private fun ensureAudioPermission() {
@@ -465,6 +566,10 @@ class MainActivity : AppCompatActivity() {
         listeningEnabled = true
         abortSpeech()
         setHalo(true)
+        if (prefs.keepListenInBackground) {
+            ensureNotifyPermission()
+            ListenKeepAliveService.start(this)
+        }
         startListening()
         Toast.makeText(this, "已开启聆听，直接说话即可；再点一次麦克风可关闭", Toast.LENGTH_LONG).show()
     }
@@ -476,6 +581,7 @@ class MainActivity : AppCompatActivity() {
         isListening = false
         runCatching { recognizer?.stopListening() }
         runCatching { recognizer?.cancel() }
+        ListenKeepAliveService.stop(this)
         setHalo(false)
         Toast.makeText(this, "已关闭聆听", Toast.LENGTH_SHORT).show()
     }
@@ -501,11 +607,17 @@ class MainActivity : AppCompatActivity() {
         streamSpokenUntil = 0
         streamSpeakStarted = false
 
-        // ⚡ 智能天气：主人说“北京天气”之类，直接走天气查询（不耗大模型）
+        // ⚡ 本地口令：天气 / 提醒 / 搜索，先拦截再走大模型
         val wxCity = detectWeatherQuery(userText)
         if (wxCity != null) {
             isSending = false
             requestWeather(wxCity)
+            return
+        }
+        val command = VoiceCommandParser.parse(userText)
+        if (command != null) {
+            isSending = false
+            handleVoiceCommand(userText, command)
             return
         }
 
@@ -605,7 +717,7 @@ class MainActivity : AppCompatActivity() {
                 adapter.add(imgMsg)
             }
             scrollToBottom()
-            store.save(history)
+            persistHistory()
             // 内心独白：不展示正文，但记录到状态栏提示
             if (prefs.mindEnabled && thought.isNotBlank()) {
                 runOnUiThread { tvStatus.text = "\uD83D\uDCAD $thought" }
@@ -641,11 +753,11 @@ class MainActivity : AppCompatActivity() {
                 val fallback = getString(R.string.role_empty_reply)
                 history[history.size - 1] = history.last().copy(content = fallback)
                 adapter.updateLast(fallback)
-                store.save(history)
+                persistHistory()
             }
           } finally {
             isSending = false
-            if (::store.isInitialized && history.isNotEmpty()) store.save(history)
+            persistHistory()
             if (!tts.isSpeaking) scheduleRestartListening()
           }
         }
@@ -728,7 +840,7 @@ class MainActivity : AppCompatActivity() {
             adapter.add(ChatMessage("user", c + "天气", isMe = true))
             adapter.add(ChatMessage("assistant", text, isMe = false))
             scrollToBottom()
-            store.save(history)
+            persistHistory()
             tvStatus.text = getString(R.string.status_idle)
             if (prefs.emotionEnabled) {
                 tts.setEmotion(emotion.ttsRate(), emotion.ttsPitch())
@@ -854,17 +966,223 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        // 退到后台时关闭聆听，避免持续占用麦克风
-        if (listeningEnabled) stopListeningMode()
-        if (::store.isInitialized && history.isNotEmpty()) store.save(history)
+        persistHistory()
+        if (listeningEnabled && prefs.keepListenInBackground) {
+            ListenKeepAliveService.start(this)
+        } else {
+            ListenKeepAliveService.stop(this)
+            if (listeningEnabled) stopListeningMode()
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleRemindIntent(intent)
     }
 
     override fun onDestroy() {
         super.onDestroy()
         listeningEnabled = false
+        ListenKeepAliveService.stop(this)
         tts.onSpeakDone = null
         recognizer?.destroy()
         wakeHelper?.stop()
         tts.shutdown()
+    }
+
+    private fun persistHistory() {
+        if (!::store.isInitialized || activeChatId.isBlank()) return
+        store.save(activeChatId, history)
+    }
+
+    private fun switchToSession(id: String) {
+        if (id.isBlank() || id == activeChatId) return
+        persistHistory()
+        activeChatId = id
+        prefs.activeChatId = id
+        history.clear()
+        history.addAll(collapseLegacyDuplicates(store.load(id)))
+        adapter.notifyDataSetChanged()
+        if (history.isNotEmpty()) scrollToBottom()
+    }
+
+    private fun showSessionPicker() {
+        val sessions = store.loadSessions()
+        if (sessions.isEmpty()) {
+            startNewSession()
+            return
+        }
+        val labels = sessions.map { s ->
+            val mark = if (s.id == activeChatId) "● " else ""
+            val preview = s.preview.ifBlank { getString(R.string.role_preview_empty) }
+            mark + s.title + "\n" + preview
+        }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.menu_sessions)
+            .setItems(labels) { _, which ->
+                val selected = sessions.getOrNull(which) ?: return@setItems
+                switchToSession(selected.id)
+            }
+            .setNeutralButton(R.string.menu_rename_session) { _, _ -> promptRenameSession() }
+            .setNegativeButton(R.string.menu_delete_session) { _, _ -> confirmDeleteSession() }
+            .setPositiveButton(R.string.role_cancel, null)
+            .show()
+    }
+
+    private fun startNewSession() {
+        persistHistory()
+        val created = store.create()
+        switchToSession(created.id)
+        if (prefs.welcomeEnabled && history.isEmpty()) {
+            adapter.add(ChatMessage(role = "assistant", content = getString(R.string.welcome_msg), isMe = false))
+            persistHistory()
+            scrollToBottom()
+        }
+        Toast.makeText(this, R.string.menu_new_session, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun promptRenameSession() {
+        val input = EditText(this)
+        input.hint = getString(R.string.hint_rename_session)
+        input.setText(store.loadSessions().firstOrNull { it.id == activeChatId }?.title.orEmpty())
+        AlertDialog.Builder(this)
+            .setTitle(R.string.menu_rename_session)
+            .setView(input)
+            .setPositiveButton(R.string.role_save) { _, _ ->
+                val name = input.text.toString().trim()
+                if (name.isNotEmpty() && activeChatId.isNotBlank()) {
+                    store.rename(activeChatId, name)
+                    Toast.makeText(this, R.string.toast_session_renamed, Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton(R.string.role_cancel, null)
+            .show()
+    }
+
+    private fun confirmDeleteSession() {
+        val remain = store.delete(activeChatId) ?: run {
+            Toast.makeText(this, R.string.role_keep_one_chat, Toast.LENGTH_SHORT).show()
+            return
+        }
+        activeChatId = remain
+        prefs.activeChatId = remain
+        history.clear()
+        history.addAll(collapseLegacyDuplicates(store.load(remain)))
+        adapter.notifyDataSetChanged()
+        if (history.isNotEmpty()) scrollToBottom()
+        Toast.makeText(this, R.string.toast_cleared, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun handleVoiceCommand(userText: String, command: VoiceCommand) {
+        when (command) {
+            is VoiceCommand.RemindAt -> addReminder(userText, command.atMillis, command.text)
+            is VoiceCommand.RemindIn -> addReminder(userText, command.atMillis, command.text)
+            VoiceCommand.ListReminders -> {
+                val items = reminders.upcoming()
+                val reply = if (items.isEmpty()) {
+                    getString(R.string.toast_remind_none)
+                } else {
+                    items.joinToString("\n") { reminders.formatWhen(it.atMillis) + "  " + it.text }
+                }
+                replyLocal(userText, reply)
+            }
+            VoiceCommand.CancelReminders -> {
+                reminders.cancelAll()
+                replyLocal(userText, getString(R.string.toast_remind_cleared))
+            }
+            is VoiceCommand.Search -> runWebSearch(userText, command.query)
+        }
+    }
+
+    private fun addReminder(userText: String, atMillis: Long, topic: String) {
+        ensureNotifyPermission()
+        val item = reminders.add(topic, atMillis)
+        val whenText = reminders.formatWhen(item.atMillis)
+        replyLocal(userText, getString(R.string.toast_remind_set, whenText, item.text))
+    }
+
+    private fun runWebSearch(userText: String, query: String) {
+        if (!prefs.webSearchEnabled) {
+            replyLocal(userText, getString(R.string.search_fail))
+            return
+        }
+        isSending = true
+        adapter.add(ChatMessage("user", userText, isMe = true))
+        adapter.add(ChatMessage("assistant", "", isMe = false))
+        scrollToBottom()
+        tvStatus.text = "🔎 正在搜：$query"
+        lifecycleScope.launch {
+            try {
+                val found = searcher.search(query)
+                val reply = found.ifBlank { getString(R.string.search_fail) }
+                if (isFinishing || isDestroyed) return@launch
+                if (history.isNotEmpty()) {
+                    history[history.size - 1] = history.last().copy(content = reply)
+                    adapter.updateLast(reply)
+                }
+                persistHistory()
+                scrollToBottom()
+                speakLocal(reply)
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (!isFinishing && !isDestroyed) {
+                    val fail = getString(R.string.search_fail)
+                    if (history.isNotEmpty() && history.last().role == "assistant") {
+                        history[history.size - 1] = history.last().copy(content = fail)
+                        adapter.updateLast(fail)
+                    }
+                    persistHistory()
+                    speakLocal(fail)
+                }
+            } finally {
+                isSending = false
+                tvStatus.text = getString(R.string.status_idle)
+                if (!tts.isSpeaking) scheduleRestartListening()
+            }
+        }
+    }
+
+    private fun replyLocal(userText: String, reply: String) {
+        adapter.add(ChatMessage("user", userText, isMe = true))
+        adapter.add(ChatMessage("assistant", reply, isMe = false))
+        persistHistory()
+        scrollToBottom()
+        speakLocal(reply)
+        if (!tts.isSpeaking) scheduleRestartListening()
+    }
+
+    private fun speakLocal(text: String) {
+        if (text.isBlank() || !::tts.isInitialized) return
+        applySpeakVoice()
+        suspendRecognitionForSpeech()
+        bindListenAfterSpeak()
+        tts.speak(text, prefs.taiwanVoice)
+    }
+
+    private fun handleRemindIntent(intent: Intent?) {
+        val text = intent?.getStringExtra(EXTRA_REMIND_SPEAK).orEmpty()
+        if (text.isBlank()) return
+        intent?.removeExtra(EXTRA_REMIND_SPEAK)
+        val line = getString(R.string.remind_notif_title) + "：" + text
+        adapter.add(ChatMessage("assistant", line, isMe = false))
+        persistHistory()
+        scrollToBottom()
+        speakLocal(line)
+    }
+
+    private fun ensureNotifyPermission() {
+        if (Build.VERSION.SDK_INT < 33) return
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+            == PackageManager.PERMISSION_GRANTED) return
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+            REQ_NOTIFY
+        )
+    }
+
+    companion object {
+        const val EXTRA_REMIND_SPEAK = "remind_speak"
     }
 }

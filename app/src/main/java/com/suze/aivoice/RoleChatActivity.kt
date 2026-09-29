@@ -25,6 +25,7 @@ class RoleChatActivity : AppCompatActivity() {
     private lateinit var prefs: Prefs
     private lateinit var llm: LlmClient
     private lateinit var store: RoleStore
+    private lateinit var tts: TtsHelper
     private lateinit var adapter: ChatAdapter
     private lateinit var recycler: RecyclerView
     private lateinit var editInput: EditText
@@ -34,6 +35,7 @@ class RoleChatActivity : AppCompatActivity() {
     private var chatId: String = ""
     private var isSending = false
     private var sendJob: Job? = null
+    private var speechSession = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,6 +43,7 @@ class RoleChatActivity : AppCompatActivity() {
         prefs = Prefs(this)
         llm = LlmClient(prefs)
         llm.allowLocalFallback = false
+        tts = TtsHelper(this, prefs)
         store = RoleStore(this)
         val id = intent.getStringExtra(EXTRA_ROLE_ID).orEmpty()
         character = store.get(id)
@@ -83,6 +86,11 @@ class RoleChatActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         sendJob?.cancel()
+        if (::tts.isInitialized) {
+            tts.onSpeakDone = null
+            tts.stop()
+            tts.shutdown()
+        }
         super.onDestroy()
     }
 
@@ -92,8 +100,35 @@ class RoleChatActivity : AppCompatActivity() {
         store.saveChat(chatId, history, c.id)
     }
 
+    private fun applyRoleVoice() {
+        if (!::tts.isInitialized || !::prefs.isInitialized) return
+        val voice = character?.voiceName.orEmpty()
+        if (voice.isNotBlank()) {
+            tts.setVoiceByName(voice)
+        } else if (prefs.taiwanVoice) {
+            tts.applyTaiwanVoice()
+        } else {
+            val savedVoice = tts.availableVoices().getOrNull(prefs.voiceIndex)
+            if (savedVoice != null) tts.setVoiceByName(savedVoice)
+        }
+        tts.setRate(prefs.ttsRate)
+        tts.setPitch(prefs.ttsPitch)
+    }
+
+    private fun speakRole(text: String) {
+        if (text.isBlank() || !::tts.isInitialized) return
+        applyRoleVoice()
+        val taiwan = character?.voiceName.orEmpty().contains("台湾") ||
+            (character?.voiceName.isNullOrBlank() && prefs.taiwanVoice)
+        tts.speak(text, taiwan)
+    }
+
     private fun loadCurrentChat(seedGreeting: Boolean) {
         val c = character ?: return
+        speechSession += 1L
+        sendJob?.cancel()
+        isSending = false
+        if (::tts.isInitialized) tts.stop()
         history.clear()
         history.addAll(store.loadChat(chatId))
         if (seedGreeting && history.isEmpty()) {
@@ -329,9 +364,11 @@ class RoleChatActivity : AppCompatActivity() {
 
     private fun stopGeneration() {
         if (!isSending) return
+        speechSession += 1L
         sendJob?.cancel()
         sendJob = null
         isSending = false
+        if (::tts.isInitialized) tts.stop()
         val c = character
         if (history.isNotEmpty() && history.last().role == "assistant" && history.last().content.isBlank()) {
             history[history.size - 1] = ChatMessage("assistant", getString(R.string.toast_role_stopped), isMe = false)
@@ -344,6 +381,8 @@ class RoleChatActivity : AppCompatActivity() {
 
     private fun sendToRole(userText: String, appendUser: Boolean = true) {
         val c = character ?: return
+        speechSession += 1L
+        val session = speechSession
         isSending = true
         val cloudReady = llm.isConfigured()
         tvStatus.text = if (cloudReady && prefs.cloudThinkEnabled) {
@@ -379,7 +418,7 @@ class RoleChatActivity : AppCompatActivity() {
                             rawBuffer.append(delta)
                             val snapshot = rawBuffer.toString()
                             runOnUiThread {
-                                if (isFinishing || history.isEmpty()) return@runOnUiThread
+                                if (session != speechSession || isFinishing || isDestroyed || history.isEmpty()) return@runOnUiThread
                                 val visible = llm.stripReasoning(snapshot)
                                 history[history.size - 1] = ChatMessage("assistant", visible, isMe = false)
                                 adapter.updateLast(visible)
@@ -393,25 +432,26 @@ class RoleChatActivity : AppCompatActivity() {
                     if (e is kotlinx.coroutines.CancellationException) throw e
                     getString(R.string.role_empty_reply)
                 }
-                if (isFinishing) {
+                if (session != speechSession || isFinishing || isDestroyed) {
                     persistChat()
                     return@launch
                 }
                 val finalText = llm.stripReasoning(rawText).ifBlank { getString(R.string.role_empty_reply) }
-                finishAssistant(finalText, c)
+                finishAssistant(finalText, c, session)
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) {
                     persistChat()
                     return@launch
                 }
-                if (!isFinishing) {
-                    finishAssistant(getString(R.string.role_empty_reply), c)
+                if (session == speechSession && !isFinishing && !isDestroyed) {
+                    finishAssistant(getString(R.string.role_empty_reply), c, session)
                 }
             }
         }
     }
 
-    private fun finishAssistant(text: String, c: RoleCharacter) {
+    private fun finishAssistant(text: String, c: RoleCharacter, session: Long = speechSession) {
+        if (session != speechSession) return
         if (history.isNotEmpty()) {
             history[history.size - 1] = ChatMessage("assistant", text, isMe = false)
             adapter.updateLast(text)
@@ -420,7 +460,10 @@ class RoleChatActivity : AppCompatActivity() {
         scrollToBottom()
         isSending = false
         sendJob = null
-        if (!isFinishing) tvStatus.text = statusIdleText(c)
+        if (!isFinishing) {
+            tvStatus.text = statusIdleText(c)
+            speakRole(text)
+        }
     }
 
     private fun scrollToBottom() {

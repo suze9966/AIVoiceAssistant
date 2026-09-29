@@ -4,7 +4,13 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Android 11+ 包可见性：声明后才能探测到系统语音识别服务，否则
          SpeechRecognizer.isRecognitionAvailable() 会返回 false（报“设备不支持语音唤醒”） -->
     <queries>
@@ -49,7 +55,6 @@
             <data android:mimeType="*/*" />
         </intent>
     </queries>
-
     <application
         android:allowBackup="false"
         android:fullBackupContent="false"
@@ -60,6 +65,25 @@
         android:supportsRtl="true"
         android:usesCleartextTraffic="false"
         android:theme="@style/Theme.AIVoice">
+        <service
+            android:name=".ListenKeepAliveService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+        <receiver
+            android:name=".ReminderReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.suze.aivoice.REMIND" />
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name=".BootRemindReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -102,14 +126,13 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <!-- 设置页：必须在此注册，否则 startActivity 会抛 ActivityNotFoundException 直接闪退 -->
         <activity
             android:name=".SettingsActivity"
             android:exported="false"

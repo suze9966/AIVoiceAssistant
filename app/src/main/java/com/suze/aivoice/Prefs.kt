@@ -215,4 +215,17 @@ class Prefs(context: Context) {
     var lastCity: String
         get() = sp.getString("lastCity", "北京") ?: "北京"
         set(v) = sp.edit().putString("lastCity", v).apply()
+    /** 退到后台也保持耳听（前台服务保活） */
+    var keepListenInBackground: Boolean
+        get() = sp.getBoolean("keepListenInBackground", true)
+        set(v) = sp.edit().putBoolean("keepListenInBackground", v).apply()
+    /** 联网搜索开关 */
+    var webSearchEnabled: Boolean
+        get() = sp.getBoolean("webSearchEnabled", true)
+        set(v) = sp.edit().putBoolean("webSearchEnabled", v).apply()
+    /** 主聊天当前会话 id */
+    var activeChatId: String
+        get() = sp.getString("activeChatId", "") ?: ""
+        set(v) = sp.edit().putString("activeChatId", v).apply()
 }
+

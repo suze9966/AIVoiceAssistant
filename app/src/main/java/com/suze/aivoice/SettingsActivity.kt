@@ -1,19 +1,16 @@
 package com.suze.aivoice
-
-import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
-import android.widget.*
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.SwitchCompat
-import java.util.Locale
 
 class SettingsActivity : AppCompatActivity() {
     private lateinit var prefs: Prefs
     private lateinit var tts: TtsHelper
     private lateinit var memory: MemoryEngine
     private var pickingAvatar = true
+    private var binder: SettingsBinder? = null
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri == null) return@registerForActivityResult
         val ok = if (pickingAvatar) ChatStyleStore.saveAvatar(this, uri)
@@ -25,302 +22,32 @@ class SettingsActivity : AppCompatActivity() {
             else getString(R.string.toast_background_updated),
             Toast.LENGTH_SHORT
         ).show()
-        if (ok) refreshAppearancePreview()
+        if (ok) binder?.refreshAppearancePreview()
     }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // 设置页可能短暂持有凭证明文：禁止截图、最近任务缩略图和非安全投屏捕获。
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        // 兜底：任何意外异常都不让设置页闪退
         try {
             setContentView(R.layout.activity_settings)
-            initView()
+            prefs = Prefs(this)
+            tts = TtsHelper(this, prefs)
+            memory = MemoryEngine(this)
+            binder = SettingsBinder(
+                activity = this,
+                prefs = prefs,
+                tts = tts,
+                memory = memory,
+                pickImage = { avatar ->
+                    pickingAvatar = avatar
+                    pickImage.launch("image/*")
+                },
+                onSaved = { finish() }
+            )
+            binder?.bind()
         } catch (t: Throwable) {
             Toast.makeText(this, "设置页初始化失败：" + t.message, Toast.LENGTH_LONG).show()
         }
     }
-
-    private fun initView() {
-        prefs = Prefs(this)
-        tts = TtsHelper(this, prefs)
-        memory = MemoryEngine(this)
-
-        val editBaseUrl = findViewById<EditText>(R.id.editBaseUrl)
-        val editApiKey = findViewById<EditText>(R.id.editApiKey)
-        val editModel = findViewById<EditText>(R.id.editModel)
-        val editSystem = findViewById<EditText>(R.id.editSystem)
-        val spinnerLocale = findViewById<Spinner>(R.id.spinnerLocale)
-        val switchTaiwan = findViewById<SwitchCompat>(R.id.switchTaiwan)
-        val editTaiwanPrompt = findViewById<EditText>(R.id.editTaiwanPrompt)
-        val spinnerVoice = findViewById<Spinner>(R.id.spinnerVoice)
-        val spinnerTtsEngine = findViewById<Spinner>(R.id.spinnerTtsEngine)
-        val spinnerCosyVoice = findViewById<Spinner>(R.id.spinnerCosyVoice)
-        val editSiliconflowKey = findViewById<EditText>(R.id.editSiliconflowKey)
-        val editCaiyunKey = findViewById<EditText>(R.id.editCaiyunKey)
-        val editCaiyunSecret = findViewById<EditText>(R.id.editCaiyunSecret)
-        val editCaiyunToken = findViewById<EditText>(R.id.editCaiyunToken)
-        val spinnerWeatherSource = findViewById<Spinner>(R.id.spinnerWeatherSource)
-        val editWake = findViewById<EditText>(R.id.editWakeWord)
-        val switchStream = findViewById<SwitchCompat>(R.id.switchStream)
-        val switchEmotion = findViewById<SwitchCompat>(R.id.switchEmotion)
-        val switchMind = findViewById<SwitchCompat>(R.id.switchMind)
-        val switchGrow = findViewById<SwitchCompat>(R.id.switchGrow)
-        val switchMemory = findViewById<SwitchCompat>(R.id.switchMemory)
-        val switchFreeChat = findViewById<SwitchCompat>(R.id.switchFreeChat)
-        val btnMemorySummary = findViewById<Button>(R.id.btnMemorySummary)
-        val btnTest = findViewById<Button>(R.id.btnTestVoice)
-        val seekRate = findViewById<SeekBar>(R.id.seekRate)
-        val seekPitch = findViewById<SeekBar>(R.id.seekPitch)
-        val btnStopSpeak = findViewById<Button>(R.id.btnStopSpeak)
-        val btnSave = findViewById<Button>(R.id.btnSave)
-        bindAppearance()
-        findViewById<Button>(R.id.btnConnectLlm).setOnClickListener {
-            startActivity(Intent(this, LlmConnectActivity::class.java))
-        }
-        findViewById<Button>(R.id.btnVoiceClone).setOnClickListener {
-            startActivity(Intent(this, VoiceCloneActivity::class.java))
-        }
-
-        editBaseUrl.setText(prefs.baseUrl)
-        // 安全：绝不回显完整 API Key。已保存过就显示脱敏占位，仅在用户重新输入时才覆盖
-        val hasKey = prefs.apiKey.isNotBlank()
-        editApiKey.setText("")
-        editApiKey.hint = if (hasKey) "已加密保存（留空则不修改）" else getString(R.string.label_apikey_hint)
-        listOf(editApiKey, editCaiyunKey, editCaiyunSecret, editCaiyunToken, editSiliconflowKey).forEach {
-            it.filterTouchesWhenObscured = true
-        }
-        editSiliconflowKey.setText("")
-        editSiliconflowKey.hint = if (prefs.siliconflowKey.isNotBlank()) "已加密保存 · 留空不修改" else "硅基流动 API Key（cloud.siliconflow.cn）"
-        editModel.setText(prefs.model)
-        editSystem.setText(prefs.systemPrompt)
-        editCaiyunKey.hint = if (prefs.caiyunAppKey.isNotBlank()) "已加密保存 · 留空不修改" else "请输入彩云 App Key"
-        editCaiyunSecret.hint = if (prefs.caiyunAppSecret.isNotBlank()) "已加密保存 · 留空不修改" else "请输入彩云 App Secret"
-        editCaiyunToken.hint = if (prefs.caiyunToken.isNotBlank()) "旧 Token 已加密保存 · 留空不修改" else "可选：旧版 Token"
-        editWake.setText(prefs.wakeWord)
-        switchStream.isChecked = prefs.streamEnabled
-        switchEmotion.isChecked = prefs.emotionEnabled
-        switchMind.isChecked = prefs.mindEnabled
-        switchGrow.isChecked = prefs.growEnabled
-        switchMemory.isChecked = prefs.memoryEnabled
-        switchFreeChat.isChecked = prefs.freeChatEnabled
-        switchTaiwan.isChecked = prefs.taiwanVoice
-        editTaiwanPrompt.setText(prefs.taiwanPrompt)
-        seekRate.progress = (((prefs.ttsRate - 0.5f) / 1.1f) * 110f).toInt().coerceIn(0, 110)
-        seekPitch.progress = (((prefs.ttsPitch - 0.5f) / 1.1f) * 110f).toInt().coerceIn(0, 110)
-
-        val localeLabels = try { tts.localeOptions.map { it.first } } catch (t: Throwable) { listOf("普通话（大陆）") }
-        spinnerLocale.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, localeLabels)
-        val savedIdx = localeLabels.indexOfFirst { it == prefs.voiceLocaleName }
-        if (savedIdx >= 0) spinnerLocale.setSelection(savedIdx)
-
-        spinnerLocale.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(p: AdapterView<*>?, v: android.view.View?, pos: Int, id: Long) {
-                val loc = tts.localeOptions.getOrNull(pos)?.second ?: Locale.CHINA
-                tts.setLocale(loc)
-                refreshVoices(spinnerVoice)
-            }
-            override fun onNothingSelected(p: AdapterView<*>?) {}
-        }
-
-        switchTaiwan.setOnCheckedChangeListener { _, checked ->
-            if (checked) {
-                val name = tts.applyTaiwanVoice()
-                val twIdx = localeLabels.indexOfFirst { it.contains("台湾") }
-                if (twIdx >= 0) spinnerLocale.setSelection(twIdx)
-                refreshVoices(spinnerVoice)
-                val strongTwIndex = tts.availableVoices().indexOfFirst { it.contains("台湾腔·女·真人") }
-                if (strongTwIndex >= 0) spinnerVoice.setSelection(strongTwIndex)
-                Toast.makeText(this, if (name != null) "已切换台湾音色：$name" else "未找到台湾音色，已回退中文音色", Toast.LENGTH_SHORT).show()
-            } else {
-                tts.setLocale(Locale.CHINA)
-                refreshVoices(spinnerVoice)
-            }
-        }
-
-        val engineLabels = Prefs.TTS_ENGINE_OPTIONS.map { it.second }
-        spinnerTtsEngine.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, engineLabels)
-        val engineIdx = Prefs.TTS_ENGINE_OPTIONS.indexOfFirst { it.first == prefs.ttsEngine }
-        if (engineIdx >= 0) spinnerTtsEngine.setSelection(engineIdx)
-
-        val cosyLabels = Prefs.COSY_VOICE_OPTIONS.map { it.second }
-        spinnerCosyVoice.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, cosyLabels)
-        val cosyIdx = Prefs.COSY_VOICE_OPTIONS.indexOfFirst { it.first == prefs.cosyVoice }
-        if (cosyIdx >= 0) spinnerCosyVoice.setSelection(cosyIdx)
-
-        val weatherLabels = Prefs.WEATHER_SOURCE_OPTIONS.map { it.second }
-        spinnerWeatherSource.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, weatherLabels)
-        val weatherIdx = Prefs.WEATHER_SOURCE_OPTIONS.indexOfFirst { it.first == prefs.weatherSource }
-        if (weatherIdx >= 0) spinnerWeatherSource.setSelection(weatherIdx)
-
-        spinnerVoice.postDelayed({ refreshVoices(spinnerVoice) }, 800)
-
-        btnTest.setOnClickListener {
-            val demo = if (switchTaiwan.isChecked)
-                "欸，主人你好喔！今天过得还好吗？这个真的很可以耶，我陪你一起聊，好不好嘛～"
-            else
-                "你好主人，这是当前的语音音色试听效果。"
-            previewCurrentVoice(
-                spinnerVoice,
-                spinnerTtsEngine,
-                spinnerCosyVoice,
-                switchTaiwan.isChecked,
-                0.5f + seekRate.progress / 100f,
-                0.5f + seekPitch.progress / 100f,
-                demo
-            )
-        }
-
-        btnStopSpeak.setOnClickListener {
-            tts.stop()
-            Toast.makeText(this, R.string.toast_stopped, Toast.LENGTH_SHORT).show()
-        }
-
-        btnMemorySummary.setOnClickListener {
-            val txt = memory.exportText()
-            android.app.AlertDialog.Builder(this)
-                .setTitle("本地记忆库 · " + memory.summary())
-                .setMessage(txt)
-                .setPositiveButton("关闭", null)
-                .setNeutralButton("清空记忆") { _, _ ->
-                    memory.clearAll()
-                    Toast.makeText(this, "已清空本地记忆", Toast.LENGTH_SHORT).show()
-                }
-                .show()
-        }
-
-        btnSave.setOnClickListener {
-            val baseUrl = editBaseUrl.text.toString().trim()
-            if (!isSafeHttpsBaseUrl(baseUrl)) {
-                editBaseUrl.error = getString(R.string.error_https_base_url)
-                editBaseUrl.requestFocus()
-                Toast.makeText(this, R.string.error_https_base_url, Toast.LENGTH_LONG).show()
-                return@setOnClickListener
-            }
-            prefs.baseUrl = baseUrl
-            // 安全：只有用户真正输入了新 Key 才覆盖；留空则保留原有加密 Key（不读取、不回显、不落盘明文）
-            val newKey = editApiKey.text.toString().trim()
-            if (newKey.isNotEmpty()) {
-                prefs.apiKey = newKey
-                editApiKey.setText("") // 保存后立即清空输入框，避免遗留在界面/内存
-                Toast.makeText(this, R.string.toast_key_saved, Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this, R.string.toast_key_on, Toast.LENGTH_SHORT).show()
-            }
-            editCaiyunKey.text.toString().trim().takeIf { it.isNotEmpty() }?.let { prefs.caiyunAppKey = it }
-            editCaiyunSecret.text.toString().trim().takeIf { it.isNotEmpty() }?.let { prefs.caiyunAppSecret = it }
-            editCaiyunToken.text.toString().trim().takeIf { it.isNotEmpty() }?.let { prefs.caiyunToken = it }
-            editCaiyunKey.setText("")
-            editCaiyunSecret.setText("")
-            editCaiyunToken.setText("")
-            prefs.model = editModel.text.toString().trim()
-            prefs.systemPrompt = editSystem.text.toString().trim()
-            prefs.wakeWord = editWake.text.toString().trim().ifBlank { "你好小沫" }
-            prefs.streamEnabled = switchStream.isChecked
-            prefs.emotionEnabled = switchEmotion.isChecked
-            prefs.mindEnabled = switchMind.isChecked
-            prefs.growEnabled = switchGrow.isChecked
-            prefs.memoryEnabled = switchMemory.isChecked
-            prefs.freeChatEnabled = switchFreeChat.isChecked
-            prefs.taiwanVoice = switchTaiwan.isChecked
-            val tp = editTaiwanPrompt.text.toString().trim()
-            if (tp.isNotBlank()) prefs.taiwanPrompt = tp
-            val locIdx = spinnerLocale.selectedItemPosition
-            prefs.voiceLocaleName = localeLabels.getOrNull(locIdx) ?: "普通话（大陆）"
-            prefs.voiceIndex = spinnerVoice.selectedItemPosition
-            prefs.weatherSource = Prefs.WEATHER_SOURCE_OPTIONS.getOrNull(spinnerWeatherSource.selectedItemPosition)?.first ?: "auto"
-            prefs.ttsEngine = Prefs.TTS_ENGINE_OPTIONS.getOrNull(spinnerTtsEngine.selectedItemPosition)?.first ?: "auto"
-            prefs.cosyVoice = Prefs.COSY_VOICE_OPTIONS.getOrNull(spinnerCosyVoice.selectedItemPosition)?.first ?: prefs.cosyVoice
-            editSiliconflowKey.text.toString().trim().takeIf { it.isNotEmpty() }?.let { prefs.siliconflowKey = it }
-            editSiliconflowKey.setText("")
-            prefs.ttsRate = 0.5f + seekRate.progress / 100f
-            prefs.ttsPitch = 0.5f + seekPitch.progress / 100f
-            val vName = spinnerVoice.selectedItem?.toString()
-            if (vName != null && !vName.startsWith("（")) {
-                tts.setVoiceByName(vName)
-            }
-            if (prefs.cloneVoiceEnabled) {
-                Toast.makeText(this, getString(R.string.toast_clone_covers_cosy), Toast.LENGTH_LONG).show()
-            } else {
-                Toast.makeText(this, "已保存", Toast.LENGTH_SHORT).show()
-            }
-            finish()
-        }
-    }
-
-
-    private fun previewCurrentVoice(
-        spinnerVoice: Spinner,
-        spinnerTtsEngine: Spinner,
-        spinnerCosyVoice: Spinner,
-        taiwan: Boolean,
-        rate: Float,
-        pitch: Float,
-        demo: String
-    ) {
-        tts.setRate(rate)
-        tts.setPitch(pitch)
-        val vName = spinnerVoice.selectedItem?.toString()
-        if (vName != null && !vName.startsWith("（")) {
-            tts.setVoiceByName(vName)
-        }
-        val prevEngine = prefs.ttsEngine
-        val prevCosy = prefs.cosyVoice
-        prefs.ttsEngine = Prefs.TTS_ENGINE_OPTIONS.getOrNull(spinnerTtsEngine.selectedItemPosition)?.first ?: prevEngine
-        prefs.cosyVoice = Prefs.COSY_VOICE_OPTIONS.getOrNull(spinnerCosyVoice.selectedItemPosition)?.first ?: prevCosy
-        if (prefs.cloneVoiceEnabled) {
-            Toast.makeText(this, getString(R.string.toast_clone_covers_cosy), Toast.LENGTH_LONG).show()
-        }
-        tts.speak(demo, taiwan)
-        prefs.ttsEngine = prevEngine
-        prefs.cosyVoice = prevCosy
-    }
-    private fun bindAppearance() {
-        findViewById<Button>(R.id.btnChangeAvatar).setOnClickListener {
-            pickingAvatar = true
-            pickImage.launch("image/*")
-        }
-        findViewById<Button>(R.id.btnResetAvatar).setOnClickListener {
-            ChatStyleStore.clearAvatar(this)
-            refreshAppearancePreview()
-            Toast.makeText(this, R.string.toast_avatar_reset, Toast.LENGTH_SHORT).show()
-        }
-        findViewById<Button>(R.id.btnChangeBackground).setOnClickListener {
-            pickingAvatar = false
-            pickImage.launch("image/*")
-        }
-        findViewById<Button>(R.id.btnResetBackground).setOnClickListener {
-            ChatStyleStore.clearBackground(this)
-            refreshAppearancePreview()
-            Toast.makeText(this, R.string.toast_background_reset, Toast.LENGTH_SHORT).show()
-        }
-        refreshAppearancePreview()
-    }
-
-    private fun refreshAppearancePreview() {
-        ChatStyleStore.applyAvatar(findViewById(R.id.ivAvatarPreview))
-        ChatStyleStore.applyBackgroundPreview(findViewById(R.id.ivBackgroundPreview))
-    }
-
-    private fun isSafeHttpsBaseUrl(value: String): Boolean = runCatching {
-        val uri = java.net.URI(value)
-        uri.scheme.equals("https", ignoreCase = true) && !uri.host.isNullOrBlank() &&
-            uri.rawUserInfo == null && uri.rawQuery == null && uri.rawFragment == null
-    }.getOrDefault(false)
-
-    private fun refreshVoices(spinnerVoice: Spinner) {
-        val voices = tts.availableVoices()
-        val adapter = if (voices.isNotEmpty()) {
-            ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, voices)
-        } else {
-            ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, listOf("（系统未返回音色，使用默认）"))
-        }
-        spinnerVoice.adapter = adapter
-        if (voices.isNotEmpty()) {
-            spinnerVoice.setSelection(prefs.voiceIndex.coerceIn(0, voices.size - 1))
-        }
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         if (::tts.isInitialized) tts.shutdown()

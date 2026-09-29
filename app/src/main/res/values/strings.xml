@@ -9,6 +9,7 @@
     <string name="hint_input">说点什么…</string>
     <string name="btn_send">发送</string>
     <string name="btn_settings">设置</string>
+    <string name="btn_open_drawer">打开设置</string>
     <string name="btn_hold_talk">按住说话</string>
     <string name="settings_title">设置</string>
     <string name="label_base_url">接口地址 Base URL</string>
@@ -239,4 +240,25 @@
     <string name="toast_clone_deleted">克隆音色已删除</string>
     <string name="toast_clone_deleted_local">本机已停用克隆音色</string>
     <string name="toast_clone_play_failed">参考音频播放失败</string>
+    <string name="listen_fg_title">小沫正在聆听</string>
+    <string name="listen_fg_text">退到后台也继续听。点通知可回到对话。</string>
+    <string name="listen_fg_channel">常驻聆听</string>
+    <string name="menu_sessions">对话列表</string>
+    <string name="menu_new_session">新开对话</string>
+    <string name="menu_rename_session">重命名对话</string>
+    <string name="menu_delete_session">删除对话</string>
+    <string name="hint_rename_session">给这条对话起个名字</string>
+    <string name="toast_keep_one_session">至少保留一条对话</string>
+    <string name="toast_session_renamed">对话已重命名</string>
+    <string name="label_keep_listen">退到后台继续聆听</string>
+    <string name="label_web_search">联网搜索</string>
+    <string name="remind_notif_title">小沫提醒</string>
+    <string name="remind_channel">提醒闹钟</string>
+    <string name="toast_remind_set">好，%1$s 提醒你：%2$s</string>
+    <string name="toast_remind_none">现在没有待办提醒</string>
+    <string name="toast_remind_cleared">提醒都取消啦</string>
+    <string name="search_fail">网上没查到，等会儿再试</string>
+    <string name="role_label_voice">角色音色</string>
+    <string name="role_hint_voice">不填就用全局音色</string>
+    <string name="role_voice_default">跟随全局</string>
 </resources>

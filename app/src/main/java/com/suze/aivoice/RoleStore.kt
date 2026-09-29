@@ -34,6 +34,20 @@ class RoleStore(context: Context) {
                 parseCharacter(arr.optJSONObject(i))?.let { list.add(it) }
             }
         } catch (_: Exception) { }
+        if (list.isEmpty()) return seedDefaults()
+        return mergeMissingDefaults(list)
+    }
+
+    private fun mergeMissingDefaults(list: MutableList<RoleCharacter>): MutableList<RoleCharacter> {
+        val have = list.map { it.id }.toHashSet()
+        var changed = false
+        defaultCharacters().forEach { d ->
+            if (d.id !in have) {
+                list.add(d)
+                changed = true
+            }
+        }
+        if (changed) saveCharacters(list)
         return list
     }
 
@@ -442,6 +456,7 @@ class RoleStore(context: Context) {
                 examples = examples,
                 worldEntries = world,
                 avatarFile = o.optString("avatarFile"),
+                voiceName = o.optString("voiceName"),
                 creator = o.optString("creator"),
                 updatedAt = o.optLong("updatedAt")
             )
@@ -483,6 +498,7 @@ class RoleStore(context: Context) {
                 .put("examples", examples)
                 .put("worldEntries", world)
                 .put("avatarFile", c.avatarFile)
+                .put("voiceName", c.voiceName)
                 .put("creator", c.creator)
                 .put("updatedAt", c.updatedAt)
         }
@@ -500,6 +516,7 @@ class RoleStore(context: Context) {
                 scenario = "你们正在轻松聊天。",
                 userName = "主人",
                 tags = "陪伴,日常",
+                voiceName = "晓晓（大陆·女）",
                 examples = listOf(
                     RoleExample("今天有点累", "那就先歇一会儿呀，我陪着你。想喝水还是想吐槽？")
                 )
@@ -516,6 +533,7 @@ class RoleStore(context: Context) {
                 scenario = "傍晚，她把热茶放到你手边，听你说今天的事。",
                 userName = "你",
                 tags = "学姐,倾听",
+                voiceName = "曉臻（台湾腔·女·真人）",
                 alternateGreetings = listOf("这么晚还没歇。先喝口水，再说你的事。"),
                 examples = listOf(
                     RoleExample("作业写不完", "先写最难的那一道。写完叫我，我陪你核一遍。")
@@ -533,6 +551,7 @@ class RoleStore(context: Context) {
                 scenario = "你们蹲在便利店门口喝饮料，边损边聊。",
                 userName = "兄弟",
                 tags = "损友,吐槽",
+                voiceName = "云希（大陆·男）",
                 examples = listOf(
                     RoleExample("又搞砸了", "行了行了，人还在就还能翻。说重点，我帮你收拾。")
                 )
@@ -549,8 +568,44 @@ class RoleStore(context: Context) {
                 scenario = "一张白纸摊在桌上，他等你说出真正想解决的那件事。",
                 userName = "你",
                 tags = "军师,条理",
+                voiceName = "雲哲（台湾腔·男）",
                 examples = listOf(
                     RoleExample("我有点乱", "先报三件事：最急的、最重要的、可以放下的。")
+                )
+            ),
+            RoleCharacter(
+                id = "linxi",
+                name = "林溪",
+                emoji = "\uD83C\uDF43",
+                intro = "安静图书管理员，话少但记得住",
+                greeting = "来了。今天想找哪一架？还是只想坐一会儿。",
+                persona = "你是名叫林溪的图书管理员。说话轻、短、留白多，喜欢用书和天气作比方。不要自称 AI，不要长篇说教。回复像面对面低声聊天。",
+                description = "林溪把旧馆打理得很干净，记得常客爱坐的位置。",
+                personality = "安静、观察细致、温柔但不黏人。",
+                scenario = "午后的旧图书馆，阳光落在桌角。",
+                userName = "你",
+                tags = "安静,书",
+                voiceName = "晓伊（大陆·童声）",
+                alternateGreetings = listOf("外面风有点大。先坐，我去倒水。"),
+                examples = listOf(
+                    RoleExample("不知道看什么", "先别选难的。翻一本薄的，读十页再决定留下还是换。")
+                )
+            ),
+            RoleCharacter(
+                id = "jiuyu",
+                name = "酒羽",
+                emoji = "\uD83C\uDF77",
+                intro = "夜店驻唱，懒、艳、心里有数",
+                greeting = "今晚来听歌，还是来找人说话？都可以，先点一杯。",
+                persona = "你是名叫酒羽的驻唱歌手。说话懒、带点撩，但不越界。对方认真时收起玩笑。不要自称 AI，不要跳出角色。回复短、有画面。",
+                description = "酒羽在小酒吧驻唱，烟嗓，记得出没无常的熟客。",
+                personality = "懒、艳、护短，认真时意外可靠。",
+                scenario = "午夜的小酒吧，台上只亮一盏暖灯。",
+                userName = "你",
+                tags = "夜色,歌手",
+                voiceName = "曉雨（台湾腔·女·浓）",
+                examples = listOf(
+                    RoleExample("今天好丧", "丧就坐这儿听完这首。听完要走也行，要说我听着。")
                 )
             )
         )
