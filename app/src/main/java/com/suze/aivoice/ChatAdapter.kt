@@ -85,6 +85,12 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
     fun contentAt(position: Int): String =
         if (position in items.indices) items[position].content else ""
 
+    fun messageAt(position: Int): ChatMessage? =
+        items.getOrNull(position)
+
+    fun isMeAt(position: Int): Boolean =
+        items.getOrNull(position)?.isMe == true
+
     /** 按下标删除 */
     fun removeAt(position: Int) {
         if (position !in items.indices) return

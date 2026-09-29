@@ -1,6 +1,7 @@
 package com.suze.aivoice
 
 import android.content.Intent
+import androidx.core.content.FileProvider
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -18,6 +19,7 @@ class SettingsBinder(
     private val tts: TtsHelper,
     private val memory: MemoryEngine,
     private val pickImage: (avatar: Boolean) -> Unit,
+    private val pickBackup: () -> Unit = {},
     private val onSaved: () -> Unit
 ) {
     fun bind() {
@@ -45,6 +47,8 @@ class SettingsBinder(
         val switchFreeChat = activity.findViewById<SwitchCompat>(R.id.switchFreeChat)
         val switchKeepListen = activity.findViewById<SwitchCompat>(R.id.switchKeepListen)
         val switchWebSearch = activity.findViewById<SwitchCompat>(R.id.switchWebSearch)
+        val switchNotifySpeak = activity.findViewById<SwitchCompat>(R.id.switchNotifySpeak)
+        val switchHeadsetWake = activity.findViewById<SwitchCompat>(R.id.switchHeadsetWake)
         val btnMemorySummary = activity.findViewById<Button>(R.id.btnMemorySummary)
         val btnTest = activity.findViewById<Button>(R.id.btnTestVoice)
         val seekRate = activity.findViewById<SeekBar>(R.id.seekRate)
@@ -81,6 +85,23 @@ class SettingsBinder(
         switchFreeChat.isChecked = prefs.freeChatEnabled
         switchKeepListen.isChecked = prefs.keepListenInBackground
         switchWebSearch.isChecked = prefs.webSearchEnabled
+        switchNotifySpeak.isChecked = prefs.notifySpeakEnabled
+        switchHeadsetWake.isChecked = prefs.headsetWakeEnabled
+        activity.findViewById<Button>(R.id.btnBackupExport).setOnClickListener {
+            val file = BackupStore(activity).exportZip()
+            if (file == null) {
+                Toast.makeText(activity, R.string.toast_backup_fail, Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            val uri = FileProvider.getUriForFile(activity, activity.packageName + ".fileprovider", file)
+            val share = Intent(Intent.ACTION_SEND)
+                .setType("application/zip")
+                .putExtra(Intent.EXTRA_STREAM, uri)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            activity.startActivity(Intent.createChooser(share, activity.getString(R.string.btn_backup_export)))
+            Toast.makeText(activity, R.string.toast_backup_ok, Toast.LENGTH_SHORT).show()
+        }
+        activity.findViewById<Button>(R.id.btnBackupImport).setOnClickListener { pickBackup() }
         switchTaiwan.isChecked = prefs.taiwanVoice
         editTaiwanPrompt.setText(prefs.taiwanPrompt)
         seekRate.progress = (((prefs.ttsRate - 0.5f) / 1.1f) * 110f).toInt().coerceIn(0, 110)
@@ -190,6 +211,14 @@ class SettingsBinder(
             prefs.freeChatEnabled = switchFreeChat.isChecked
             prefs.keepListenInBackground = switchKeepListen.isChecked
             prefs.webSearchEnabled = switchWebSearch.isChecked
+            val turnOnNotify = switchNotifySpeak.isChecked && !prefs.notifySpeakEnabled
+            prefs.notifySpeakEnabled = switchNotifySpeak.isChecked
+            prefs.headsetWakeEnabled = switchHeadsetWake.isChecked
+            if (turnOnNotify) {
+                runCatching {
+                    activity.startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
+                }
+            }
             prefs.taiwanVoice = switchTaiwan.isChecked
             val tp = editTaiwanPrompt.text.toString().trim()
             if (tp.isNotBlank()) prefs.taiwanPrompt = tp

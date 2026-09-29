@@ -11,6 +11,11 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var memory: MemoryEngine
     private var pickingAvatar = true
     private var binder: SettingsBinder? = null
+    private val pickBackup = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri == null) return@registerForActivityResult
+        val ok = BackupStore(this).importZip(uri)
+        Toast.makeText(this, if (ok) R.string.toast_backup_imported else R.string.toast_backup_fail, Toast.LENGTH_LONG).show()
+    }
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri == null) return@registerForActivityResult
         val ok = if (pickingAvatar) ChatStyleStore.saveAvatar(this, uri)
@@ -41,6 +46,7 @@ class SettingsActivity : AppCompatActivity() {
                     pickingAvatar = avatar
                     pickImage.launch("image/*")
                 },
+                pickBackup = { pickBackup.launch("application/zip") },
                 onSaved = { finish() }
             )
             binder?.bind()

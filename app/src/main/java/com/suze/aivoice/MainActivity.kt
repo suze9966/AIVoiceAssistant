@@ -7,6 +7,8 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.LocationManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.speech.RecognitionListener
@@ -15,7 +17,6 @@ import android.speech.SpeechRecognizer
 import android.view.View
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
-import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
@@ -25,12 +26,14 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
+import java.io.File
 import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
@@ -40,6 +43,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tts: TtsHelper
     private lateinit var store: HistoryStore
     private lateinit var reminders: ReminderStore
+    private lateinit var todos: TodoStore
+    private lateinit var utilities: UtilityClient
+    private lateinit var calendarHelper: CalendarHelper
+    private lateinit var backups: BackupStore
     private lateinit var searcher: SearchClient
     private lateinit var emotion: EmotionEngine
     private lateinit var mind: MindEngine
@@ -72,6 +79,26 @@ class MainActivity : AppCompatActivity() {
             applyChatStyle()
         }
     }
+    private val pickBackupZip = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri == null) return@registerForActivityResult
+        val ok = backups.importZip(uri)
+        Toast.makeText(this, if (ok) R.string.toast_backup_imported else R.string.toast_backup_fail, Toast.LENGTH_LONG).show()
+    }
+    private val pickVisionImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri == null) return@registerForActivityResult
+        askAboutImage(uri)
+    }
+    private val takeVisionPhoto = registerForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
+        val uri = pendingCameraUri
+        pendingCameraUri = null
+        if (ok && uri != null) askAboutImage(uri)
+    }
+    private var pendingCameraUri: Uri? = null
+    private var pendingVisionPrompt: String = "请用中文简短说明这张图。"
+    private var greetingBusy = false
+    private var pendingCalendarUser: String? = null
+    private var pendingCalendarAddMillis: Long = 0L
+    private var pendingCalendarAddTitle: String? = null
 
     private var recognizer: SpeechRecognizer? = null
     private var wakeHelper: WakeWordHelper? = null
@@ -96,6 +123,9 @@ class MainActivity : AppCompatActivity() {
     private var activeChatId: String = ""
     private val REQ_AUDIO = 1001
     private val REQ_NOTIFY = 1002
+    private val REQ_CALENDAR = 1003
+    private val REQ_LOCATION = 1004
+    private val REQ_CAMERA = 1005
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -106,6 +136,10 @@ class MainActivity : AppCompatActivity() {
         tts = TtsHelper(this, prefs)
         store = HistoryStore(this)
         reminders = ReminderStore(this)
+        todos = TodoStore(this)
+        utilities = UtilityClient()
+        calendarHelper = CalendarHelper(this)
+        backups = BackupStore(this)
         searcher = SearchClient()
         emotion = EmotionEngine(this)
         llm.bindEmotion(emotion)
@@ -126,17 +160,23 @@ class MainActivity : AppCompatActivity() {
             pop.menu.add(0, 1, 0, getString(R.string.btn_settings))
             pop.menu.add(0, 8, 1, getString(R.string.menu_sessions))
             pop.menu.add(0, 9, 2, getString(R.string.menu_new_session))
-            pop.menu.add(0, 5, 3, getString(R.string.menu_weather))
-            pop.menu.add(0, 6, 4, getString(R.string.menu_role_lounge))
-            pop.menu.add(0, 7, 5, getString(R.string.menu_connect_llm))
-            pop.menu.add(0, 2, 6, getString(R.string.menu_clear))
-            pop.menu.add(0, 4, 7, getString(R.string.menu_stop_speak))
-            pop.menu.add(0, 3, 8, getString(R.string.menu_wake))
+            pop.menu.add(0, 10, 3, getString(R.string.menu_find_chat))
+            pop.menu.add(0, 11, 4, getString(R.string.menu_export_chat))
+            pop.menu.add(0, 12, 5, getString(R.string.menu_ask_image))
+            pop.menu.add(0, 5, 6, getString(R.string.menu_weather))
+            pop.menu.add(0, 6, 7, getString(R.string.menu_role_lounge))
+            pop.menu.add(0, 7, 8, getString(R.string.menu_connect_llm))
+            pop.menu.add(0, 2, 9, getString(R.string.menu_clear))
+            pop.menu.add(0, 4, 10, getString(R.string.menu_stop_speak))
+            pop.menu.add(0, 3, 11, getString(R.string.menu_wake))
             pop.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     1 -> { openSettingsDrawer(); true }
                     8 -> { showSessionPicker(); true }
                     9 -> { startNewSession(); true }
+                    10 -> { promptFindChat(); true }
+                    11 -> { exportCurrentChat(); true }
+                    12 -> { promptAskImage(); true }
                     5 -> { askCityAndShowWeather(); true }
                     6 -> { startActivity(Intent(this, RoleLoungeActivity::class.java)); true }
                     7 -> { startActivity(Intent(this, LlmConnectActivity::class.java)); true }
@@ -174,6 +214,7 @@ class MainActivity : AppCompatActivity() {
             adapter.add(ChatMessage(role = "assistant", content = getString(R.string.welcome_msg), isMe = false))
             persistHistory()
             scrollToBottom()
+            prefs.lastBriefAt = System.currentTimeMillis()
         }
         handleRemindIntent(intent)
 
@@ -256,6 +297,8 @@ class MainActivity : AppCompatActivity() {
             val popup = PopupMenu(this, anchorView)
             popup.menu.add(0, 1, 0, getString(R.string.menu_copy))
             popup.menu.add(0, 2, 1, getString(R.string.menu_delete))
+            popup.menu.add(0, 3, 2, getString(R.string.menu_respeak))
+            if (!adapter.isMeAt(pos)) popup.menu.add(0, 4, 3, getString(R.string.menu_regenerate))
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     1 -> {
@@ -268,6 +311,11 @@ class MainActivity : AppCompatActivity() {
                         persistHistory()
                         Toast.makeText(this, R.string.toast_deleted, Toast.LENGTH_SHORT).show()
                     }
+                    3 -> {
+                        val text = adapter.contentAt(pos)
+                        if (text.isNotBlank()) speakLocal(text)
+                    }
+                    4 -> regenerateLast()
                 }
                 true
             }
@@ -341,6 +389,7 @@ class MainActivity : AppCompatActivity() {
         }
         applyChatStyle()
         if (::adapter.isInitialized) adapter.notifyDataSetChanged()
+        maybeGreetOnResume()
     }
 
     /** 应用可更换的小沫头像和聊天背景 */
@@ -392,6 +441,7 @@ class MainActivity : AppCompatActivity() {
                     pickingAvatar = avatar
                     pickSettingsImage.launch("image/*")
                 },
+                pickBackup = { pickBackupZip.launch("application/zip") },
                 onSaved = {
                     applySavedVoice()
                     applyChatStyle()
@@ -445,19 +495,43 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQ_AUDIO) {
-            val granted = grantResults.isNotEmpty() &&
-                grantResults[0] == PackageManager.PERMISSION_GRANTED
-            if (granted) {
-                // 仅当用户点了麦克风才自动开启聆听
-                if (waitingMicForListen || listeningEnabled) {
+        val granted = grantResults.isNotEmpty() &&
+            grantResults[0] == PackageManager.PERMISSION_GRANTED
+        when (requestCode) {
+            REQ_AUDIO -> {
+                if (granted) {
+                    if (waitingMicForListen || listeningEnabled) {
+                        waitingMicForListen = false
+                        startListeningMode()
+                    }
+                } else {
                     waitingMicForListen = false
-                    startListeningMode()
+                    listeningEnabled = false
+                    Toast.makeText(this, "未授予麦克风权限，无法聆听", Toast.LENGTH_SHORT).show()
                 }
-            } else {
-                waitingMicForListen = false
-                listeningEnabled = false
-                Toast.makeText(this, "未授予麦克风权限，无法聆听", Toast.LENGTH_SHORT).show()
+            }
+            REQ_CAMERA -> {
+                if (granted) launchCameraForVision()
+                else Toast.makeText(this, R.string.toast_vision_fail, Toast.LENGTH_SHORT).show()
+            }
+            REQ_CALENDAR -> {
+                val userText = pendingCalendarUser
+                val addTitle = pendingCalendarAddTitle
+                val addMillis = pendingCalendarAddMillis
+                pendingCalendarUser = null
+                pendingCalendarAddTitle = null
+                pendingCalendarAddMillis = 0L
+                if (!granted || userText.isNullOrBlank()) {
+                    if (!granted) Toast.makeText(this, R.string.toast_calendar_need_perm, Toast.LENGTH_SHORT).show()
+                    return
+                }
+                if (addTitle != null) handleCalendarAdd(userText, addMillis, addTitle)
+                else handleCalendarList(userText)
+            }
+            REQ_LOCATION -> {
+                if (granted) {
+                    locationCity(requestIfMissing = false)?.let { prefs.lastCity = it }
+                }
             }
         }
     }
@@ -835,6 +909,8 @@ class MainActivity : AppCompatActivity() {
                 return@launch
             }
             val text = info.toSpeakText()
+            prefs.lastWeatherBrief = text.take(48)
+            XiaomoWidgetProvider.refresh(this@MainActivity)
             WeatherActivity.pendingInfo = info
             startActivity(Intent(this@MainActivity, WeatherActivity::class.java).putExtra(WeatherActivity.EXTRA_CITY, c))
             adapter.add(ChatMessage("user", c + "天气", isMe = true))
@@ -1076,14 +1152,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleVoiceCommand(userText: String, command: VoiceCommand) {
         when (command) {
-            is VoiceCommand.RemindAt -> addReminder(userText, command.atMillis, command.text)
+            is VoiceCommand.RemindAt -> addReminder(userText, command.atMillis, command.text, command.repeatDaily, command.advanceMin)
             is VoiceCommand.RemindIn -> addReminder(userText, command.atMillis, command.text)
             VoiceCommand.ListReminders -> {
                 val items = reminders.upcoming()
                 val reply = if (items.isEmpty()) {
                     getString(R.string.toast_remind_none)
                 } else {
-                    items.joinToString("\n") { reminders.formatWhen(it.atMillis) + "  " + it.text }
+                    items.joinToString("\n") { reminders.formatItem(it) }
                 }
                 replyLocal(userText, reply)
             }
@@ -1092,14 +1168,44 @@ class MainActivity : AppCompatActivity() {
                 replyLocal(userText, getString(R.string.toast_remind_cleared))
             }
             is VoiceCommand.Search -> runWebSearch(userText, command.query)
+            is VoiceCommand.AddTodo -> {
+                val item = todos.add(command.text)
+                replyLocal(userText, getString(R.string.toast_todo_added, item.text))
+            }
+            VoiceCommand.ListTodos -> replyLocal(userText, todos.formatList())
+            is VoiceCommand.DoneTodo -> {
+                val done = todos.markDone(command.text)
+                replyLocal(
+                    userText,
+                    if (done == null) getString(R.string.toast_todo_missing)
+                    else getString(R.string.toast_todo_done, done.text)
+                )
+            }
+            VoiceCommand.ClearTodos -> {
+                todos.clearAll()
+                replyLocal(userText, getString(R.string.toast_todo_cleared))
+            }
+            is VoiceCommand.Translate -> runUtility(userText) { utilities.translate(command.text, command.target) }
+            is VoiceCommand.Convert -> runUtility(userText) { utilities.convert(command.amount, command.from, command.to) }
+            is VoiceCommand.WorldClock -> replyLocal(userText, utilities.worldClock(command.place))
+            VoiceCommand.News -> runUtility(userText) { utilities.news() }
+            VoiceCommand.CalendarList -> handleCalendarList(userText)
+            is VoiceCommand.CalendarAdd -> handleCalendarAdd(userText, command.atMillis, command.text)
+            is VoiceCommand.FindChat -> replyLocal(userText, findInHistory(command.query))
+            VoiceCommand.DailyBrief -> speakDailyBrief(userText)
         }
     }
 
-    private fun addReminder(userText: String, atMillis: Long, topic: String) {
+    private fun addReminder(
+        userText: String,
+        atMillis: Long,
+        topic: String,
+        repeatDaily: Boolean = false,
+        advanceMin: Int = 0
+    ) {
         ensureNotifyPermission()
-        val item = reminders.add(topic, atMillis)
-        val whenText = reminders.formatWhen(item.atMillis)
-        replyLocal(userText, getString(R.string.toast_remind_set, whenText, item.text))
+        val item = reminders.add(topic, atMillis, repeatDaily, advanceMin)
+        replyLocal(userText, getString(R.string.toast_remind_set, reminders.formatItem(item), item.text))
     }
 
     private fun runWebSearch(userText: String, query: String) {
@@ -1161,9 +1267,23 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleRemindIntent(intent: Intent?) {
-        val text = intent?.getStringExtra(EXTRA_REMIND_SPEAK).orEmpty()
+        if (intent == null) return
+        val notify = intent.getStringExtra(EXTRA_NOTIFY_SPEAK).orEmpty()
+        if (notify.isNotBlank()) {
+            intent.removeExtra(EXTRA_NOTIFY_SPEAK)
+            val line = "通知：" + notify
+            adapter.add(ChatMessage("assistant", line, isMe = false))
+            persistHistory()
+            scrollToBottom()
+            speakLocal(line)
+        }
+        if (intent.getBooleanExtra(EXTRA_HEADSET_WAKE, false)) {
+            intent.removeExtra(EXTRA_HEADSET_WAKE)
+            toggleWake(true)
+        }
+        val text = intent.getStringExtra(EXTRA_REMIND_SPEAK).orEmpty()
         if (text.isBlank()) return
-        intent?.removeExtra(EXTRA_REMIND_SPEAK)
+        intent.removeExtra(EXTRA_REMIND_SPEAK)
         val line = getString(R.string.remind_notif_title) + "：" + text
         adapter.add(ChatMessage("assistant", line, isMe = false))
         persistHistory()
@@ -1182,7 +1302,276 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    private fun regenerateLast() {
+        if (isSending) return
+        val lastUserIndex = history.indexOfLast { it.role == "user" && it.content.isNotBlank() }
+        if (lastUserIndex < 0) return
+        val userText = history[lastUserIndex].content
+        if (VoiceCommandParser.parse(userText) != null || detectWeatherQuery(userText) != null) {
+            val lastReply = history.lastOrNull { !it.isMe && it.content.isNotBlank() }?.content.orEmpty()
+            if (lastReply.isNotBlank()) speakLocal(lastReply)
+            else speakLocal(getString(R.string.toast_regenerate_command))
+            return
+        }
+        while (history.size > lastUserIndex + 1) history.removeAt(history.lastIndex)
+        adapter.notifyDataSetChanged()
+        persistHistory()
+        sendToLlm(userText)
+    }
+
+    private fun promptFindChat() {
+        val input = EditText(this)
+        input.hint = getString(R.string.hint_find_chat)
+        AlertDialog.Builder(this)
+            .setTitle(R.string.menu_find_chat)
+            .setView(input)
+            .setPositiveButton(R.string.btn_send) { _, _ ->
+                val q = input.text.toString().trim()
+                if (q.isNotEmpty()) replyLocal("搜索对话：" + q, findInHistory(q))
+            }
+            .setNegativeButton(R.string.role_cancel, null)
+            .show()
+    }
+
+    private fun findInHistory(query: String): String {
+        val q = query.trim()
+        if (q.isEmpty()) return "要找哪个字？"
+        val hits = history.filter { it.content.contains(q) }.takeLast(6)
+        if (hits.isEmpty()) return "对话里没找到「$q」。"
+        return hits.joinToString("\n") { m ->
+            val who = if (m.isMe) "主人" else "小沫"
+            who + "：" + m.content.take(40)
+        }
+    }
+
+    private fun exportCurrentChat() {
+        val title = store.loadSessions().firstOrNull { it.id == activeChatId }?.title ?: "对话"
+        val file = backups.exportChatMarkdown(title, history)
+        if (file == null) {
+            Toast.makeText(this, R.string.toast_backup_fail, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val uri = FileProvider.getUriForFile(this, packageName + ".fileprovider", file)
+        val share = Intent(Intent.ACTION_SEND)
+            .setType("text/markdown")
+            .putExtra(Intent.EXTRA_STREAM, uri)
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        startActivity(Intent.createChooser(share, getString(R.string.menu_export_chat)))
+        Toast.makeText(this, R.string.toast_export_ok, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun promptAskImage() {
+        if (!llm.isConfigured()) {
+            Toast.makeText(this, R.string.toast_vision_need_model, Toast.LENGTH_LONG).show()
+            return
+        }
+        val input = EditText(this)
+        input.hint = getString(R.string.hint_ask_image)
+        AlertDialog.Builder(this)
+            .setTitle(R.string.menu_ask_image)
+            .setView(input)
+            .setPositiveButton(R.string.ask_image_gallery) { _, _ ->
+                pendingVisionPrompt = input.text.toString().trim().ifBlank { "请用中文简短说明这张图。" }
+                pickVisionImage.launch("image/*")
+            }
+            .setNeutralButton(R.string.ask_image_camera) { _, _ ->
+                pendingVisionPrompt = input.text.toString().trim().ifBlank { "请用中文简短说明这张图。" }
+                launchCameraForVision()
+            }
+            .setNegativeButton(R.string.role_cancel, null)
+            .show()
+    }
+
+    private fun launchCameraForVision() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), REQ_CAMERA)
+            return
+        }
+        val dir = File(cacheDir, "vision_capture").apply { mkdirs() }
+        val file = File(dir, "ask.jpg")
+        val uri = FileProvider.getUriForFile(this, packageName + ".fileprovider", file)
+        pendingCameraUri = uri
+        takeVisionPhoto.launch(uri)
+    }
+
+    private fun askAboutImage(uri: Uri) {
+        if (isSending) return
+        isSending = true
+        val prompt = pendingVisionPrompt
+        adapter.add(ChatMessage("user", "问图：" + prompt, isMe = true))
+        adapter.add(ChatMessage("assistant", "", isMe = false))
+        scrollToBottom()
+        lifecycleScope.launch {
+            try {
+                val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: ByteArray(0)
+                val mime = contentResolver.getType(uri) ?: "image/jpeg"
+                val reply = if (bytes.isEmpty()) "" else llm.chatVision(prompt, bytes.take(900_000).toByteArray(), mime)
+                val text = reply.ifBlank { getString(R.string.toast_vision_fail) }
+                if (!isFinishing && !isDestroyed && history.isNotEmpty()) {
+                    history[history.size - 1] = history.last().copy(content = text)
+                    adapter.updateLast(text)
+                    persistHistory()
+                    scrollToBottom()
+                    speakLocal(text)
+                }
+            } catch (_: Exception) {
+                if (!isFinishing && !isDestroyed) {
+                    val fail = getString(R.string.toast_vision_fail)
+                    if (history.isNotEmpty()) {
+                        history[history.size - 1] = history.last().copy(content = fail)
+                        adapter.updateLast(fail)
+                    }
+                    persistHistory()
+                    speakLocal(fail)
+                }
+            } finally {
+                isSending = false
+                if (!tts.isSpeaking) scheduleRestartListening()
+            }
+        }
+    }
+
+    private fun runUtility(userText: String, block: () -> String) {
+        isSending = true
+        adapter.add(ChatMessage("user", userText, isMe = true))
+        adapter.add(ChatMessage("assistant", "", isMe = false))
+        scrollToBottom()
+        lifecycleScope.launch {
+            try {
+                val reply = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { block() }
+                    .ifBlank { getString(R.string.search_fail) }
+                if (isFinishing || isDestroyed) return@launch
+                if (history.isNotEmpty()) {
+                    history[history.size - 1] = history.last().copy(content = reply)
+                    adapter.updateLast(reply)
+                }
+                persistHistory()
+                scrollToBottom()
+                speakLocal(reply)
+            } finally {
+                isSending = false
+                if (!tts.isSpeaking) scheduleRestartListening()
+            }
+        }
+    }
+
+    private fun handleCalendarList(userText: String) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CALENDAR)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            pendingCalendarUser = userText
+            pendingCalendarAddTitle = null
+            pendingCalendarAddMillis = 0L
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR),
+                REQ_CALENDAR
+            )
+            Toast.makeText(this, R.string.toast_calendar_need_perm, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val text = calendarHelper.upcoming()
+        replyLocal(userText, if (text == "NO_PERM") getString(R.string.toast_calendar_need_perm) else text)
+    }
+
+    private fun handleCalendarAdd(userText: String, atMillis: Long, title: String) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_CALENDAR)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            pendingCalendarUser = userText
+            pendingCalendarAddTitle = title
+            pendingCalendarAddMillis = atMillis
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR),
+                REQ_CALENDAR
+            )
+            Toast.makeText(this, R.string.toast_calendar_need_perm, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val ok = calendarHelper.add(title, atMillis)
+        replyLocal(userText, getString(if (ok) R.string.toast_calendar_added else R.string.toast_calendar_fail))
+    }
+
+    private fun maybeGreetOnResume() {
+        if (!prefs.welcomeEnabled || greetingBusy || isSending || tts.isSpeaking) return
+        val now = System.currentTimeMillis()
+        if (now - prefs.lastBriefAt < 6 * 3600_000L) return
+        prefs.lastBriefAt = now
+        speakDailyBrief(null)
+    }
+
+    private fun speakDailyBrief(userText: String?) {
+        greetingBusy = true
+        lifecycleScope.launch {
+            try {
+                val city = locationCity() ?: prefs.lastCity
+                if (city.isNotBlank()) prefs.lastCity = city
+                val weatherText = runCatching { weather.query(city)?.toSpeakText().orEmpty() }.getOrDefault("")
+                if (weatherText.isNotBlank()) {
+                    prefs.lastWeatherBrief = weatherText.take(48)
+                    XiaomoWidgetProvider.refresh(this@MainActivity)
+                }
+                val next = reminders.upcoming().firstOrNull()?.let { reminders.formatItem(it) } ?: "暂无提醒"
+                val mood = if (::emotion.isInitialized) emotion.statusLine() else ""
+                val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+                val hello = when (hour) {
+                    in 5..10 -> "早上好"
+                    in 11..13 -> "中午好"
+                    in 14..18 -> "下午好"
+                    else -> "晚上好"
+                }
+                val reply = listOf(
+                    hello + "，主人。",
+                    weatherText.ifBlank { city + "天气等会儿再查。" },
+                    "下一件提醒：" + next,
+                    mood
+                ).filter { it.isNotBlank() }.joinToString("\n")
+                if (userText != null) replyLocal(userText, reply)
+                else {
+                    adapter.add(ChatMessage("assistant", reply, isMe = false))
+                    persistHistory()
+                    scrollToBottom()
+                    speakLocal(reply)
+                }
+            } finally {
+                greetingBusy = false
+            }
+        }
+    }
+
+    private fun locationCity(requestIfMissing: Boolean = true): String? {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            if (requestIfMissing) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION),
+                    REQ_LOCATION
+                )
+            }
+            return null
+        }
+        return try {
+            val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            val loc = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+                ?: lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+            if (loc == null) null
+            else android.location.Geocoder(this, Locale.CHINA)
+                .getFromLocation(loc.latitude, loc.longitude, 1)
+                ?.firstOrNull()?.locality
+                ?.takeIf { it.isNotBlank() }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     companion object {
         const val EXTRA_REMIND_SPEAK = "remind_speak"
+        const val EXTRA_NOTIFY_SPEAK = "notify_speak"
+        const val EXTRA_HEADSET_WAKE = "headset_wake"
     }
 }

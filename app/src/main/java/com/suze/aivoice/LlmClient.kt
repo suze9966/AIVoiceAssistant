@@ -223,6 +223,41 @@ class LlmClient(private val prefs: Prefs) {
         }
 
     /** 探测云端接口是否可用，不回落到本地闲聊。 */
+    suspend fun chatVision(prompt: String, imageBytes: ByteArray, mime: String = "image/jpeg"): String =
+        withContext(Dispatchers.IO) {
+            if (!llmConfigured() || imageBytes.isEmpty()) return@withContext ""
+            val b64 = android.util.Base64.encodeToString(imageBytes, android.util.Base64.NO_WRAP)
+            val dataUrl = "data:" + mime + ";base64," + b64
+            val content = JSONArray()
+                .put(JSONObject().put("type", "text").put("text", prompt.take(300).ifBlank { "请用中文简短说明这张图。" }))
+                .put(
+                    JSONObject().put("type", "image_url")
+                        .put("image_url", JSONObject().put("url", dataUrl))
+                )
+            val messages = JSONArray()
+            val sys = composeSystem()
+            if (sys.isNotBlank()) messages.put(JSONObject().put("role", "system").put("content", sys))
+            messages.put(JSONObject().put("role", "user").put("content", content))
+            val body = JSONObject()
+                .put("model", prefs.model.take(MAX_MODEL_CHARS))
+                .put("messages", messages)
+                .put("temperature", 0.4)
+                .put("stream", false)
+                .toString()
+            try {
+                client.newCall(buildRequest(false, body)).execute().use { resp ->
+                    if (!resp.isSuccessful || resp.isRedirect) return@withContext ""
+                    val text = resp.body?.readUtf8Limited(MAX_RESPONSE_BYTES) ?: return@withContext ""
+                    extractContent(
+                        JSONObject(text).optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("message")
+                    ).take(MAX_OUTPUT_CHARS)
+                }
+            } catch (_: Exception) {
+                ""
+            }
+        }
+
+    /** 探测云端接口是否可用，不回落到本地闲聊。 */
     suspend fun probe(): String = withContext(Dispatchers.IO) {
         if (!llmConfigured()) return@withContext "还没填完整：需要 HTTPS 地址、模型名和 API Key"
         try {

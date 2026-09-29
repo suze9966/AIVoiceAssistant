@@ -320,6 +320,8 @@ class RoleChatActivity : AppCompatActivity() {
             val popup = PopupMenu(this, anchor)
             popup.menu.add(0, 1, 0, getString(R.string.menu_copy))
             popup.menu.add(0, 2, 1, getString(R.string.menu_delete))
+            popup.menu.add(0, 3, 2, getString(R.string.menu_respeak))
+            if (!adapter.isMeAt(pos)) popup.menu.add(0, 4, 3, getString(R.string.menu_regenerate))
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     1 -> {
@@ -332,6 +334,11 @@ class RoleChatActivity : AppCompatActivity() {
                         persistChat()
                         Toast.makeText(this, R.string.toast_deleted, Toast.LENGTH_SHORT).show()
                     }
+                    3 -> {
+                        val text = adapter.contentAt(pos)
+                        if (text.isNotBlank()) speakRole(text)
+                    }
+                    4 -> regenerateLast()
                 }
                 true
             }

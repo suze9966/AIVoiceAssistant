@@ -17,7 +17,9 @@ data class ReminderItem(
     val id: String,
     val text: String,
     val atMillis: Long,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val repeatDaily: Boolean = false,
+    val advanceMin: Int = 0
 )
 
 class ReminderStore(private val context: Context) {
@@ -36,7 +38,9 @@ class ReminderStore(private val context: Context) {
                         id = o.optString("id").ifBlank { UUID.randomUUID().toString() },
                         text = o.optString("text"),
                         atMillis = o.optLong("atMillis"),
-                        createdAt = o.optLong("createdAt")
+                        createdAt = o.optLong("createdAt"),
+                        repeatDaily = o.optBoolean("repeatDaily", false),
+                        advanceMin = o.optInt("advanceMin", 0)
                     )
                 )
             }
@@ -54,6 +58,8 @@ class ReminderStore(private val context: Context) {
                         .put("text", r.text)
                         .put("atMillis", r.atMillis)
                         .put("createdAt", r.createdAt)
+                        .put("repeatDaily", r.repeatDaily)
+                        .put("advanceMin", r.advanceMin)
                 )
             }
             file.writeText(arr.toString())
@@ -62,19 +68,31 @@ class ReminderStore(private val context: Context) {
 
     fun upcoming(): List<ReminderItem> {
         val now = System.currentTimeMillis() - 15_000L
-        return load().filter { it.atMillis >= now }.sortedBy { it.atMillis }
+        return load().filter { it.repeatDaily || it.atMillis >= now }.sortedBy { it.atMillis }
     }
 
-    fun add(text: String, atMillis: Long): ReminderItem {
+    fun formatItem(item: ReminderItem): String {
+        val extra = buildString {
+            if (item.repeatDaily) append(" ·每天")
+            if (item.advanceMin > 0) append(" ·提前").append(item.advanceMin).append("分钟")
+        }
+        return formatWhen(item.atMillis) + extra + "  " + item.text
+    }
+
+    fun add(text: String, atMillis: Long, repeatDaily: Boolean = false, advanceMin: Int = 0): ReminderItem {
         val item = ReminderItem(
             id = UUID.randomUUID().toString(),
             text = text.trim().ifBlank { "到时间啦" }.take(80),
-            atMillis = atMillis
+            atMillis = atMillis,
+            repeatDaily = repeatDaily,
+            advanceMin = advanceMin.coerceIn(0, 60)
         )
-        val list = load().filter { it.atMillis >= System.currentTimeMillis() - 15_000L }.toMutableList()
+        val now = System.currentTimeMillis() - 15_000L
+        val list = load().filter { it.atMillis >= now || it.repeatDaily }.toMutableList()
         list.add(item)
         save(list)
         schedule(item)
+        XiaomoWidgetProvider.refresh(context)
         return item
     }
 
@@ -83,16 +101,28 @@ class ReminderStore(private val context: Context) {
         val found = list.firstOrNull { it.id == id } ?: return false
         unschedule(found)
         save(list.filterNot { it.id == id })
+        XiaomoWidgetProvider.refresh(context)
         return true
     }
 
     fun cancelAll() {
         load().forEach { unschedule(it) }
         save(emptyList())
+        XiaomoWidgetProvider.refresh(context)
     }
 
     fun markFired(id: String) {
-        save(load().filterNot { it.id == id })
+        val list = load()
+        val found = list.firstOrNull { it.id == id } ?: return
+        if (found.repeatDaily) {
+            val next = found.copy(atMillis = found.atMillis + 24L * 3600_000L)
+            save(list.map { if (it.id == id) next else it })
+            schedule(next)
+        } else {
+            unschedule(found)
+            save(list.filterNot { it.id == id })
+        }
+        XiaomoWidgetProvider.refresh(context)
     }
 
     fun rescheduleAll() {
@@ -104,34 +134,46 @@ class ReminderStore(private val context: Context) {
     }
 
     private fun schedule(item: ReminderItem) {
+        setAlarm(pending(item, false), item.atMillis)
+        if (item.advanceMin > 0) {
+            val early = item.atMillis - item.advanceMin * 60_000L
+            if (early > System.currentTimeMillis() + 5_000L) {
+                setAlarm(pending(item, true), early)
+            }
+        }
+    }
+
+    private fun setAlarm(pi: PendingIntent, atMillis: Long) {
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val pi = pending(item)
         try {
             if (Build.VERSION.SDK_INT >= 31) {
                 if (am.canScheduleExactAlarms()) {
-                    am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, item.atMillis, pi)
+                    am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, pi)
                 } else {
-                    am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, item.atMillis, pi)
+                    am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, pi)
                 }
             } else {
-                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, item.atMillis, pi)
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, pi)
             }
         } catch (_: Exception) {
-            runCatching { am.set(AlarmManager.RTC_WAKEUP, item.atMillis, pi) }
+            runCatching { am.set(AlarmManager.RTC_WAKEUP, atMillis, pi) }
         }
     }
 
     private fun unschedule(item: ReminderItem) {
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        runCatching { am.cancel(pending(item)) }
+        runCatching { am.cancel(pending(item, false)) }
+        runCatching { am.cancel(pending(item, true)) }
     }
 
-    private fun pending(item: ReminderItem): PendingIntent {
+    private fun pending(item: ReminderItem, advance: Boolean): PendingIntent {
         val intent = Intent(context, ReminderReceiver::class.java)
             .setAction("com.suze.aivoice.REMIND")
             .putExtra(ReminderReceiver.EXTRA_ID, item.id)
             .putExtra(ReminderReceiver.EXTRA_TEXT, item.text)
+            .putExtra(ReminderReceiver.EXTRA_ADVANCE, advance)
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        return PendingIntent.getBroadcast(context, item.id.hashCode(), intent, flags)
+        val code = item.id.hashCode() xor if (advance) 0x51ED else 0
+        return PendingIntent.getBroadcast(context, code, intent, flags)
     }
 }

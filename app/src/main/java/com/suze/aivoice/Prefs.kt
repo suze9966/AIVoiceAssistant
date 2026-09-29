@@ -227,5 +227,25 @@ class Prefs(context: Context) {
     var activeChatId: String
         get() = sp.getString("activeChatId", "") ?: ""
         set(v) = sp.edit().putString("activeChatId", v).apply()
+
+    /** 小组件用的最近天气摘要 */
+    var lastWeatherBrief: String
+        get() = sp.getString("lastWeatherBrief", "") ?: ""
+        set(v) = sp.edit().putString("lastWeatherBrief", v).apply()
+
+    /** 上次主动问候时间，避免每次回到前台都播报 */
+    var lastBriefAt: Long
+        get() = sp.getLong("lastBriefAt", 0L)
+        set(v) = sp.edit().putLong("lastBriefAt", v).apply()
+
+    /** 通知朗读，默认关 */
+    var notifySpeakEnabled: Boolean
+        get() = sp.getBoolean("notifySpeakEnabled", false)
+        set(v) = sp.edit().putBoolean("notifySpeakEnabled", v).apply()
+
+    /** 插上耳机或连上蓝牙后自动开唤醒 */
+    var headsetWakeEnabled: Boolean
+        get() = sp.getBoolean("headsetWakeEnabled", false)
+        set(v) = sp.edit().putBoolean("headsetWakeEnabled", v).apply()
 }
 

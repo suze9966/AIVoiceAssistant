@@ -12,8 +12,11 @@ import androidx.core.app.NotificationCompat
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val id = intent.getStringExtra(EXTRA_ID).orEmpty()
-        val text = intent.getStringExtra(EXTRA_TEXT).orEmpty().ifBlank { "到时间啦" }
-        if (id.isNotBlank()) ReminderStore(context).markFired(id)
+        val advance = intent.getBooleanExtra(EXTRA_ADVANCE, false)
+        val raw = intent.getStringExtra(EXTRA_TEXT).orEmpty().ifBlank { "到时间啦" }
+        val text = if (advance) context.getString(R.string.remind_advance_title) + "：" + raw else raw
+        if (id.isNotBlank() && !advance) ReminderStore(context).markFired(id)
+        else XiaomoWidgetProvider.refresh(context)
         ensureChannel(context)
         val open = Intent(context, MainActivity::class.java)
             .putExtra(MainActivity.EXTRA_REMIND_SPEAK, text)
@@ -51,6 +54,7 @@ class ReminderReceiver : BroadcastReceiver() {
         const val CHANNEL = "xiaomo_remind"
         const val EXTRA_ID = "remind_id"
         const val EXTRA_TEXT = "remind_text"
+        const val EXTRA_ADVANCE = "remind_advance"
     }
 }
 
