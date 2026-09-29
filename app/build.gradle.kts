@@ -11,13 +11,26 @@ android {
         applicationId = "com.suze.aivoice"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
+    }
+
+    signingConfigs {
+        create("xiaomo") {
+            storeFile = file("xiaomo-debug.jks")
+            storePassword = "xiaomo9966"
+            keyAlias = "xiaomo"
+            keyPassword = "xiaomo9966"
+        }
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("xiaomo")
+        }
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("xiaomo")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

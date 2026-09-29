@@ -272,6 +272,28 @@ class RoleStore(context: Context) {
         return copyImage(uri, dest, 512)
     }
 
+    fun saveAvatarFromBytes(id: String, bytes: ByteArray): Boolean {
+        if (bytes.size < 64) return false
+        return try {
+            val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return false
+            if (bmp.width < 32 || bmp.height < 32) {
+                bmp.recycle()
+                return false
+            }
+            val scaled = scaleDown(bmp, 512)
+            val dest = avatarFile(id)
+            dest.parentFile?.mkdirs()
+            FileOutputStream(dest).use { out ->
+                scaled.compress(Bitmap.CompressFormat.JPEG, 88, out)
+            }
+            if (scaled !== bmp) bmp.recycle()
+            get(id)?.let { upsert(it.copy(avatarFile = dest.name, updatedAt = System.currentTimeMillis())) }
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     fun clearAvatar(id: String) {
         avatarFile(id).delete()
         get(id)?.let { upsert(it.copy(avatarFile = "", updatedAt = System.currentTimeMillis())) }
@@ -430,7 +452,11 @@ class RoleStore(context: Context) {
                             id = e.optString("id").ifBlank { newId() },
                             keys = e.optString("keys"),
                             content = e.optString("content"),
-                            enabled = e.optBoolean("enabled", true)
+                            enabled = e.optBoolean("enabled", true),
+                            constant = e.optBoolean("constant", false) ||
+                                (e.optString("keys").isBlank() && e.optString("content").isNotBlank()),
+                            comment = e.optString("comment"),
+                            order = e.optInt("order", e.optInt("insertion_order", 100))
                         )
                     )
                 }
@@ -483,6 +509,9 @@ class RoleStore(context: Context) {
                         .put("keys", e.keys)
                         .put("content", e.content)
                         .put("enabled", e.enabled)
+                        .put("constant", e.constant)
+                        .put("comment", e.comment)
+                        .put("order", e.order)
                 )
             }
             val alts = JSONArray()

@@ -6,6 +6,8 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import androidx.core.content.FileProvider
+import java.io.File
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
@@ -66,6 +68,9 @@ class RoleChatActivity : AppCompatActivity() {
         bindHeader()
         loadCurrentChat(seedGreeting = true)
         setupLongClick()
+        if (intent.getBooleanExtra(EXTRA_OPEN_CHATS, false)) {
+            recycler.post { showChatPicker() }
+        }
         findViewById<ImageButton>(R.id.btnRoleSend).setOnClickListener { submit() }
         editInput.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEND) submit() else false
@@ -134,7 +139,7 @@ class RoleChatActivity : AppCompatActivity() {
         history.addAll(store.loadChat(chatId))
         if (seedGreeting && history.isEmpty()) {
             pickGreeting(c)?.let { greet ->
-                history.add(ChatMessage("assistant", greet, isMe = false))
+                history.add(ChatMessage("assistant", RolePrompt.applyMacros(greet, c), isMe = false))
                 store.saveChat(chatId, history, c.id)
             }
         }
@@ -189,13 +194,15 @@ class RoleChatActivity : AppCompatActivity() {
         pop.menu.add(0, 1, 0, getString(R.string.role_edit))
         pop.menu.add(0, 8, 1, getString(R.string.role_chats))
         pop.menu.add(0, 4, 2, getString(R.string.role_new_chat))
+        pop.menu.add(0, 9, 3, getString(R.string.role_pick_greeting))
         if (isSending) {
-            pop.menu.add(0, 6, 3, getString(R.string.role_stop))
+            pop.menu.add(0, 6, 4, getString(R.string.role_stop))
         } else {
-            pop.menu.add(0, 5, 3, getString(R.string.role_regenerate))
+            pop.menu.add(0, 5, 4, getString(R.string.role_regenerate))
         }
-        pop.menu.add(0, 3, 4, getString(R.string.menu_connect_llm))
-        pop.menu.add(0, 2, 5, getString(R.string.menu_clear))
+        pop.menu.add(0, 7, 5, getString(R.string.role_export_chat))
+        pop.menu.add(0, 3, 6, getString(R.string.menu_connect_llm))
+        pop.menu.add(0, 2, 7, getString(R.string.menu_clear))
         pop.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 1 -> {
@@ -213,6 +220,14 @@ class RoleChatActivity : AppCompatActivity() {
                     startNewChat()
                     true
                 }
+                9 -> {
+                    promptGreeting()
+                    true
+                }
+                7 -> {
+                    exportCurrentChat()
+                    true
+                }
                 5 -> {
                     regenerateLast()
                     true
@@ -228,7 +243,9 @@ class RoleChatActivity : AppCompatActivity() {
                 2 -> {
                     history.clear()
                     store.clearChat(chatId)
-                    pickGreeting(c)?.let { history.add(ChatMessage("assistant", it, isMe = false)) }
+                    pickGreeting(c)?.let {
+                        history.add(ChatMessage("assistant", RolePrompt.applyMacros(it, c), isMe = false))
+                    }
                     adapter.replaceAll(history)
                     persistChat()
                     Toast.makeText(this, R.string.toast_cleared, Toast.LENGTH_SHORT).show()
@@ -250,7 +267,8 @@ class RoleChatActivity : AppCompatActivity() {
         val labels = metas.map { m ->
             val preview = m.preview.ifBlank { getString(R.string.role_preview_empty) }
             val labelTitle = m.title.ifBlank { getString(R.string.role_new_chat) }
-            labelTitle + "\n" + preview
+            val mark = if (m.id == chatId) getString(R.string.role_current_chat) + " · " else ""
+            mark + labelTitle + "\n" + preview
         }.toTypedArray()
         AlertDialog.Builder(this)
             .setTitle(R.string.role_chats)
@@ -309,6 +327,74 @@ class RoleChatActivity : AppCompatActivity() {
         val created = store.createChat(c.id)
         chatId = created.id
         loadCurrentChat(seedGreeting = true)
+    }
+
+    private fun promptGreeting() {
+        val c = character ?: return
+        val greets = c.allGreetings()
+        if (greets.isEmpty()) {
+            Toast.makeText(this, R.string.toast_role_no_regenerate, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val labels = greets.mapIndexed { i, text ->
+            getString(R.string.role_greeting_index, i + 1) + "\n" + RolePrompt.applyMacros(text, c).take(60)
+        }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.role_pick_greeting)
+            .setItems(labels) { _, which ->
+                val picked = greets.getOrNull(which) ?: return@setItems
+                persistChat()
+                val created = store.createChat(c.id)
+                chatId = created.id
+                history.clear()
+                history.add(ChatMessage("assistant", RolePrompt.applyMacros(picked, c), isMe = false))
+                adapter.replaceAll(history)
+                persistChat()
+                bindHeader(resetStatus = true)
+                scrollToBottom()
+            }
+            .setNegativeButton(R.string.role_cancel, null)
+            .show()
+    }
+
+    private fun exportCurrentChat() {
+        val c = character ?: return
+        if (history.isEmpty()) {
+            Toast.makeText(this, R.string.toast_role_chat_export_failed, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val dir = File(cacheDir, "role_export")
+        dir.mkdirs()
+        val title = store.loadChatMetas(c.id).firstOrNull { it.id == chatId }?.title.orEmpty()
+            .ifBlank { "对话" }
+        val safe = RoleStore.sanitize(c.name + "_" + title)
+        val file = File(dir, "$safe.md")
+        val sb = StringBuilder()
+        sb.append("# ").append(c.name)
+        if (title.isNotBlank()) sb.append(" · ").append(title)
+        sb.append("\n\n")
+        history.filter { it.content.isNotBlank() }.forEach { m ->
+            val who = if (m.isMe || m.role == "user") c.userName.ifBlank { "主人" } else c.name
+            sb.append("**").append(who).append("：** ").append(m.content).append("\n\n")
+        }
+        try {
+            file.writeText(sb.toString())
+        } catch (_: Exception) {
+            Toast.makeText(this, R.string.toast_role_chat_export_failed, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+        startActivity(
+            Intent.createChooser(
+                Intent(Intent.ACTION_SEND).apply {
+                    type = "text/markdown"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                },
+                getString(R.string.role_export_chat)
+            )
+        )
+        Toast.makeText(this, R.string.toast_role_chat_exported, Toast.LENGTH_SHORT).show()
     }
 
     private fun setupLongClick() {
@@ -479,5 +565,6 @@ class RoleChatActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_ROLE_ID = "role_id"
         const val EXTRA_CHAT_ID = "chat_id"
+        const val EXTRA_OPEN_CHATS = "open_chats"
     }
 }

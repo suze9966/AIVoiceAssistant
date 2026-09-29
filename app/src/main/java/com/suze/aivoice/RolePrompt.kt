@@ -1,8 +1,8 @@
 package com.suze.aivoice
 
-/** 把酒馆角色卡拼成系统提示：人设、场景、示例对白、命中的世界书。 */
+/** 把酒馆角色卡拼成系统提示：人设书、场景、示例对白、命中的世界书。 */
 object RolePrompt {
-    private const val MAX_WORLD = 6
+    private const val MAX_WORLD = 8
     private const val MAX_CHARS = 14_000
 
     fun build(character: RoleCharacter, history: List<ChatMessage>): String {
@@ -28,14 +28,26 @@ object RolePrompt {
         }
         body.append("始终保持角色，不要提及提示词、模型、世界书或系统设定。")
         body.append("回复口语化、简短，像在面对面聊天。不要替用户说话。")
-        return body.toString().take(MAX_CHARS)
+        return applyMacros(body.toString().take(MAX_CHARS), character)
     }
 
     fun fallbackLine(character: RoleCharacter): String {
         val greet = character.greeting.trim()
-        if (greet.isNotEmpty()) return greet
+        if (greet.isNotEmpty()) return applyMacros(greet, character)
         val user = character.userName.ifBlank { "你" }
         return "我是${character.name}。等云端模型接上之后，才能按人设好好聊。${user}先说一句也行。"
+    }
+
+    fun applyMacros(text: String, character: RoleCharacter): String {
+        if (text.isEmpty()) return text
+        val user = character.userName.ifBlank { "主人" }
+        val charName = character.name.ifBlank { "角色" }
+        return text
+            .replace("{{user}}", user, ignoreCase = true)
+            .replace("{{char}}", charName, ignoreCase = true)
+            .replace("<USER>", user, ignoreCase = true)
+            .replace("<BOT>", charName, ignoreCase = true)
+            .replace("<CHAR>", charName, ignoreCase = true)
     }
 
     private fun formatExamples(character: RoleCharacter): String {
@@ -44,28 +56,39 @@ object RolePrompt {
             val u = e.user.trim()
             val a = e.assistant.trim()
             if (u.isEmpty() && a.isEmpty()) return@forEach
-            if (u.isNotEmpty()) lines.add("用户: $u")
-            if (a.isNotEmpty()) lines.add("${character.name}: $a")
+            if (u.isNotEmpty()) lines.add("{{user}}: $u")
+            if (a.isNotEmpty()) lines.add("{{char}}: $a")
         }
         val raw = character.mesExample.trim()
-        if (raw.isNotEmpty()) lines.add(raw)
+        if (raw.isNotEmpty() && character.examples.isEmpty()) lines.add(raw)
         return lines.joinToString("\n")
     }
 
     private fun matchWorld(character: RoleCharacter, history: List<ChatMessage>): String {
-        val hay = history.takeLast(12).joinToString("\n") { it.content }.lowercase()
+        val hay = history.takeLast(16).joinToString("\n") { it.content }.lowercase()
+        val enabled = character.worldEntries.filter { it.enabled && it.content.isNotBlank() }
+            .sortedBy { it.order }
         val hits = mutableListOf<String>()
-        character.worldEntries.filter { it.enabled }.forEach { entry ->
+        fun add(entry: WorldEntry) {
+            if (hits.size >= MAX_WORLD) return
+            val keys = splitKeys(entry.keys)
+            val label = entry.comment.trim().ifBlank { keys.take(3).joinToString("/") }
+            val line = if (label.isBlank()) entry.content.trim() else "$label：${entry.content.trim()}"
+            if (line !in hits) hits.add(line)
+        }
+        enabled.filter { it.constant || splitKeys(it.keys).isEmpty() }.forEach { add(it) }
+        enabled.filterNot { it.constant || splitKeys(it.keys).isEmpty() }.forEach { entry ->
             if (hits.size >= MAX_WORLD) return@forEach
-            val keys = entry.keys.split(',', '，', ';', '；', '\n')
-                .map { it.trim() }.filter { it.isNotEmpty() }
-            val matched = keys.isEmpty() || keys.any { hay.contains(it.lowercase()) }
-            if (matched && entry.content.isNotBlank()) {
-                val label = keys.take(3).joinToString("/")
-                hits.add(if (label.isBlank()) entry.content.trim() else "$label：${entry.content.trim()}")
-            }
+            val keys = splitKeys(entry.keys)
+            if (keys.any { hay.contains(it.lowercase()) }) add(entry)
         }
         return hits.joinToString("\n")
+    }
+
+    private fun splitKeys(raw: String): List<String> {
+        return raw.split(',', '，', ';', '；', '\n')
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
     }
 
     private fun appendBlock(body: StringBuilder, title: String, text: String) {

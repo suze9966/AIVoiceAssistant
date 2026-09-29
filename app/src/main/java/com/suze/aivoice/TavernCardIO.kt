@@ -13,12 +13,22 @@ import java.util.zip.CRC32
 import java.util.zip.Inflater
 import android.util.Base64
 
+data class ImportedTavernCard(
+    val character: RoleCharacter,
+    val avatarBytes: ByteArray? = null
+)
+
 /** 导入 / 导出酒馆角色卡：JSON、Character Card V2，以及 PNG 内嵌的 chara 块。 */
 object TavernCardIO {
-    fun importUri(context: Context, uri: Uri): RoleCharacter? {
+    fun importUri(context: Context, uri: Uri): RoleCharacter? = importUriFull(context, uri)?.character
+
+    fun importUriFull(context: Context, uri: Uri): ImportedTavernCard? {
         val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return null
         val name = displayName(context, uri)
-        return importBytes(bytes, name)
+        val character = importBytes(bytes, name) ?: return null
+        val isPng = bytes.size >= 8 && bytes.copyOfRange(0, 8).contentEquals(PNG_SIG)
+        val avatar = if (isPng && bytes.size > 256) bytes else null
+        return ImportedTavernCard(character, avatar)
     }
 
     fun importBytes(bytes: ByteArray, fileName: String = ""): RoleCharacter? {
@@ -56,7 +66,9 @@ object TavernCardIO {
                     .put("keys", keys)
                     .put("content", e.content)
                     .put("enabled", e.enabled)
-                    .put("comment", "")
+                    .put("constant", e.constant)
+                    .put("comment", e.comment)
+                    .put("insertion_order", e.order)
             )
         }
         val book = JSONObject().put("entries", entries)
@@ -130,7 +142,7 @@ object TavernCardIO {
         val name = data.optString("name").ifBlank { "导入角色" }
         return RoleCharacter(
             id = RoleStore.newId(),
-            name = name.take(24),
+            name = name.take(48),
             emoji = "\uD83C\uDFAD",
             intro = data.optString("creator_notes").ifBlank { data.optString("description").replace("\n", " ").take(80) },
             greeting = data.optString("first_mes"),
@@ -153,24 +165,45 @@ object TavernCardIO {
 
     private fun parseCharacterBook(book: JSONObject?): List<WorldEntry> {
         if (book == null) return emptyList()
-        val arr = book.optJSONArray("entries") ?: return emptyList()
-        val list = mutableListOf<WorldEntry>()
-        for (i in 0 until arr.length()) {
-            val item = arr.optJSONObject(i) ?: continue
-            val keys = when {
-                item.optJSONArray("keys") != null -> jsonStringList(item.optJSONArray("keys")).joinToString(",")
-                else -> item.optString("keys")
+        val items = mutableListOf<JSONObject>()
+        book.optJSONArray("entries")?.let { arr ->
+            for (i in 0 until arr.length()) arr.optJSONObject(i)?.let { items.add(it) }
+        }
+        if (items.isEmpty()) {
+            book.optJSONObject("entries")?.let { obj ->
+                val keys = obj.keys()
+                while (keys.hasNext()) obj.optJSONObject(keys.next())?.let { items.add(it) }
             }
+        }
+        val list = mutableListOf<WorldEntry>()
+        items.forEach { item ->
+            val keys = mutableListOf<String>()
+            keys.addAll(jsonStringList(item.optJSONArray("keys")))
+            keys.addAll(jsonStringList(item.optJSONArray("secondary_keys")))
+            if (keys.isEmpty()) {
+                item.optString("keys").split(',', '，', ';', '；')
+                    .map { it.trim() }.filter { it.isNotEmpty() }.forEach { keys.add(it) }
+            }
+            val enabled = when {
+                item.has("enabled") -> item.optBoolean("enabled", true)
+                item.has("disable") -> !item.optBoolean("disable", false)
+                else -> true
+            }
+            val content = item.optString("content")
+            if (content.isBlank() && keys.isEmpty()) return@forEach
             list.add(
                 WorldEntry(
                     id = item.optString("id").ifBlank { UUID.randomUUID().toString() },
-                    keys = keys,
-                    content = item.optString("content"),
-                    enabled = item.optBoolean("enabled", true)
+                    keys = keys.joinToString(","),
+                    content = content,
+                    enabled = enabled,
+                    constant = item.optBoolean("constant", false) || keys.isEmpty(),
+                    comment = item.optString("comment"),
+                    order = item.optInt("insertion_order", item.optInt("order", 100))
                 )
             )
         }
-        return list
+        return list.sortedBy { it.order }
     }
 
     private fun parseMesExample(raw: String): List<RoleExample> {
@@ -197,7 +230,7 @@ object TavernCardIO {
             if (user.isNotEmpty() || assistant.isNotEmpty()) list.add(RoleExample(user, assistant))
         }
         if (blocks.size > 1) blocks.drop(1).forEach { consume(it) } else consume(raw)
-        return list.filter { it.user.isNotBlank() || it.assistant.isNotBlank() }.take(8)
+        return list.filter { it.user.isNotBlank() || it.assistant.isNotBlank() }.take(16)
     }
 
     private fun examplesAsMes(character: RoleCharacter): String {

@@ -9,7 +9,10 @@ data class WorldEntry(
     val id: String,
     val keys: String = "",
     val content: String = "",
-    val enabled: Boolean = true
+    val enabled: Boolean = true,
+    val constant: Boolean = false,
+    val comment: String = "",
+    val order: Int = 100
 )
 
 data class RoleChatMeta(
@@ -20,7 +23,7 @@ data class RoleChatMeta(
     val preview: String = ""
 )
 
-/** 对标酒馆角色卡：人设 / 场景 / 示例对白 / 世界书，不做插件和养成数值。 */
+/** 对标酒馆角色卡：人设书、场景、示例对白、世界书、多开场白。不做插件、正则和群聊。 */
 data class RoleCharacter(
     val id: String,
     val name: String,
@@ -45,6 +48,10 @@ data class RoleCharacter(
     val updatedAt: Long = 0L
 ) {
     fun displayIntro(): String = intro.ifBlank { description.replace("\n", " ").take(80) }
+
+    fun tagList(): List<String> = tags.split(',', '，', ';', '；')
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
 
     fun allGreetings(): List<String> {
         val list = mutableListOf<String>()

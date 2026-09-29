@@ -7,7 +7,10 @@ import android.text.format.DateFormat
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.text.Editable
+import android.text.TextWatcher
 import android.widget.Button
+import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
@@ -24,7 +27,9 @@ class RoleLoungeActivity : AppCompatActivity() {
     private lateinit var llm: LlmClient
     private lateinit var adapter: RoleCardAdapter
     private lateinit var emptyView: TextView
+    private val allItems = mutableListOf<RoleCharacter>()
     private val items = mutableListOf<RoleCharacter>()
+    private var query: String = ""
 
     private val importCard = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -36,12 +41,14 @@ class RoleLoungeActivity : AppCompatActivity() {
                 Intent.FLAG_GRANT_READ_URI_PERMISSION
             )
         }
-        val imported = TavernCardIO.importUri(this, uri)
+        val imported = TavernCardIO.importUriFull(this, uri)
         if (imported == null) {
             Toast.makeText(this, R.string.toast_role_import_failed, Toast.LENGTH_SHORT).show()
             return@registerForActivityResult
         }
-        store.upsert(imported.copy(updatedAt = System.currentTimeMillis()))
+        val character = imported.character.copy(updatedAt = System.currentTimeMillis())
+        store.upsert(character)
+        imported.avatarBytes?.let { bytes -> store.saveAvatarFromBytes(character.id, bytes) }
         reload()
         Toast.makeText(this, R.string.toast_role_imported, Toast.LENGTH_SHORT).show()
     }
@@ -72,6 +79,14 @@ class RoleLoungeActivity : AppCompatActivity() {
         val recycler = findViewById<RecyclerView>(R.id.recyclerRoles)
         recycler.layoutManager = LinearLayoutManager(this)
         recycler.adapter = adapter
+        findViewById<EditText>(R.id.editRoleSearch).addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                query = s?.toString().orEmpty().trim()
+                applyFilter()
+            }
+        })
         GlassKit.attachPage(this, recycler)
     }
 
@@ -82,9 +97,31 @@ class RoleLoungeActivity : AppCompatActivity() {
     }
 
     private fun reload() {
+        allItems.clear()
+        allItems.addAll(store.loadCharacters())
+        applyFilter()
+    }
+
+    private fun applyFilter() {
+        val q = query.lowercase()
         items.clear()
-        items.addAll(store.loadCharacters())
+        if (q.isEmpty()) {
+            items.addAll(allItems)
+        } else {
+            items.addAll(allItems.filter { c ->
+                c.name.contains(query, ignoreCase = true) ||
+                    c.intro.contains(query, ignoreCase = true) ||
+                    c.description.contains(query, ignoreCase = true) ||
+                    c.tags.contains(query, ignoreCase = true) ||
+                    c.tagList().any { it.contains(query, ignoreCase = true) }
+            })
+        }
         adapter.notifyDataSetChanged()
+        emptyView.text = when {
+            allItems.isEmpty() -> getString(R.string.role_lounge_empty)
+            items.isEmpty() -> getString(R.string.role_search_empty)
+            else -> getString(R.string.role_lounge_empty)
+        }
         emptyView.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
     }
 
@@ -112,14 +149,23 @@ class RoleLoungeActivity : AppCompatActivity() {
     private fun showCardMenu(anchor: View, character: RoleCharacter) {
         val pop = PopupMenu(this, anchor)
         pop.menu.add(0, 1, 0, getString(R.string.role_edit))
-        pop.menu.add(0, 3, 1, getString(R.string.role_duplicate))
-        pop.menu.add(0, 2, 2, getString(R.string.role_delete))
+        pop.menu.add(0, 4, 1, getString(R.string.role_chats))
+        pop.menu.add(0, 3, 2, getString(R.string.role_duplicate))
+        pop.menu.add(0, 2, 3, getString(R.string.role_delete))
         pop.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 1 -> {
                     startActivity(
                         Intent(this, RoleEditActivity::class.java)
                             .putExtra(RoleEditActivity.EXTRA_ROLE_ID, character.id)
+                    )
+                    true
+                }
+                4 -> {
+                    startActivity(
+                        Intent(this, RoleChatActivity::class.java)
+                            .putExtra(RoleChatActivity.EXTRA_ROLE_ID, character.id)
+                            .putExtra(RoleChatActivity.EXTRA_OPEN_CHATS, true)
                     )
                     true
                 }
@@ -164,6 +210,7 @@ class RoleLoungeActivity : AppCompatActivity() {
             val avatar: ImageView = view.findViewById(R.id.ivRoleAvatar)
             val name: TextView = view.findViewById(R.id.tvRoleName)
             val intro: TextView = view.findViewById(R.id.tvRoleIntro)
+            val tags: TextView = view.findViewById(R.id.tvRoleTags)
             val preview: TextView = view.findViewById(R.id.tvRolePreview)
             val time: TextView = view.findViewById(R.id.tvRoleTime)
         }
@@ -180,6 +227,13 @@ class RoleLoungeActivity : AppCompatActivity() {
             holder.name.text = item.name
             holder.intro.text = item.displayIntro().ifBlank {
                 ctx.getString(R.string.role_intro_empty)
+            }
+            val tags = item.tagList()
+            if (tags.isEmpty()) {
+                holder.tags.visibility = View.GONE
+            } else {
+                holder.tags.visibility = View.VISIBLE
+                holder.tags.text = tags.take(4).joinToString(" · ")
             }
             val (preview, updatedAt) = store.lastPreview(item.id)
             holder.preview.text = preview.ifBlank { ctx.getString(R.string.role_preview_empty) }

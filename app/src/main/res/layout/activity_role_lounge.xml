@@ -47,6 +47,12 @@
                 android:textColor="@color/purple_700" android:textSize="26sp" android:textStyle="bold"
                 android:contentDescription="@string/role_add"/>
         </LinearLayout>
+            <EditText android:id="@+id/editRoleSearch" android:layout_width="match_parent" android:layout_height="40dp"
+                android:layout_marginTop="10dp" android:background="@drawable/s_bg_edit"
+                android:paddingStart="14dp" android:paddingEnd="14dp"
+                android:hint="@string/role_hint_search" android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_secondary" android:textSize="13sp"
+                android:inputType="text" android:singleLine="true" android:imeOptions="actionSearch"/>
     </LinearLayout>
     <com.suze.aivoice.LiquidGlassView
         android:id="@+id/bottomGlass"
