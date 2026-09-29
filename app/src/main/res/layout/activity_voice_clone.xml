@@ -1,9 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
-    android:orientation="vertical" android:background="@drawable/glass_page_bg">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/glass_header"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+    <FrameLayout
+        android:id="@+id/pageContent"
+        android:layout_width="match_parent" android:layout_height="match_parent"
+        android:background="@drawable/glass_page_bg">
+        <ScrollView android:id="@+id/pageScroll" android:layout_width="match_parent" android:layout_height="match_parent"
+            android:fillViewport="true" android:clipToPadding="false">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:padding="16dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:background="@drawable/s_bg_card" android:elevation="2dp" android:padding="16dp">
+                    <TextView android:id="@+id/tvClonePageStatus" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:text="@string/voice_clone_status_off" android:textColor="@color/purple_700" android:textSize="14sp" android:layout_marginBottom="12dp"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="52dp">
+                        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/label_use_clone" android:textColor="@color/text_primary" android:textSize="14sp"/>
+                        <androidx.appcompat.widget.SwitchCompat android:id="@+id/switchUseClone" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                    </LinearLayout>
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/voice_clone_hint" android:textColor="@color/text_secondary" android:textSize="12sp" android:layout_marginTop="4dp" android:layout_marginBottom="12dp"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/label_clone_name" android:textColor="@color/text_secondary" android:textSize="12sp" android:layout_marginBottom="6dp"/>
+                    <EditText android:id="@+id/editCloneName" android:layout_width="match_parent" android:layout_height="48dp" android:background="@drawable/s_bg_edit" android:paddingStart="14dp" android:paddingEnd="14dp" android:hint="xiaomo" android:textColor="@color/text_primary" android:textColorHint="@color/text_secondary" android:textSize="14sp" android:inputType="text" android:singleLine="true" android:layout_marginBottom="12dp"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/label_clone_transcript" android:textColor="@color/text_secondary" android:textSize="12sp" android:layout_marginBottom="6dp"/>
+                    <EditText android:id="@+id/editCloneTranscript" android:layout_width="match_parent" android:layout_height="96dp" android:background="@drawable/s_bg_edit" android:paddingStart="14dp" android:paddingEnd="14dp" android:paddingTop="12dp" android:paddingBottom="12dp" android:gravity="top|start" android:hint="@string/voice_clone_default_transcript" android:textColor="@color/text_primary" android:textColorHint="@color/text_secondary" android:textSize="14sp" android:inputType="textCapSentences|textMultiLine" android:maxLines="4" android:scrollbars="vertical" android:layout_marginBottom="12dp"/>
+                    <TextView android:id="@+id/tvCloneSource" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/voice_clone_source_empty" android:textColor="@color/text_secondary" android:textSize="12sp" android:layout_marginBottom="12dp"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="8dp">
+                        <Button android:id="@+id/btnCloneRecord" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:background="@drawable/s_btn_ghost" android:text="@string/btn_clone_record" android:textColor="@color/purple_700" android:textSize="13sp"/>
+                        <Button android:id="@+id/btnClonePick" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:layout_marginStart="8dp" android:background="@drawable/s_btn_ghost" android:text="@string/btn_clone_pick" android:textColor="@color/purple_700" android:textSize="13sp"/>
+                    </LinearLayout>
+                    <Button android:id="@+id/btnClonePlay" android:layout_width="match_parent" android:layout_height="44dp" android:background="@drawable/s_btn_ghost" android:text="@string/btn_clone_play" android:textColor="@color/purple_700" android:textSize="13sp" android:layout_marginBottom="8dp"/>
+                    <Button android:id="@+id/btnCloneTest" android:layout_width="match_parent" android:layout_height="44dp" android:background="@drawable/s_btn_ghost" android:text="@string/btn_clone_test" android:textColor="@color/purple_700" android:textSize="13sp" android:layout_marginBottom="8dp"/>
+                    <Button android:id="@+id/btnCloneDelete" android:layout_width="match_parent" android:layout_height="44dp" android:background="@drawable/s_btn_ghost" android:text="@string/btn_clone_delete" android:textColor="@color/accent_pink" android:textSize="13sp"/>
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+    </FrameLayout>
+    <com.suze.aivoice.LiquidGlassView
+        android:id="@+id/headerGlass"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="top"/>
+    <LinearLayout android:id="@+id/headerBar"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:orientation="horizontal" android:gravity="center_vertical" android:background="@android:color/transparent"
         android:elevation="10dp" android:paddingStart="14dp" android:paddingEnd="14dp" android:paddingTop="16dp" android:paddingBottom="16dp">
         <TextView android:id="@+id/btnCloneBack" android:layout_width="48dp" android:layout_height="48dp"
             android:gravity="center" android:background="@drawable/icon_touch_bg" android:text="‹"
@@ -19,38 +57,17 @@
                 android:textColor="@color/text_secondary" android:textSize="12sp"/>
         </LinearLayout>
     </LinearLayout>
-    <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical" android:padding="16dp">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="vertical" android:background="@drawable/s_bg_card" android:elevation="2dp" android:padding="16dp">
-                <TextView android:id="@+id/tvClonePageStatus" android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:text="@string/voice_clone_status_off" android:textColor="@color/purple_700" android:textSize="14sp" android:layout_marginBottom="12dp"/>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="52dp">
-                    <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/label_use_clone" android:textColor="@color/text_primary" android:textSize="14sp"/>
-                    <androidx.appcompat.widget.SwitchCompat android:id="@+id/switchUseClone" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                </LinearLayout>
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/voice_clone_hint" android:textColor="@color/text_secondary" android:textSize="12sp" android:layout_marginTop="4dp" android:layout_marginBottom="12dp"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/label_clone_name" android:textColor="@color/text_secondary" android:textSize="12sp" android:layout_marginBottom="6dp"/>
-                <EditText android:id="@+id/editCloneName" android:layout_width="match_parent" android:layout_height="48dp" android:background="@drawable/s_bg_edit" android:paddingStart="14dp" android:paddingEnd="14dp" android:hint="xiaomo" android:textColor="@color/text_primary" android:textColorHint="@color/text_secondary" android:textSize="14sp" android:inputType="text" android:singleLine="true" android:layout_marginBottom="12dp"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/label_clone_transcript" android:textColor="@color/text_secondary" android:textSize="12sp" android:layout_marginBottom="6dp"/>
-                <EditText android:id="@+id/editCloneTranscript" android:layout_width="match_parent" android:layout_height="96dp" android:background="@drawable/s_bg_edit" android:paddingStart="14dp" android:paddingEnd="14dp" android:paddingTop="12dp" android:paddingBottom="12dp" android:gravity="top|start" android:hint="@string/voice_clone_default_transcript" android:textColor="@color/text_primary" android:textColorHint="@color/text_secondary" android:textSize="14sp" android:inputType="textCapSentences|textMultiLine" android:maxLines="4" android:scrollbars="vertical" android:layout_marginBottom="12dp"/>
-                <TextView android:id="@+id/tvCloneSource" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/voice_clone_source_empty" android:textColor="@color/text_secondary" android:textSize="12sp" android:layout_marginBottom="12dp"/>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="8dp">
-                    <Button android:id="@+id/btnCloneRecord" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:background="@drawable/s_btn_ghost" android:text="@string/btn_clone_record" android:textColor="@color/purple_700" android:textSize="13sp"/>
-                    <Button android:id="@+id/btnClonePick" android:layout_width="0dp" android:layout_height="44dp" android:layout_weight="1" android:layout_marginStart="8dp" android:background="@drawable/s_btn_ghost" android:text="@string/btn_clone_pick" android:textColor="@color/purple_700" android:textSize="13sp"/>
-                </LinearLayout>
-                <Button android:id="@+id/btnClonePlay" android:layout_width="match_parent" android:layout_height="44dp" android:background="@drawable/s_btn_ghost" android:text="@string/btn_clone_play" android:textColor="@color/purple_700" android:textSize="13sp" android:layout_marginBottom="8dp"/>
-                <Button android:id="@+id/btnCloneTest" android:layout_width="match_parent" android:layout_height="44dp" android:background="@drawable/s_btn_ghost" android:text="@string/btn_clone_test" android:textColor="@color/purple_700" android:textSize="13sp" android:layout_marginBottom="8dp"/>
-                <Button android:id="@+id/btnCloneDelete" android:layout_width="match_parent" android:layout_height="44dp" android:background="@drawable/s_btn_ghost" android:text="@string/btn_clone_delete" android:textColor="@color/accent_pink" android:textSize="13sp"/>
-            </LinearLayout>
-        </LinearLayout>
-    </ScrollView>
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="vertical" android:background="@drawable/glass_bottom" android:elevation="12dp"
+    <com.suze.aivoice.LiquidGlassView
+        android:id="@+id/bottomGlass"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="bottom"/>
+    <LinearLayout android:id="@+id/bottomBar"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical" android:background="@android:color/transparent" android:elevation="12dp"
         android:paddingStart="16dp" android:paddingEnd="16dp" android:paddingTop="10dp" android:paddingBottom="12dp">
         <Button android:id="@+id/btnCloneUpload" android:layout_width="match_parent" android:layout_height="52dp"
             android:background="@drawable/s_btn_primary" android:text="@string/btn_clone_upload"
             android:textColor="@color/white" android:textSize="16sp" android:textStyle="bold"/>
     </LinearLayout>
-</LinearLayout>
+</FrameLayout>

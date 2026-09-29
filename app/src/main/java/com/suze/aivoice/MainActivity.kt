@@ -202,6 +202,14 @@ class MainActivity : AppCompatActivity() {
         adapter = ChatAdapter(history)
         recycler.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
         recycler.adapter = adapter
+        GlassKit.attach(
+            findViewById(R.id.chatContent),
+            recycler,
+            findViewById(R.id.headerBar),
+            findViewById(R.id.bottomBar),
+            findViewById(R.id.headerGlass),
+            findViewById(R.id.bottomGlass)
+        )
 
         // 恢复本地历史，并清理旧版本因 history/adapter 共用列表产生的相邻重复项。
         activeChatId = store.migrateAndActive(prefs)
@@ -418,6 +426,8 @@ class MainActivity : AppCompatActivity() {
         ChatStyleStore.applyBackground(ivChatBackground)
         chatBgScrim.visibility = if (ChatStyleStore.hasBackground(this)) View.VISIBLE else View.GONE
         ChatStyleStore.applyAvatar(ivHeaderAvatar)
+        findViewById<View>(R.id.headerGlass)?.invalidate()
+        findViewById<View>(R.id.bottomGlass)?.invalidate()
     }
 
     private fun setupSettingsDrawer() {
@@ -663,11 +673,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ---------------- 发送：流式 / 非流式 ----------------
-    private fun sendToLlm(userText: String) {
+    private fun sendToLlm(userText: String, appendUser: Boolean = true) {
         if (isSending) return
         // 防重复：2 秒内完全相同的文本只处理一次（语音引擎双回调 / 双击发送按钮）
+        // 重新生成会复用上一句，必须跳过这段去重，否则 2 秒内会直接被丢掉。
         val now = System.currentTimeMillis()
-        if (userText == lastSentText && now - lastSentAt < 2000L) {
+        if (appendUser && userText == lastSentText && now - lastSentAt < 2000L) {
             scheduleRestartListening()
             return
         }
@@ -732,7 +743,9 @@ class MainActivity : AppCompatActivity() {
         extra.append("可用关键词有：" + StickerLibrary.stickerHint() + "。")
         extra.append("注意：一条回复最多发一个表情包标记，不要解释这个标记。")
         llm.extraSystemPrompt = extra.toString().takeIf { it.isNotBlank() }
-        adapter.add(ChatMessage("user", userText, isMe = true))
+        if (appendUser) {
+            adapter.add(ChatMessage("user", userText, isMe = true))
+        }
         adapter.add(ChatMessage("assistant", "", isMe = false))
         scrollToBottom()
 
@@ -1339,7 +1352,7 @@ class MainActivity : AppCompatActivity() {
         while (history.size > lastUserIndex + 1) history.removeAt(history.lastIndex)
         adapter.notifyDataSetChanged()
         persistHistory()
-        sendToLlm(userText)
+        sendToLlm(userText, appendUser = false)
     }
 
     private fun promptFindChat() {

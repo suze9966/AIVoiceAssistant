@@ -10,6 +10,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.View
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.EditText
@@ -58,6 +59,7 @@ class VoiceCloneActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         setContentView(R.layout.activity_voice_clone)
+        GlassKit.attachPage(this, findViewById(R.id.pageScroll))
         prefs = Prefs(this)
         client = VoiceCloneClient(prefs)
         tts = TtsHelper(this, prefs)

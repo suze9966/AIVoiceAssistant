@@ -23,6 +23,7 @@ class LlmConnectActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         setContentView(R.layout.activity_llm_connect)
+        GlassKit.attachPage(this, findViewById(R.id.pageScroll))
         prefs = Prefs(this)
         llm = LlmClient(prefs)
 

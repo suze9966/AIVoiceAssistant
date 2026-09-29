@@ -4,20 +4,32 @@
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:fitsSystemWindows="true">
     <FrameLayout
-        android:layout_width="match_parent" android:layout_height="match_parent"
-        android:background="@drawable/glass_page_bg">
-        <ImageView android:id="@+id/ivChatBackground"
+        android:id="@+id/chatScene"
+        android:layout_width="match_parent" android:layout_height="match_parent">
+        <FrameLayout
+            android:id="@+id/chatContent"
             android:layout_width="match_parent" android:layout_height="match_parent"
-            android:scaleType="centerCrop" android:visibility="gone"
-            android:contentDescription="@string/label_chat_background"/>
-        <View android:id="@+id/chatBgScrim"
-            android:layout_width="match_parent" android:layout_height="match_parent"
-            android:background="#66F4F1FF" android:visibility="gone"/>
-        <LinearLayout
-            android:layout_width="match_parent" android:layout_height="match_parent"
-            android:orientation="vertical" android:background="@android:color/transparent">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical" android:background="@drawable/glass_header" android:elevation="10dp"
+            android:background="@drawable/glass_page_bg">
+            <ImageView android:id="@+id/ivChatBackground"
+                android:layout_width="match_parent" android:layout_height="match_parent"
+                android:scaleType="centerCrop" android:visibility="gone"
+                android:contentDescription="@string/label_chat_background"/>
+            <View android:id="@+id/chatBgScrim"
+                android:layout_width="match_parent" android:layout_height="match_parent"
+                android:background="#66F4F1FF" android:visibility="gone"/>
+            <androidx.recyclerview.widget.RecyclerView android:id="@+id/recyclerChat"
+                android:layout_width="match_parent" android:layout_height="match_parent"
+                android:clipToPadding="false" android:paddingStart="8dp" android:paddingEnd="8dp"
+                android:paddingTop="14dp" android:paddingBottom="16dp" android:scrollbars="none"/>
+        </FrameLayout>
+        <com.suze.aivoice.LiquidGlassView
+            android:id="@+id/headerGlass"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_gravity="top"/>
+        <LinearLayout android:id="@+id/headerBar"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_gravity="top"
+            android:orientation="vertical" android:background="@android:color/transparent" android:elevation="10dp"
             android:paddingStart="12dp" android:paddingEnd="14dp" android:paddingTop="16dp" android:paddingBottom="16dp">
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
                 <ImageButton android:id="@+id/btnDrawer" android:layout_width="48dp" android:layout_height="48dp"
@@ -42,12 +54,14 @@
                     android:contentDescription="@string/btn_more" android:padding="12dp"/>
             </LinearLayout>
         </LinearLayout>
-        <androidx.recyclerview.widget.RecyclerView android:id="@+id/recyclerChat"
-            android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
-            android:clipToPadding="false" android:paddingStart="8dp" android:paddingEnd="8dp"
-            android:paddingTop="14dp" android:paddingBottom="16dp" android:scrollbars="none"/>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical" android:background="@drawable/glass_bottom" android:elevation="12dp"
+        <com.suze.aivoice.LiquidGlassView
+            android:id="@+id/bottomGlass"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_gravity="bottom"/>
+        <LinearLayout android:id="@+id/bottomBar"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:orientation="vertical" android:background="@android:color/transparent" android:elevation="12dp"
             android:paddingStart="10dp" android:paddingEnd="10dp" android:paddingTop="10dp" android:paddingBottom="12dp">
             <TextView android:id="@+id/tvInputHint" android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:layout_marginStart="10dp" android:layout_marginBottom="5dp" android:text="@string/input_helper"
@@ -79,10 +93,10 @@
                     android:orientation="horizontal" android:gravity="center_vertical"/>
             </HorizontalScrollView>
         </LinearLayout>
-        </LinearLayout>
     </FrameLayout>
     <include
         layout="@layout/settings_panel"
-        android:layout_width="320dp" android:layout_height="match_parent"
+        android:layout_width="320dp"
+        android:layout_height="match_parent"
         android:layout_gravity="start"/>
 </androidx.drawerlayout.widget.DrawerLayout>

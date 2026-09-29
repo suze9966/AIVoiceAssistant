@@ -1,9 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
-    android:orientation="vertical" android:background="@drawable/glass_page_bg">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="vertical" android:background="@drawable/glass_header" android:elevation="10dp"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+    <FrameLayout
+        android:id="@+id/pageContent"
+        android:layout_width="match_parent" android:layout_height="match_parent"
+        android:background="@drawable/glass_page_bg">
+        <androidx.recyclerview.widget.RecyclerView android:id="@+id/recyclerRoleChat"
+            android:layout_width="match_parent" android:layout_height="match_parent"
+            android:clipToPadding="false" android:paddingStart="8dp" android:paddingEnd="8dp"
+            android:paddingTop="14dp" android:paddingBottom="16dp" android:scrollbars="none"/>
+    </FrameLayout>
+    <com.suze.aivoice.LiquidGlassView
+        android:id="@+id/headerGlass"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="top"/>
+    <LinearLayout android:id="@+id/headerBar"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:orientation="vertical" android:background="@android:color/transparent" android:elevation="10dp"
         android:paddingStart="14dp" android:paddingEnd="10dp" android:paddingTop="16dp" android:paddingBottom="16dp">
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="horizontal" android:gravity="center_vertical">
@@ -31,12 +45,14 @@
                 android:contentDescription="@string/btn_more" android:padding="12dp"/>
         </LinearLayout>
     </LinearLayout>
-    <androidx.recyclerview.widget.RecyclerView android:id="@+id/recyclerRoleChat"
-        android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
-        android:clipToPadding="false" android:paddingStart="8dp" android:paddingEnd="8dp"
-        android:paddingTop="14dp" android:paddingBottom="16dp" android:scrollbars="none"/>
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="horizontal" android:gravity="bottom" android:background="@drawable/glass_bottom"
+    <com.suze.aivoice.LiquidGlassView
+        android:id="@+id/bottomGlass"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="bottom"/>
+    <LinearLayout android:id="@+id/bottomBar"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="horizontal" android:gravity="bottom" android:background="@android:color/transparent"
         android:elevation="12dp" android:paddingStart="12dp" android:paddingEnd="12dp" android:paddingTop="10dp" android:paddingBottom="12dp">
         <EditText android:id="@+id/editRoleInput" android:layout_width="0dp" android:layout_height="wrap_content"
             android:minHeight="48dp" android:maxHeight="112dp" android:layout_weight="1" android:layout_marginEnd="8dp"
@@ -48,4 +64,4 @@
             android:background="@drawable/btn_send_bg" android:src="@drawable/ic_send" android:padding="12dp"
             android:contentDescription="@string/btn_send"/>
     </LinearLayout>
-</LinearLayout>
+</FrameLayout>

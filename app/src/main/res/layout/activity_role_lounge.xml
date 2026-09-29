@@ -1,9 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
-    android:orientation="vertical" android:background="@drawable/glass_page_bg">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="vertical" android:background="@drawable/glass_header" android:elevation="10dp"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+    <FrameLayout
+        android:id="@+id/pageContent"
+        android:layout_width="match_parent" android:layout_height="match_parent"
+        android:background="@drawable/glass_page_bg">
+        <androidx.recyclerview.widget.RecyclerView android:id="@+id/recyclerRoles"
+            android:layout_width="match_parent" android:layout_height="match_parent"
+            android:clipToPadding="false" android:paddingStart="16dp" android:paddingEnd="16dp"
+            android:paddingTop="12dp" android:paddingBottom="12dp"/>
+        <TextView android:id="@+id/tvRoleEmpty" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_gravity="center" android:gravity="center" android:padding="24dp"
+            android:text="@string/role_lounge_empty" android:textColor="@color/text_secondary" android:textSize="14sp"
+            android:visibility="gone"/>
+    </FrameLayout>
+    <com.suze.aivoice.LiquidGlassView
+        android:id="@+id/headerGlass"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="top"/>
+    <LinearLayout android:id="@+id/headerBar"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:orientation="vertical" android:background="@android:color/transparent" android:elevation="10dp"
         android:paddingStart="14dp" android:paddingEnd="14dp" android:paddingTop="16dp" android:paddingBottom="16dp">
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="horizontal" android:gravity="center_vertical">
@@ -30,18 +48,14 @@
                 android:contentDescription="@string/role_add"/>
         </LinearLayout>
     </LinearLayout>
-    <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
-        <androidx.recyclerview.widget.RecyclerView android:id="@+id/recyclerRoles"
-            android:layout_width="match_parent" android:layout_height="match_parent"
-            android:clipToPadding="false" android:paddingStart="16dp" android:paddingEnd="16dp"
-            android:paddingTop="12dp" android:paddingBottom="12dp"/>
-        <TextView android:id="@+id/tvRoleEmpty" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_gravity="center" android:gravity="center" android:padding="24dp"
-            android:text="@string/role_lounge_empty" android:textColor="@color/text_secondary" android:textSize="14sp"
-            android:visibility="gone"/>
-    </FrameLayout>
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="vertical" android:background="@drawable/glass_bottom" android:elevation="12dp"
+    <com.suze.aivoice.LiquidGlassView
+        android:id="@+id/bottomGlass"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="bottom"/>
+    <LinearLayout android:id="@+id/bottomBar"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical" android:background="@android:color/transparent" android:elevation="12dp"
         android:paddingStart="16dp" android:paddingEnd="16dp" android:paddingTop="10dp" android:paddingBottom="12dp">
         <TextView android:id="@+id/tvLlmStatus" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:text="@string/llm_status_off" android:textColor="@color/text_secondary" android:textSize="12sp"
@@ -50,4 +64,4 @@
             android:background="@drawable/s_btn_primary" android:text="@string/btn_connect_llm"
             android:textColor="@color/white" android:textSize="16sp" android:textStyle="bold"/>
     </LinearLayout>
-</LinearLayout>
+</FrameLayout>

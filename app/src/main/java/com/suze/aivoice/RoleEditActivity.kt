@@ -36,6 +36,7 @@ class RoleEditActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_role_edit)
+        GlassKit.attachPage(this, findViewById(R.id.pageScroll))
         store = RoleStore(this)
         roleId = intent.getStringExtra(EXTRA_ROLE_ID).orEmpty()
         val existing = roleId.takeIf { it.isNotBlank() }?.let { store.get(it) }

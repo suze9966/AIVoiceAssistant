@@ -273,6 +273,7 @@
     <string name="hint_ask_image">想问这张图什么？</string>
     <string name="label_notify_speak">朗读系统通知（默认关）</string>
     <string name="label_headset_wake">耳机/蓝牙连上后唤醒</string>
+    <string name="label_welcome">打开时主动问候（天气+提醒+心情）</string>
     <string name="btn_backup_export">导出备份</string>
     <string name="btn_backup_import">导入备份</string>
     <string name="widget_open">打开小沫</string>

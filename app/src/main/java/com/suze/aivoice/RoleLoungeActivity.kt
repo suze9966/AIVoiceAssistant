@@ -72,6 +72,7 @@ class RoleLoungeActivity : AppCompatActivity() {
         val recycler = findViewById<RecyclerView>(R.id.recyclerRoles)
         recycler.layoutManager = LinearLayoutManager(this)
         recycler.adapter = adapter
+        GlassKit.attachPage(this, recycler)
     }
 
     override fun onResume() {

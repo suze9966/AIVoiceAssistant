@@ -62,6 +62,7 @@ class RoleChatActivity : AppCompatActivity() {
         adapter.bindAiAvatar = { view -> bindBubbleAvatar(view) }
         recycler.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
         recycler.adapter = adapter
+        GlassKit.attachPage(this, recycler)
         bindHeader()
         loadCurrentChat(seedGreeting = true)
         setupLongClick()

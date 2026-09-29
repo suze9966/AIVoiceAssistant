@@ -50,6 +50,7 @@ class SettingsBinder(
         val switchNotifySpeak = activity.findViewById<SwitchCompat>(R.id.switchNotifySpeak)
         val switchHeadsetWake = activity.findViewById<SwitchCompat>(R.id.switchHeadsetWake)
         val switchLocalKws = activity.findViewById<SwitchCompat>(R.id.switchLocalKws)
+        val switchWelcome = activity.findViewById<SwitchCompat>(R.id.switchWelcome)
         val spinnerPortrait = activity.findViewById<Spinner>(R.id.spinnerPortrait)
         val btnMemorySummary = activity.findViewById<Button>(R.id.btnMemorySummary)
         val btnTest = activity.findViewById<Button>(R.id.btnTestVoice)
@@ -90,6 +91,7 @@ class SettingsBinder(
         switchNotifySpeak.isChecked = prefs.notifySpeakEnabled
         switchHeadsetWake.isChecked = prefs.headsetWakeEnabled
         switchLocalKws.isChecked = prefs.localKwsEnabled
+        switchWelcome.isChecked = prefs.welcomeEnabled
         val portraitLabels = PortraitLibrary.all().map { it.name }
         spinnerPortrait.adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item, portraitLabels)
         val portraitIdx = PortraitLibrary.all().indexOfFirst { it.id == prefs.portraitId }
@@ -222,6 +224,7 @@ class SettingsBinder(
             prefs.notifySpeakEnabled = switchNotifySpeak.isChecked
             prefs.headsetWakeEnabled = switchHeadsetWake.isChecked
             prefs.localKwsEnabled = switchLocalKws.isChecked
+            prefs.welcomeEnabled = switchWelcome.isChecked
             PortraitLibrary.all().getOrNull(spinnerPortrait.selectedItemPosition)?.id?.let { prefs.portraitId = it }
             if (turnOnNotify) {
                 runCatching {
