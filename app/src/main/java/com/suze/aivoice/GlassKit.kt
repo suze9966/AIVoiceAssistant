@@ -34,9 +34,9 @@ object GlassKit {
             headerGlass.invalidate()
             bottomGlass?.invalidate()
         }
-        header.addOnLayoutChangeListener { _, _, _, _, _, _, _, _ -> applyPad.run() }
-        bottom?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _ -> applyPad.run() }
-        scroller.addOnLayoutChangeListener { _, _, _, _, _, _, _, _ ->
+        header.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> applyPad.run() }
+        bottom?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> applyPad.run() }
+        scroller.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
             headerGlass.invalidate()
             bottomGlass?.invalidate()
         }
