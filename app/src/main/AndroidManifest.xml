@@ -146,6 +146,31 @@
             android:label="@string/role_edit_title"
             android:windowSoftInputMode="adjustResize" />
         <activity
+            android:name=".TavernPluginActivity"
+            android:exported="false"
+            android:label="@string/plugin_title"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".TavernPluginEditActivity"
+            android:exported="false"
+            android:label="@string/plugin_edit_title"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".GroupLoungeActivity"
+            android:exported="false"
+            android:label="@string/group_title"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".GroupEditActivity"
+            android:exported="false"
+            android:label="@string/group_edit_title"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".GroupChatActivity"
+            android:exported="false"
+            android:label="@string/group_title"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
             android:name=".LlmConnectActivity"
             android:exported="false"
             android:label="@string/llm_connect_title"

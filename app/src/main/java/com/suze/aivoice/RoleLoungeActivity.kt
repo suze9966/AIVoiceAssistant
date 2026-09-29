@@ -70,6 +70,12 @@ class RoleLoungeActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnConnectLlm).setOnClickListener {
             startActivity(Intent(this, LlmConnectActivity::class.java))
         }
+        findViewById<Button>(R.id.btnOpenPlugins).setOnClickListener {
+            startActivity(Intent(this, TavernPluginActivity::class.java))
+        }
+        findViewById<Button>(R.id.btnOpenGroups).setOnClickListener {
+            startActivity(Intent(this, GroupLoungeActivity::class.java))
+        }
         adapter = RoleCardAdapter(
             items,
             store,

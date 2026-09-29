@@ -23,9 +23,12 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
     var onItemLongClick: ((Int) -> Unit)? = null
     /** 角色聊天可覆盖 AI 头像；为空时沿用小沫全局头像。 */
     var bindAiAvatar: ((ImageView) -> Unit)? = null
+    /** 群聊按发言人切换头像。 */
+    var bindMessageAvatar: ((ImageView, ChatMessage) -> Unit)? = null
 
     class VH(view: View) : RecyclerView.ViewHolder(view) {
         val tvMsg: TextView = view.findViewById(R.id.tvMsg)
+        val tvSpeaker: TextView? = view.findViewById(R.id.tvSpeaker)
         val ivSticker: ImageView = view.findViewById(R.id.ivSticker)
         val ivAvatar: ImageView? = view.findViewById(R.id.ivAvatar)
     }
@@ -42,7 +45,18 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
     override fun onBindViewHolder(holder: VH, position: Int) {
         val msg = items[position]
         holder.ivAvatar?.let { view ->
-            bindAiAvatar?.invoke(view) ?: ChatStyleStore.applyAvatar(view)
+            bindMessageAvatar?.invoke(view, msg)
+                ?: bindAiAvatar?.invoke(view)
+                ?: ChatStyleStore.applyAvatar(view)
+        }
+        val speaker = msg.speakerName.trim()
+        holder.tvSpeaker?.let { label ->
+            if (!msg.isMe && speaker.isNotEmpty()) {
+                label.visibility = View.VISIBLE
+                label.text = speaker
+            } else {
+                label.visibility = View.GONE
+            }
         }
         when (msg.type) {
             ChatMessage.TYPE_IMAGE -> {

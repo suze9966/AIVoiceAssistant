@@ -31,6 +31,29 @@ object RolePrompt {
         return applyMacros(body.toString().take(MAX_CHARS), character)
     }
 
+    fun buildGroup(
+        speaker: RoleCharacter,
+        members: List<RoleCharacter>,
+        scene: String,
+        history: List<ChatMessage>
+    ): String {
+        val user = speaker.userName.ifBlank { "主人" }
+        val others = members.filter { it.id != speaker.id }
+        val names = members.joinToString("、") { it.name }
+        val body = StringBuilder()
+        body.append("这是群聊。你只扮演「").append(speaker.name).append("」，不要替别人说话。\n")
+        body.append("用户的称呼是「").append(user).append("」。在场角色：").append(names).append("。\n")
+        if (scene.isNotBlank()) body.append("【群场景】").append(scene.trim()).append("\n")
+        others.forEach { m ->
+            body.append("【同伴 ").append(m.name).append("】")
+            body.append(m.persona.ifBlank { m.intro }.ifBlank { m.description }.take(240)).append("\n")
+        }
+        val self = build(speaker, history)
+        body.append(self)
+        body.append("只输出 ").append(speaker.name).append(" 自己要说的话，不要加名字前缀，不要总结别人。")
+        return applyMacros(body.toString().take(MAX_CHARS), speaker)
+    }
+
     fun fallbackLine(character: RoleCharacter): String {
         val greet = character.greeting.trim()
         if (greet.isNotEmpty()) return applyMacros(greet, character)

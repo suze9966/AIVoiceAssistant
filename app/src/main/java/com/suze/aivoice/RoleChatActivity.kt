@@ -27,6 +27,7 @@ class RoleChatActivity : AppCompatActivity() {
     private lateinit var prefs: Prefs
     private lateinit var llm: LlmClient
     private lateinit var store: RoleStore
+    private lateinit var plugins: TavernPluginStore
     private lateinit var tts: TtsHelper
     private lateinit var adapter: ChatAdapter
     private lateinit var recycler: RecyclerView
@@ -47,6 +48,7 @@ class RoleChatActivity : AppCompatActivity() {
         llm.allowLocalFallback = false
         tts = TtsHelper(this, prefs)
         store = RoleStore(this)
+        plugins = TavernPluginStore(this)
         val id = intent.getStringExtra(EXTRA_ROLE_ID).orEmpty()
         character = store.get(id)
         if (character == null) {
@@ -139,7 +141,8 @@ class RoleChatActivity : AppCompatActivity() {
         history.addAll(store.loadChat(chatId))
         if (seedGreeting && history.isEmpty()) {
             pickGreeting(c)?.let { greet ->
-                history.add(ChatMessage("assistant", RolePrompt.applyMacros(greet, c), isMe = false))
+                val text = plugins.applyOutput(RolePrompt.applyMacros(greet, c), c.userName.ifBlank { "主人" }, c.name)
+                history.add(ChatMessage("assistant", text, isMe = false))
                 store.saveChat(chatId, history, c.id)
             }
         }
@@ -244,7 +247,8 @@ class RoleChatActivity : AppCompatActivity() {
                     history.clear()
                     store.clearChat(chatId)
                     pickGreeting(c)?.let {
-                        history.add(ChatMessage("assistant", RolePrompt.applyMacros(it, c), isMe = false))
+                        val text = plugins.applyOutput(RolePrompt.applyMacros(it, c), c.userName.ifBlank { "主人" }, c.name)
+                        history.add(ChatMessage("assistant", text, isMe = false))
                     }
                     adapter.replaceAll(history)
                     persistChat()
@@ -347,7 +351,8 @@ class RoleChatActivity : AppCompatActivity() {
                 val created = store.createChat(c.id)
                 chatId = created.id
                 history.clear()
-                history.add(ChatMessage("assistant", RolePrompt.applyMacros(picked, c), isMe = false))
+                val text = plugins.applyOutput(RolePrompt.applyMacros(picked, c), c.userName.ifBlank { "主人" }, c.name)
+                history.add(ChatMessage("assistant", text, isMe = false))
                 adapter.replaceAll(history)
                 persistChat()
                 bindHeader(resetStatus = true)
@@ -374,7 +379,7 @@ class RoleChatActivity : AppCompatActivity() {
         if (title.isNotBlank()) sb.append(" · ").append(title)
         sb.append("\n\n")
         history.filter { it.content.isNotBlank() }.forEach { m ->
-            val who = if (m.isMe || m.role == "user") c.userName.ifBlank { "主人" } else c.name
+            val who = if (m.isMe || m.role == "user") c.userName.ifBlank { "主人" } else m.speakerName.ifBlank { c.name }
             sb.append("**").append(who).append("：** ").append(m.content).append("\n\n")
         }
         try {
@@ -484,20 +489,22 @@ class RoleChatActivity : AppCompatActivity() {
         } else {
             getString(R.string.role_status_need_llm)
         }
+        val user = c.userName.ifBlank { "主人" }
+        val processed = if (appendUser) plugins.applyInput(userText, user, c.name) else userText
         if (appendUser) {
-            adapter.add(ChatMessage("user", userText, isMe = true))
+            adapter.add(ChatMessage("user", processed, isMe = true))
         }
         adapter.add(ChatMessage("assistant", "", isMe = false))
         scrollToBottom()
         if (!cloudReady) {
             Toast.makeText(this, R.string.toast_role_need_llm, Toast.LENGTH_SHORT).show()
-            val fallback = RolePrompt.fallbackLine(c)
+            val fallback = plugins.applyOutput(RolePrompt.fallbackLine(c), user, c.name)
             finishAssistant(fallback, c)
             return
         }
         llm.applyCloudThink = true
         llm.allowLocalFallback = false
-        llm.systemPromptOverride = RolePrompt.build(c, history.dropLast(1))
+        llm.systemPromptOverride = plugins.applyPrompt(RolePrompt.build(c, history.dropLast(1)), user, c.name)
         llm.extraSystemPrompt = null
         sendJob?.cancel()
         sendJob = lifecycleScope.launch {
@@ -511,7 +518,7 @@ class RoleChatActivity : AppCompatActivity() {
                             val snapshot = rawBuffer.toString()
                             runOnUiThread {
                                 if (session != speechSession || isFinishing || isDestroyed || history.isEmpty()) return@runOnUiThread
-                                val visible = llm.stripReasoning(snapshot)
+                                val visible = plugins.applyOutput(llm.stripReasoning(snapshot), user, c.name)
                                 history[history.size - 1] = ChatMessage("assistant", visible, isMe = false)
                                 adapter.updateLast(visible)
                                 scrollToBottom()
@@ -528,7 +535,11 @@ class RoleChatActivity : AppCompatActivity() {
                     persistChat()
                     return@launch
                 }
-                val finalText = llm.stripReasoning(rawText).ifBlank { getString(R.string.role_empty_reply) }
+                val finalText = plugins.applyOutput(
+                    llm.stripReasoning(rawText).ifBlank { getString(R.string.role_empty_reply) },
+                    user,
+                    c.name
+                )
                 finishAssistant(finalText, c, session)
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) {

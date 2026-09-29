@@ -24,6 +24,15 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical">
+        <TextView
+            android:id="@+id/tvSpeaker"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="3dp"
+            android:textColor="@color/purple_700"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
         <ImageView
             android:id="@+id/ivSticker"
             android:layout_width="150dp"

@@ -23,7 +23,7 @@ data class RoleChatMeta(
     val preview: String = ""
 )
 
-/** 对标酒馆角色卡：人设书、场景、示例对白、世界书、多开场白。不做插件、正则和群聊。 */
+/** 对标酒馆角色卡：人设书、场景、示例对白、世界书、多开场白。插件和群聊走独立存储。 */
 data class RoleCharacter(
     val id: String,
     val name: String,

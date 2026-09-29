@@ -15,7 +15,10 @@ data class ChatMessage(
     val role: String,
     val content: String,
     val isMe: Boolean,
-    val type: Int = TYPE_TEXT
+    val type: Int = TYPE_TEXT,
+    val speakerId: String = "",
+    val speakerName: String = "",
+    val speakerEmoji: String = ""
 ) {
     companion object {
         const val TYPE_TEXT = 0

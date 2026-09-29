@@ -191,7 +191,10 @@ class RoleStore(context: Context) {
                         role = o.optString("role", "user"),
                         content = o.optString("content", ""),
                         isMe = o.optBoolean("isMe", false),
-                        type = o.optInt("type", ChatMessage.TYPE_TEXT)
+                        type = o.optInt("type", ChatMessage.TYPE_TEXT),
+                        speakerId = o.optString("speakerId"),
+                        speakerName = o.optString("speakerName"),
+                        speakerEmoji = o.optString("speakerEmoji")
                     )
                 )
             }
@@ -209,6 +212,9 @@ class RoleStore(context: Context) {
                         .put("content", m.content)
                         .put("isMe", m.isMe)
                         .put("type", m.type)
+                        .put("speakerId", m.speakerId)
+                        .put("speakerName", m.speakerName)
+                        .put("speakerEmoji", m.speakerEmoji)
                 )
             }
             chatFile(chatId).writeText(arr.toString())
