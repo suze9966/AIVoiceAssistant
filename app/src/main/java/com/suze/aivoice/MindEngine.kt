@@ -111,7 +111,7 @@ class MindEngine(context: Context) {
 
     fun experiences(): List<String> = expBuffer.toList()
 
-    fun setGoal(text: String) {
+    fun updateGoal(text: String) {
         goal = text.trim().take(80)
     }
 

@@ -81,7 +81,7 @@ class MindActivity : AppCompatActivity() {
             .setTitle(R.string.mind_edit_goal)
             .setView(input)
             .setPositiveButton(R.string.btn_save) { _, _ ->
-                mind.setGoal(input.text.toString())
+                mind.updateGoal(input.text.toString())
                 reload()
                 Toast.makeText(this, R.string.toast_mind_saved, Toast.LENGTH_SHORT).show()
             }
