@@ -242,8 +242,11 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
      */
     fun speak(text: String, taiwan: Boolean = false) {
         if (text.isBlank()) return
+        val trimmed = text.trim()
+        if (isSpeaking && currentText == trimmed && speakQueue.isEmpty()) return
         speakQueue.clear()
-        val chunks = splitSpeakChunks(text)
+        val chunks = splitSpeakChunks(trimmed)
+        if (chunks.isEmpty()) return
         if (chunks.size > 1) {
             for (i in 1 until chunks.size) speakQueue.addLast(chunks[i])
         }
@@ -253,13 +256,19 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
     /** 上一句还在播时，把后续句子排进队列，不打断。 */
     fun enqueueSpeak(text: String, taiwan: Boolean = false) {
         if (text.isBlank()) return
-        val chunks = splitSpeakChunks(text)
+        val chunks = splitSpeakChunks(text.trim())
+        if (chunks.isEmpty()) return
         if (!isSpeaking && speakQueue.isEmpty()) {
             speak(text, taiwan)
             return
         }
         speakingTaiwan = taiwan
-        chunks.forEach { speakQueue.addLast(it) }
+        for (chunk in chunks) {
+            if (chunk.isBlank()) continue
+            if (chunk == currentText && speakQueue.isEmpty()) continue
+            if (speakQueue.peekLast() == chunk) continue
+            speakQueue.addLast(chunk)
+        }
     }
 
     fun hasQueuedSpeech(): Boolean = speakQueue.isNotEmpty()
@@ -299,7 +308,8 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
 
     private fun splitSpeakChunks(text: String): List<String> {
         val t = text.trim()
-        if (t.length <= 18) return listOf(t)
+        // 句号不断开：普通回复整段合成，避免每句换一段音频造成停顿。
+        if (t.length <= 220) return listOf(t)
         val out = ArrayList<String>()
         val buf = StringBuilder()
         fun flush() {
@@ -309,17 +319,19 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
         }
         for (ch in t) {
             buf.append(ch)
-            val hitEnd = ch == '。' || ch == '！' || ch == '？' || ch == '!' || ch == '?' || ch.code == 10 || ch == '；'
+            val hitBreak = ch.code == 10
+            val hitEnd = ch == '。' || ch == '！' || ch == '？' || ch == '!' || ch == '?' || ch == '；'
             val hitComma = ch == '，' || ch == ',' || ch == '、'
             when {
-                hitEnd && buf.toString().trim().length >= 6 -> flush()
-                hitComma && buf.length >= 42 -> flush()
-                buf.length >= 72 -> flush()
+                hitBreak && buf.toString().trim().length >= 24 -> flush()
+                hitEnd && buf.length >= 180 -> flush()
+                hitComma && buf.length >= 240 -> flush()
+                buf.length >= 280 -> flush()
             }
         }
         flush()
         if (out.isEmpty()) return listOf(t)
-        if (out.size >= 2 && out[0].length < 6) {
+        if (out.size >= 2 && out[0].length < 24) {
             out[1] = out[0] + out[1]
             out.removeAt(0)
         }

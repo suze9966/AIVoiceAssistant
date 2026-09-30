@@ -3,5 +3,7 @@
     <files-path name="roles" path="roles/" />
     <cache-path name="role_export" path="role_export/" />
     <cache-path name="backup_export" path="backup_export/" />
+    <cache-path name="memory_export" path="memory_export/" />
+    <cache-path name="emotion_export" path="emotion_export/" />
     <cache-path name="vision_capture" path="vision_capture/" />
 </paths>

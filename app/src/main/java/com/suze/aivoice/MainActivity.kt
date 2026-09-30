@@ -118,6 +118,7 @@ class MainActivity : AppCompatActivity() {
     /** 流式回复里已经开口朗读到的位置，避免整段合成完才出声。 */
     private var streamSpokenUntil = 0
     private var streamSpeakStarted = false
+    private var lastQueuedSpeech = ""
     private var speechSession = 0L
     private var notBeforeListenAt = 0L
     private var activeChatId: String = ""
@@ -376,6 +377,7 @@ class MainActivity : AppCompatActivity() {
         }
         applySavedVoice()
         if (::emotion.isInitialized) {
+            emotion.reload()
             val care = if (prefs.emotionEnabled) emotion.resumeCare() else {
                 emotion.tick()
                 null
@@ -398,6 +400,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         applyChatStyle()
+        if (::memory.isInitialized) memory.reload()
         reloadHistoryIfIdle()
         maybeGreetOnResume()
     }
@@ -693,6 +696,7 @@ class MainActivity : AppCompatActivity() {
         streamSpeechCancelled = false
         streamSpokenUntil = 0
         streamSpeakStarted = false
+        lastQueuedSpeech = ""
 
         // ⚡ 本地口令：天气 / 提醒 / 搜索，先拦截再走大模型
         val wxCity = detectWeatherQuery(userText)
@@ -755,20 +759,14 @@ class MainActivity : AppCompatActivity() {
             val rawText: String
 
             if (prefs.streamEnabled) {
-                // 流式：逐字显示（打字机）
+                val rawBuffer = StringBuilder()
                 rawText = llm.chatStream(requestHistory) { delta ->
-                    runOnUiThread {
-                        if (session != speechSession || isFinishing || isDestroyed || history.isEmpty()) return@runOnUiThread
-                        val last = history.last()
-                        val cur = last.content + delta
-                        history[history.size - 1] = last.copy(content = cur)
-                        adapter.updateLast(cur)
-                        scrollToBottom()
-                        while (true) {
-                            val piece = takeCompletedSpeech(cur) ?: break
-                            startOrQueueSpeak(piece)
-                        }
+                    if (delta.isEmpty()) return@chatStream
+                    val snapshot = synchronized(rawBuffer) {
+                        rawBuffer.append(delta)
+                        rawBuffer.toString()
                     }
+                    runOnUiThread { applyStreamSnapshot(session, snapshot) }
                 }.ifBlank { "（无回复）" }
             } else {
                 val reply = llm.chat(requestHistory)
@@ -796,33 +794,16 @@ class MainActivity : AppCompatActivity() {
             finalText = if (stickerUrl != null) {
                 if (textNoSticker.isNotBlank()) textNoSticker else "（发了一张表情包）"
             } else finalText
-            if (history.isNotEmpty()) {
-                history[history.size - 1] = history.last().copy(content = finalText)
-                adapter.updateLast(finalText)
-            }
-            // 有贴图时，额外追加一条图片消息
-            if (stickerUrl != null) {
-                val imgMsg = ChatMessage("assistant", stickerUrl, isMe = false, type = ChatMessage.TYPE_IMAGE)
-                adapter.add(imgMsg)
-            }
-            scrollToBottom()
-            persistHistory()
-            // 内心独白：不展示正文，但记录到状态栏提示
+            val sticker = stickerUrl
+            val spokenRaw = rawText
+            val spokenFinal = finalText
             if (prefs.mindEnabled && thought.isNotBlank()) {
-                runOnUiThread { tvStatus.text = "\uD83D\uDCAD $thought" }
+                tvStatus.text = "\uD83D\uDCAD $thought"
             }
             if (prefs.growEnabled) refreshGrowthSubtitle()
             isSending = false
-
-            // 小智式：第一句已经开口就只补后面；否则整段分句后先说第一句。
-            if (session == speechSession && !streamSpeechCancelled) {
-            val speakable = visibleSpeakable(if (streamSpeakStarted) rawText else finalText)
-            val remain = if (streamSpeakStarted) {
-                if (streamSpokenUntil in 0 until speakable.length) speakable.substring(streamSpokenUntil).trim() else ""
-            } else {
-                speakable
-            }
-            if (remain.isNotBlank()) startOrQueueSpeak(remain)
+            recycler.post {
+                finishStreamReply(session, spokenRaw, spokenFinal, sticker)
             }
 
             // 思考引擎：到反射周期就发起一次反思（异步，不阻塞）
@@ -847,7 +828,9 @@ class MainActivity : AppCompatActivity() {
           } finally {
             isSending = false
             persistHistory()
-            if (!tts.isSpeaking) scheduleRestartListening()
+            recycler.post {
+                if (!tts.isSpeaking && !tts.hasQueuedSpeech()) scheduleRestartListening()
+            }
           }
         }
     }
@@ -1010,15 +993,55 @@ class MainActivity : AppCompatActivity() {
         tts.setPitch(prefs.ttsPitch)
     }
 
+    private fun applyStreamSnapshot(session: Long, snapshot: String) {
+        if (session != speechSession || isFinishing || isDestroyed || history.isEmpty()) return
+        val last = history.last()
+        if (last.role != "assistant" || last.type == ChatMessage.TYPE_IMAGE) return
+        if (last.content != snapshot) {
+            adapter.updateLast(snapshot)
+            scrollToBottom()
+        }
+        while (true) {
+            val piece = takeCompletedSpeech(snapshot) ?: break
+            startOrQueueSpeak(piece)
+        }
+    }
+
+    private fun finishStreamReply(session: Long, rawText: String, finalText: String, sticker: String?) {
+        if (session != speechSession || isFinishing || isDestroyed) return
+        if (history.isNotEmpty() && history.last().role == "assistant" && history.last().type != ChatMessage.TYPE_IMAGE) {
+            adapter.updateLast(finalText)
+        }
+        if (sticker != null && (history.isEmpty() || history.last().type != ChatMessage.TYPE_IMAGE)) {
+            adapter.add(ChatMessage("assistant", sticker, isMe = false, type = ChatMessage.TYPE_IMAGE))
+        }
+        scrollToBottom()
+        persistHistory()
+        if (session == speechSession && !streamSpeechCancelled) {
+            val speakable = visibleSpeakable(if (streamSpeakStarted) rawText else finalText)
+            val remain = if (streamSpeakStarted) {
+                if (streamSpokenUntil in 0 until speakable.length) speakable.substring(streamSpokenUntil).trim() else ""
+            } else {
+                speakable
+            }
+            if (remain.isNotBlank()) startOrQueueSpeak(remain)
+            streamSpokenUntil = speakable.length
+        }
+        if (!tts.isSpeaking && !tts.hasQueuedSpeech()) scheduleRestartListening()
+    }
+
     private fun startOrQueueSpeak(text: String) {
-        if (text.isBlank() || !::tts.isInitialized || streamSpeechCancelled) return
+        val piece = text.trim()
+        if (piece.isBlank() || !::tts.isInitialized || streamSpeechCancelled) return
+        if (piece == lastQueuedSpeech) return
+        lastQueuedSpeech = piece
         suspendRecognitionForSpeech()
         applySpeakVoice()
         bindListenAfterSpeak()
-        if (streamSpeakStarted || tts.isSpeaking) {
-            tts.enqueueSpeak(text, prefs.taiwanVoice)
+        if (streamSpeakStarted || tts.isSpeaking || tts.hasQueuedSpeech()) {
+            tts.enqueueSpeak(piece, prefs.taiwanVoice)
         } else {
-            tts.speak(text, prefs.taiwanVoice)
+            tts.speak(piece, prefs.taiwanVoice)
         }
         streamSpeakStarted = true
     }
@@ -1037,17 +1060,15 @@ class MainActivity : AppCompatActivity() {
         return t.trimStart()
     }
 
-    /** 流式文本里已经成句的部分先送去合成，缩短首句等待。 */
+    /** 流式只在段落或较长停顿处先开口，不在每个句号切开，避免语音一顿一顿。 */
     private fun takeCompletedSpeech(full: String): String? {
         val speakable = visibleSpeakable(full)
         if (streamSpokenUntil >= speakable.length) return null
         val rest = speakable.substring(streamSpokenUntil)
-        val cut = rest.indexOfFirst { ch ->
-            ch == '。' || ch == '！' || ch == '？' || ch == '!' || ch == '?' || ch.code == 10 || ch == '；'
-        }
+        val cut = rest.indexOfFirst { ch -> ch.code == 10 }
         if (cut < 0) return null
         val chunk = rest.substring(0, cut + 1).trim()
-        if (chunk.length < 6) return null
+        if (chunk.length < 24) return null
         streamSpokenUntil += cut + 1
         return chunk
     }

@@ -196,6 +196,16 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".MemoryActivity"
+            android:exported="false"
+            android:label="@string/memory_title"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".EmotionActivity"
+            android:exported="false"
+            android:label="@string/emotion_title"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
             android:name=".SettingsActivity"
             android:exported="false"
             android:label="设置"

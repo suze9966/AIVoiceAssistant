@@ -52,6 +52,7 @@ class SettingsBinder(
         val switchLocalKws = activity.findViewById<SwitchCompat>(R.id.switchLocalKws)
         val switchWelcome = activity.findViewById<SwitchCompat>(R.id.switchWelcome)
         val spinnerPortrait = activity.findViewById<Spinner>(R.id.spinnerPortrait)
+        val btnEmotionTree = activity.findViewById<Button>(R.id.btnEmotionTree)
         val btnMemorySummary = activity.findViewById<Button>(R.id.btnMemorySummary)
         val btnTest = activity.findViewById<Button>(R.id.btnTestVoice)
         val seekRate = activity.findViewById<SeekBar>(R.id.seekRate)
@@ -174,17 +175,11 @@ class SettingsBinder(
             tts.stop()
             Toast.makeText(activity, R.string.toast_stopped, Toast.LENGTH_SHORT).show()
         }
+        btnEmotionTree.setOnClickListener {
+            activity.startActivity(Intent(activity, EmotionActivity::class.java))
+        }
         btnMemorySummary.setOnClickListener {
-            val txt = memory.exportText()
-            android.app.AlertDialog.Builder(activity)
-                .setTitle("本地记忆库 · " + memory.summary())
-                .setMessage(txt)
-                .setPositiveButton("关闭", null)
-                .setNeutralButton("清空记忆") { _, _ ->
-                    memory.clearAll()
-                    Toast.makeText(activity, "已清空本地记忆", Toast.LENGTH_SHORT).show()
-                }
-                .show()
+            activity.startActivity(Intent(activity, MemoryActivity::class.java))
         }
         btnSave.setOnClickListener {
             val baseUrl = editBaseUrl.text.toString().trim()

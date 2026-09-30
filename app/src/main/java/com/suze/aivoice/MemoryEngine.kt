@@ -187,6 +187,42 @@ class MemoryEngine(context: Context) {
         return "Lv.$level · 经验${exp} · 对话${turns}轮 · 记忆${items.size}条"
     }
 
+    /** 从磁盘重新读入，设置页改完后主聊天要拿到最新条目 */
+    fun reload() {
+        items.clear()
+        load()
+    }
+
+    fun listItems(): List<Mem> = items.toList()
+
+    fun addManual(type: String, content: String): Boolean {
+        val c = content.trim()
+        if (c.isBlank()) return false
+        remember(normalizeType(type), c.take(200))
+        return true
+    }
+
+    fun updateAt(index: Int, type: String, content: String): Boolean {
+        if (index !in items.indices) return false
+        val c = content.trim()
+        if (c.isBlank()) return false
+        val old = items[index]
+        items[index] = old.copy(
+            type = normalizeType(type),
+            content = c.take(200),
+            time = System.currentTimeMillis()
+        )
+        persist()
+        return true
+    }
+
+    fun deleteAt(index: Int): Boolean {
+        if (index !in items.indices) return false
+        items.removeAt(index)
+        persist()
+        return true
+    }
+
     /** 导出为可读文本（本地备份用） */
     fun exportText(): String {
         val sb = StringBuilder()
@@ -196,11 +232,125 @@ class MemoryEngine(context: Context) {
         return sb.toString()
     }
 
+    /** 专用 JSON：含等级经验和全部条目，不是整包备份 */
+    fun exportJson(): String {
+        val arr = JSONArray()
+        items.forEach { m ->
+            arr.put(
+                JSONObject()
+                    .put("type", m.type)
+                    .put("content", m.content)
+                    .put("weight", m.weight)
+                    .put("time", m.time)
+            )
+        }
+        return JSONObject()
+            .put("app", "xiaomo-memory")
+            .put("version", 1)
+            .put("exportedAt", System.currentTimeMillis())
+            .put("exp", exp)
+            .put("turns", turns)
+            .put("items", arr)
+            .toString()
+    }
+
+    /**
+     * 从 JSON 导入。支持本页导出的对象，也支持旧的 memory.json 数组。
+     * @return 写入条数；解析失败返回 -1
+     */
+    fun importJson(text: String, replace: Boolean): Int {
+        val parsed = parseImport(text) ?: return -1
+        val incoming = parsed.first
+        if (replace) {
+            items.clear()
+            parsed.second?.let { exp = it.coerceAtLeast(0) }
+            parsed.third?.let { turns = it.coerceAtLeast(0) }
+            incoming.forEach { m ->
+                val c = m.content.trim()
+                if (c.isNotBlank()) {
+                    items.add(
+                        m.copy(
+                            type = normalizeType(m.type),
+                            content = c.take(200)
+                        )
+                    )
+                }
+            }
+            while (items.size > MAX_ITEMS) items.removeAt(0)
+            persist()
+            return items.size
+        }
+        var n = 0
+        incoming.forEach { m ->
+            val c = m.content.trim()
+            if (c.isNotBlank()) {
+                remember(normalizeType(m.type), c.take(200))
+                n++
+            }
+        }
+        return n
+    }
+
     /** 清空所有本地记忆 */
     fun clearAll() {
         items.clear()
         exp = 0
         turns = 0
         try { if (file.exists()) file.delete() } catch (_: Exception) { }
+    }
+
+    private fun normalizeType(type: String): String {
+        return when (type.trim().lowercase()) {
+            TYPE_PREF, "偏好", "preference" -> TYPE_PREF
+            TYPE_FACT, "事实" -> TYPE_FACT
+            TYPE_LEARN, "知识", "knowledge" -> TYPE_LEARN
+            else -> TYPE_LEARN
+        }
+    }
+
+    private data class ImportPack(
+        val first: List<Mem>,
+        val second: Int?,
+        val third: Int?
+    )
+
+    private fun parseImport(text: String): ImportPack? {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return null
+        return try {
+            if (trimmed.startsWith("[")) {
+                ImportPack(parseArray(JSONArray(trimmed)), null, null)
+            } else {
+                val o = JSONObject(trimmed)
+                val arr = o.optJSONArray("items") ?: o.optJSONArray("memories")
+                val list = if (arr != null) parseArray(arr) else emptyList()
+                if (list.isEmpty() && !o.has("exp") && !o.has("turns")) return null
+                ImportPack(
+                    list,
+                    if (o.has("exp")) o.optInt("exp") else null,
+                    if (o.has("turns")) o.optInt("turns") else null
+                )
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun parseArray(arr: JSONArray): List<Mem> {
+        val list = mutableListOf<Mem>()
+        for (i in 0 until arr.length()) {
+            val o = arr.optJSONObject(i) ?: continue
+            val content = o.optString("content").trim()
+            if (content.isBlank()) continue
+            list.add(
+                Mem(
+                    o.optString("type", TYPE_LEARN),
+                    content,
+                    o.optInt("weight", 1).coerceAtLeast(1),
+                    o.optLong("time", 0L)
+                )
+            )
+        }
+        return list
     }
 }

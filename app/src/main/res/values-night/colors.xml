@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#F5F3FA</color>
-    <color name="gray_bg">#121119</color>
-    <color name="surface_soft">#1A1824</color>
-    <color name="card_white">#211F2B</color>
-    <color name="card_stroke">#373344</color>
-    <color name="divider">#34303F</color>
-    <color name="input_bg">#2A2735</color>
-    <color name="ghost_bg">#292632</color>
-    <color name="text_primary">#F3F0FA</color>
-    <color name="text_secondary">#BBB5C9</color>
-    <color name="text_tertiary">#928CA1</color>
-    <color name="bubble_ai">#24222E</color>
+    <color name="black">#08080C</color>
+    <color name="gray_bg">#08080C</color>
+    <color name="surface_soft">#121218</color>
+    <color name="card_white">#E61A1A24</color>
+    <color name="card_stroke">#28FFFFFF</color>
+    <color name="divider">#1FFFFFFF</color>
+    <color name="input_bg">#B31A1A24</color>
+    <color name="ghost_bg">#401A1A24</color>
+    <color name="text_primary">#F4F1FA</color>
+    <color name="text_secondary">#B8B3C7</color>
+    <color name="text_tertiary">#8A8499</color>
+    <color name="bubble_ai">#CC1C1C26</color>
     <color name="bubble_ai_text">#F4F1FA</color>
-    <color name="halo_idle">#5A526F</color>
+    <color name="halo_idle">#3A3548</color>
 </resources>

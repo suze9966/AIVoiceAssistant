@@ -115,6 +115,15 @@ class LlmClient(private val prefs: Prefs) {
         return stripReasoning(jsonText(message, "content"))
     }
 
+    private fun incrementalDelta(sb: StringBuilder, incoming: String): String {
+        if (incoming.isEmpty()) return ""
+        if (sb.isEmpty()) return incoming
+        val current = sb.toString()
+        if (incoming == current) return ""
+        if (incoming.startsWith(current)) return incoming.substring(current.length)
+        return incoming
+    }
+
     private fun extractDelta(delta: JSONObject?): String {
         if (delta == null) return ""
         return jsonText(delta, "content")
@@ -206,8 +215,11 @@ class LlmClient(private val prefs: Prefs) {
                         }.getOrNull()?.let { delta ->
                             val piece = extractDelta(delta)
                             if (piece.isNotEmpty()) {
-                                val safe = piece.take(MAX_OUTPUT_CHARS - sb.length)
-                                sb.append(safe); onDelta(safe)
+                                val extra = incrementalDelta(sb, piece).take(MAX_OUTPUT_CHARS - sb.length)
+                                if (extra.isNotEmpty()) {
+                                    sb.append(extra)
+                                    onDelta(extra)
+                                }
                             }
                         }
                     }

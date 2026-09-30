@@ -91,6 +91,7 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
     fun updateLast(content: String) {
         if (items.isEmpty()) return
         val last = items.last()
+        if (last.content == content) return
         items[items.size - 1] = last.copy(content = content)
         notifyItemChanged(items.size - 1)
     }

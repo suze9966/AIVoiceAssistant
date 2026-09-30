@@ -36,9 +36,9 @@ class LiquidGlassView @JvmOverloads constructor(
     private var cornerTop = dp(28f)
     private var cornerBottom = 0f
     private val downsample = 6
-    private val overlayColor = 0x66FFFFFF.toInt()
-    private val tintColor = 0x28746BFF
-    private val strokeColor = 0x99FFFFFF.toInt()
+    private val overlayColor = 0x9914141C.toInt()
+    private val tintColor = 0x40221C3A
+    private val strokeColor = 0x33FFFFFF
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val highlightPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -121,12 +121,12 @@ class LiquidGlassView @JvmOverloads constructor(
         canvas.drawRect(dest, fillPaint)
         highlightPaint.shader = LinearGradient(
             0f, 0f, 0f, height * 0.42f,
-            0x55FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP
+            0x28FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP
         )
         canvas.drawRect(dest, highlightPaint)
         highlightPaint.shader = LinearGradient(
             0f, height * 0.72f, 0f, height.toFloat(),
-            0x00000000, 0x14000000, Shader.TileMode.CLAMP
+            0x00000000, 0x33000000, Shader.TileMode.CLAMP
         )
         canvas.drawRect(dest, highlightPaint)
         highlightPaint.shader = null

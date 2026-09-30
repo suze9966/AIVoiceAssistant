@@ -26,6 +26,7 @@ class BackupStore(private val context: Context) {
                 putOne(zip, File(context.filesDir, "todos.json"), "todos.json")
                 putOne(zip, File(context.filesDir, "reminders.json"), "reminders.json")
                 putOne(zip, File(context.filesDir, "memory.json"), "memory.json")
+                putOne(zip, File(context.filesDir, "emotion_tree.json"), "emotion_tree.json")
                 zip.putNextEntry(ZipEntry("prefs-safe.json"))
                 zip.write(safePrefs().toString().toByteArray(Charsets.UTF_8))
                 zip.closeEntry()
