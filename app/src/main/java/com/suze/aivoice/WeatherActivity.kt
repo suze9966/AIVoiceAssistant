@@ -57,6 +57,9 @@ class WeatherActivity : AppCompatActivity() {
     }
 
     private fun render(info: WeatherInfo) {
+        prefs.lastWeatherBrief = info.toSpeakText().take(48)
+        prefs.lastWeatherSkycon = info.skycon
+        XiaomoWidgetProvider.refresh(this)
         scene.setWeather(info.skycon)
         findViewById<TextView>(R.id.tvWeatherPlace).text = info.place
         findViewById<TextView>(R.id.tvWeatherUpdated).text = "${info.updatedAt} 更新 · ${info.source}"

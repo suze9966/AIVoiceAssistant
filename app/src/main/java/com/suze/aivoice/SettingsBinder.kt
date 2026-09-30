@@ -315,6 +315,9 @@ class SettingsBinder(
             refreshAppearancePreview()
             Toast.makeText(activity, R.string.toast_background_reset, Toast.LENGTH_SHORT).show()
         }
+        activity.findViewById<Button>(R.id.btnDesktopWallpaper).setOnClickListener {
+            activity.startActivity(Intent(activity, WallpaperPreviewActivity::class.java))
+        }
         refreshAppearancePreview()
     }
 

@@ -923,6 +923,7 @@ class MainActivity : AppCompatActivity() {
             }
             val text = info.toSpeakText()
             prefs.lastWeatherBrief = text.take(48)
+            prefs.lastWeatherSkycon = info.skycon
             XiaomoWidgetProvider.refresh(this@MainActivity)
             WeatherActivity.pendingInfo = info
             startActivity(Intent(this@MainActivity, WeatherActivity::class.java).putExtra(WeatherActivity.EXTRA_CITY, c))
@@ -1550,9 +1551,11 @@ class MainActivity : AppCompatActivity() {
             try {
                 val city = locationCity() ?: prefs.lastCity
                 if (city.isNotBlank()) prefs.lastCity = city
-                val weatherText = runCatching { weather.query(city)?.toSpeakText().orEmpty() }.getOrDefault("")
-                if (weatherText.isNotBlank()) {
+                val info = runCatching { weather.query(city) }.getOrNull()
+                val weatherText = info?.toSpeakText().orEmpty()
+                if (info != null) {
                     prefs.lastWeatherBrief = weatherText.take(48)
+                    prefs.lastWeatherSkycon = info.skycon
                     XiaomoWidgetProvider.refresh(this@MainActivity)
                 }
                 val next = reminders.upcoming().firstOrNull()?.let { reminders.formatItem(it) } ?: "暂无提醒"

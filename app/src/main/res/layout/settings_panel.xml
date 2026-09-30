@@ -37,6 +37,7 @@
             <Button android:id="@+id/btnChangeBackground" android:layout_width="0dp" android:layout_height="40dp" android:layout_weight="1" android:background="@drawable/s_btn_ghost" android:text="@string/btn_change_background" android:textColor="@color/purple_700" android:textSize="13sp"/>
             <Button android:id="@+id/btnResetBackground" android:layout_width="0dp" android:layout_height="40dp" android:layout_weight="1" android:layout_marginStart="8dp" android:background="@drawable/s_btn_ghost" android:text="@string/btn_reset_background" android:textColor="@color/text_secondary" android:textSize="13sp"/>
         </LinearLayout>
+        <Button android:id="@+id/btnDesktopWallpaper" android:layout_width="match_parent" android:layout_height="44dp" android:layout_marginTop="12dp" android:background="@drawable/s_btn_ghost" android:text="@string/btn_desktop_wallpaper" android:textColor="@color/purple_700" android:textSize="14sp"/>
     </LinearLayout>
     <!-- 分组1 模型接入 -->
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="18dp" android:layout_marginBottom="8dp">

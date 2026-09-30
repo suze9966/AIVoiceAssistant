@@ -274,5 +274,30 @@ class Prefs(context: Context) {
             return if (PortraitLibrary.resFor(saved) != null) saved else PortraitLibrary.DEFAULT_ID
         }
         set(v) = sp.edit().putString("portraitId", v).apply()
+
+    /** 动态壁纸用的最近天气码，例如 CLEAR_DAY / RAIN / CLEAR_NIGHT。 */
+    var lastWeatherSkycon: String
+        get() = sp.getString("lastWeatherSkycon", "") ?: ""
+        set(v) = sp.edit().putString("lastWeatherSkycon", v).apply()
+
+    /** 桌面动态壁纸：心情换姿势。默认开。 */
+    var wallpaperMoodEnabled: Boolean
+        get() = sp.getBoolean("wallpaperMoodEnabled", true)
+        set(v) = sp.edit().putBoolean("wallpaperMoodEnabled", v).apply()
+
+    /** 桌面动态壁纸：天气与夜景。默认开。 */
+    var wallpaperWeatherEnabled: Boolean
+        get() = sp.getBoolean("wallpaperWeatherEnabled", true)
+        set(v) = sp.edit().putBoolean("wallpaperWeatherEnabled", v).apply()
+
+    /** 桌面动态壁纸：触摸招手、爱心。默认开。 */
+    var wallpaperTouchEnabled: Boolean
+        get() = sp.getBoolean("wallpaperTouchEnabled", true)
+        set(v) = sp.edit().putBoolean("wallpaperTouchEnabled", v).apply()
+
+    /** 桌面动态壁纸：天气/提醒/心情玻璃卡。默认开。 */
+    var wallpaperCardsEnabled: Boolean
+        get() = sp.getBoolean("wallpaperCardsEnabled", true)
+        set(v) = sp.edit().putBoolean("wallpaperCardsEnabled", v).apply()
 }
 

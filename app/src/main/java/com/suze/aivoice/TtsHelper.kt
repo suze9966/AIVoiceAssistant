@@ -74,6 +74,9 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
     private var httpCall: Call? = null
     /** CosyVoice 本轮已经成功播放或已经回退，防止超时与失败回调重复切到 Edge。 */
     private var engineSettled: Boolean = false
+    /** 整段回复锁死的引擎：cosy / edge / system。中途失败也不换人声。 */
+    private var sessionEngine: String = ""
+    private var sessionHasAudio: Boolean = false
 
     init {
         fallbackTts = TextToSpeech(context.applicationContext) { status ->
@@ -163,6 +166,7 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
     // ===== 兼容旧接口：设置类 =====
 
     fun setLocale(locale: Locale): Boolean {
+        if (isSpeaking) return true
         currentLocale = locale
         return true
     }
@@ -183,6 +187,7 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
     )
 
     fun setVoiceByName(name: String?) {
+        if (isSpeaking) return
         if (name == null) { explicitVoice = null; return }
         when {
             name.contains("云希") -> {
@@ -221,15 +226,24 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
     }
 
     fun applyTaiwanVoice(): String? {
-        currentLocale = Locale.TAIWAN
-        explicitVoice = "zh-TW-HsiaoChenNeural"
+        if (!isSpeaking) {
+            currentLocale = Locale.TAIWAN
+            explicitVoice = "zh-TW-HsiaoChenNeural"
+        }
         return "曉臻（台湾腔·女·真人）"
     }
 
-    fun setRate(rate: Float) { userRate = rate }
-    fun setPitch(pitch: Float) { userPitch = pitch }
+    fun setRate(rate: Float) {
+        if (isSpeaking) return
+        userRate = rate
+    }
+    fun setPitch(pitch: Float) {
+        if (isSpeaking) return
+        userPitch = pitch
+    }
 
     fun setEmotion(rate: Float, pitch: Float) {
+        if (isSpeaking) return
         emotionRate = rate.coerceIn(0.5f, 1.6f)
         emotionPitch = pitch.coerceIn(0.5f, 1.6f)
     }
@@ -245,6 +259,8 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
         val trimmed = text.trim()
         if (isSpeaking && currentText == trimmed && speakQueue.isEmpty()) return
         speakQueue.clear()
+        sessionEngine = ""
+        sessionHasAudio = false
         val chunks = splitSpeakChunks(trimmed)
         if (chunks.isEmpty()) return
         if (chunks.size > 1) {
@@ -291,19 +307,27 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
         fallbackStarted = false
         engineSettled = false
         isSpeaking = true
-        if (prefs.ttsEngine == "system") {
-            speakFallback(text, generation)
-            return
-        }
         val voice = voiceForLocale(currentLocale)
         val rate = edgeRate()
         val pitch = edgePitch()
         val out = File(context.cacheDir, "tts_" + System.currentTimeMillis() + ".mp3")
-        if (shouldUseCosyVoice()) {
-            speakCosyVoice(text, taiwan, generation, out)
-            return
+        when {
+            prefs.ttsEngine == "system" || sessionEngine == "system" -> {
+                sessionEngine = "system"
+                speakFallback(text, generation)
+            }
+            sessionEngine == "edge" -> {
+                speakEdge(text, taiwan, generation, out, voice, rate, pitch)
+            }
+            sessionEngine == "cosy" || (sessionEngine.isEmpty() && shouldUseCosyVoice()) -> {
+                if (sessionEngine.isEmpty()) sessionEngine = "cosy"
+                speakCosyVoice(text, taiwan, generation, out)
+            }
+            else -> {
+                if (sessionEngine.isEmpty()) sessionEngine = "edge"
+                speakEdge(text, taiwan, generation, out, voice, rate, pitch)
+            }
         }
-        speakEdge(text, taiwan, generation, out, voice, rate, pitch)
     }
 
     private fun splitSpeakChunks(text: String): List<String> {
@@ -437,7 +461,12 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
 
     private fun fallbackFromCosy(text: String, taiwan: Boolean, generation: Long) {
         if (generation != speechGeneration || fallbackStarted || engineSettled) return
+        if (sessionHasAudio) {
+            playNextOrFinish(generation)
+            return
+        }
         engineSettled = true
+        sessionEngine = "edge"
         speakEdge(
             text,
             taiwan,
@@ -544,12 +573,7 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
                 out.delete()
                 main.post {
                     if (generation != speechGeneration) return@post
-                    if (voice.contains("DragonHD")) {
-                        explicitVoice = "zh-TW-HsiaoChenNeural"
-                        startSpeakChunk(text, taiwan = false, interrupt = false)
-                    } else {
-                        speakFallback(text, generation)
-                    }
+                    fallbackFromEdge(text, taiwan, generation, voice)
                 }
             }
 
@@ -564,27 +588,40 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
                 socket = null
                 try { audio.close() } catch (_: Exception) { }
                 out.delete()
-                if (voice.contains("DragonHD")) {
-                    explicitVoice = "zh-TW-HsiaoChenNeural"
-                    startSpeakChunk(text, taiwan = false, interrupt = false)
-                } else {
-                    speakFallback(text, generation)
-                }
+                fallbackFromEdge(text, taiwan, generation, voice)
             }
         }, 18_000L)
+    }
+
+    private fun fallbackFromEdge(text: String, taiwan: Boolean, generation: Long, voice: String) {
+        if (generation != speechGeneration || fallbackStarted) return
+        if (sessionHasAudio) {
+            playNextOrFinish(generation)
+            return
+        }
+        if (voice.contains("DragonHD")) {
+            explicitVoice = "zh-TW-HsiaoChenNeural"
+            sessionEngine = "edge"
+            startSpeakChunk(text, taiwan = false, interrupt = false)
+            return
+        }
+        sessionEngine = "system"
+        speakFallback(text, generation)
     }
 
     /** 主线程用 MediaPlayer 播放缓存 MP3 */
     private fun playFile(file: File, text: String, generation: Long) {
         if (generation != speechGeneration) { file.delete(); return }
         if (!file.exists() || file.length() <= 0) {
-            speakFallback(text, generation)
+            if (sessionEngine == "cosy") fallbackFromCosy(text, speakingTaiwan, generation)
+            else fallbackFromEdge(text, speakingTaiwan, generation, voiceForLocale(currentLocale))
             return
         }
         try {
             currentFile?.delete()
             currentFile = file
             engineSettled = true
+            if (sessionEngine.isEmpty()) sessionEngine = "edge"
 
             player?.release()
             player = MediaPlayer().apply {
@@ -601,14 +638,19 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
                     }
                 }
                 setOnErrorListener { _, _, _ ->
-                    speakFallback(text, generation)
+                    main.post {
+                        if (generation == speechGeneration) playNextOrFinish(generation)
+                    }
                     true
                 }
                 prepare()
                 start()
             }
+            sessionHasAudio = true
         } catch (_: Exception) {
-            speakFallback(text, generation)
+            if (sessionHasAudio) playNextOrFinish(generation)
+            else if (sessionEngine == "cosy") fallbackFromCosy(text, speakingTaiwan, generation)
+            else fallbackFromEdge(text, speakingTaiwan, generation, voiceForLocale(currentLocale))
         }
     }
 
@@ -658,6 +700,8 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
 
     fun stop() {
         speakQueue.clear()
+        sessionEngine = ""
+        sessionHasAudio = false
         stopInternal()
         isSpeaking = false
     }

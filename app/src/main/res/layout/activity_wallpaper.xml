@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+    <com.suze.aivoice.XiaomoSceneView
+        android:id="@+id/pageContent"
+        android:layout_width="match_parent" android:layout_height="match_parent" />
+    <com.suze.aivoice.LiquidGlassView
+        android:id="@+id/headerGlass"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="top"/>
+    <LinearLayout android:id="@+id/headerBar"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:background="@android:color/transparent" android:elevation="10dp"
+        android:paddingStart="14dp" android:paddingEnd="14dp" android:paddingTop="16dp" android:paddingBottom="16dp">
+        <TextView android:id="@+id/btnWallpaperBack" android:layout_width="48dp" android:layout_height="48dp"
+            android:gravity="center" android:background="@drawable/icon_touch_bg" android:text="‹"
+            android:textColor="@color/purple_700" android:textSize="28sp" android:textStyle="bold"
+            android:contentDescription="@string/role_back"/>
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginStart="8dp" android:orientation="vertical">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/wallpaper_title" android:textColor="@color/text_primary"
+                android:textSize="20sp" android:textStyle="bold"/>
+            <TextView android:id="@+id/tvWallpaperSubtitle" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="2dp" android:text="@string/wallpaper_subtitle"
+                android:textColor="@color/text_secondary" android:textSize="12sp"/>
+        </LinearLayout>
+    </LinearLayout>
+    <com.suze.aivoice.LiquidGlassView
+        android:id="@+id/bottomGlass"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="bottom"/>
+    <LinearLayout android:id="@+id/bottomBar"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="bottom" android:orientation="vertical"
+        android:background="@android:color/transparent" android:elevation="12dp"
+        android:paddingStart="16dp" android:paddingEnd="16dp" android:paddingTop="10dp" android:paddingBottom="12dp">
+        <androidx.appcompat.widget.SwitchCompat android:id="@+id/switchWallpaperMood"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/label_wallpaper_mood" android:textColor="@color/text_primary" android:textSize="14sp"/>
+        <androidx.appcompat.widget.SwitchCompat android:id="@+id/switchWallpaperWeather"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/label_wallpaper_weather" android:textColor="@color/text_primary" android:textSize="14sp"/>
+        <androidx.appcompat.widget.SwitchCompat android:id="@+id/switchWallpaperTouch"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/label_wallpaper_touch" android:textColor="@color/text_primary" android:textSize="14sp"/>
+        <androidx.appcompat.widget.SwitchCompat android:id="@+id/switchWallpaperCards"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/label_wallpaper_cards" android:textColor="@color/text_primary" android:textSize="14sp"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:layout_marginTop="8dp">
+            <Button android:id="@+id/btnWallpaperChat" android:layout_width="0dp" android:layout_height="44dp"
+                android:layout_weight="1" android:background="@drawable/s_btn_ghost"
+                android:text="@string/btn_wallpaper_chat" android:textColor="@color/purple_700" android:textSize="13sp"/>
+            <Button android:id="@+id/btnWallpaperApply" android:layout_width="0dp" android:layout_height="44dp"
+                android:layout_weight="1" android:layout_marginStart="8dp" android:background="@drawable/s_btn_primary"
+                android:text="@string/btn_wallpaper_apply" android:textColor="@color/white" android:textSize="13sp"/>
+        </LinearLayout>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:text="@string/wallpaper_help"
+            android:textColor="@color/text_secondary" android:textSize="12sp"/>
+    </LinearLayout>
+</FrameLayout>
