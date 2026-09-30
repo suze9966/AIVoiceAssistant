@@ -56,7 +56,7 @@ class GroupEditActivity : AppCompatActivity() {
             box.text = (c.emoji.ifBlank { "\uD83C\uDFAD" } + "  " + c.name)
             box.isChecked = c.id in selected
             box.setOnCheckedChangeListener { _, checked ->
-                if (checked && checks.count { it.second.isChecked } > 6) {
+                if (checked && checks.count { it.second.isChecked } > GroupStore.MAX_MEMBERS) {
                     box.isChecked = false
                     Toast.makeText(this, R.string.group_member_limit, Toast.LENGTH_SHORT).show()
                 }
@@ -87,7 +87,7 @@ class GroupEditActivity : AppCompatActivity() {
                 GroupRoom(
                     id = groupId,
                     name = name,
-                    memberIds = members.take(6),
+                    memberIds = members.take(GroupStore.MAX_MEMBERS),
                     scene = editScene.text.toString().trim(),
                     greeting = editGreeting.text.toString().trim(),
                     updatedAt = System.currentTimeMillis(),

@@ -746,7 +746,7 @@ class MainActivity : AppCompatActivity() {
         extra.append("使用方式是在回复里写一个标记：[sticker:关键词]，")
         extra.append("可用关键词有：" + StickerLibrary.stickerHint() + "。")
         extra.append("注意：一条回复最多发一个表情包标记，不要解释这个标记。")
-        llm.extraSystemPrompt = extra.toString().takeIf { it.isNotBlank() }
+        val baseExtra = extra.toString()
         if (appendUser) {
             adapter.add(ChatMessage("user", userText, isMe = true))
         }
@@ -755,6 +755,21 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
           try {
+            var notes = ""
+            if (prefs.webSearchEnabled && KnowledgeAssist.needsWeb(userText)) {
+                tvStatus.text = getString(R.string.status_searching)
+                notes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    searcher.gatherNotes(KnowledgeAssist.queryOf(userText))
+                }
+                if (session != speechSession || isFinishing || isDestroyed) return@launch
+            }
+            val extraNow = StringBuilder(baseExtra)
+            KnowledgeAssist.notesPrompt(notes).takeIf { it.isNotBlank() }?.let {
+                extraNow.append('\n').append(it)
+            }
+            llm.extraSystemPrompt = extraNow.toString().takeIf { it.isNotBlank() }
+            if (notes.isNotBlank()) tvStatus.text = getString(R.string.status_speaking)
+
             val requestHistory = history.dropLast(1).filter { it.content.isNotBlank() }
             val rawText: String
 
@@ -767,9 +782,9 @@ class MainActivity : AppCompatActivity() {
                         rawBuffer.toString()
                     }
                     runOnUiThread { applyStreamSnapshot(session, snapshot) }
-                }.ifBlank { "（无回复）" }
+                }.ifBlank { llmFailText() }
             } else {
-                val reply = llm.chat(requestHistory)
+                val reply = llm.chat(requestHistory).ifBlank { llmFailText() }
                 runOnUiThread {
                     if (session == speechSession && history.isNotEmpty()) {
                         history[history.size - 1] = history.last().copy(content = reply)
@@ -820,7 +835,7 @@ class MainActivity : AppCompatActivity() {
           } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             if (!isFinishing && !isDestroyed && history.isNotEmpty() && history.last().role == "assistant" && history.last().content.isBlank()) {
-                val fallback = getString(R.string.role_empty_reply)
+                val fallback = llmFailText()
                 history[history.size - 1] = history.last().copy(content = fallback)
                 adapter.updateLast(fallback)
                 persistHistory()
@@ -1265,45 +1280,14 @@ class MainActivity : AppCompatActivity() {
         replyLocal(userText, getString(R.string.toast_remind_set, reminders.formatItem(item), item.text))
     }
 
+    private fun llmFailText(): String {
+        val reason = llm.lastCloudError.orEmpty()
+        return if (reason.isNotBlank()) getString(R.string.toast_llm_fail, reason)
+        else getString(R.string.role_empty_reply)
+    }
+
     private fun runWebSearch(userText: String, query: String) {
-        if (!prefs.webSearchEnabled) {
-            replyLocal(userText, getString(R.string.search_fail))
-            return
-        }
-        isSending = true
-        adapter.add(ChatMessage("user", userText, isMe = true))
-        adapter.add(ChatMessage("assistant", "", isMe = false))
-        scrollToBottom()
-        tvStatus.text = "🔎 正在搜：$query"
-        lifecycleScope.launch {
-            try {
-                val found = searcher.search(query)
-                val reply = found.ifBlank { getString(R.string.search_fail) }
-                if (isFinishing || isDestroyed) return@launch
-                if (history.isNotEmpty()) {
-                    history[history.size - 1] = history.last().copy(content = reply)
-                    adapter.updateLast(reply)
-                }
-                persistHistory()
-                scrollToBottom()
-                speakLocal(reply)
-            } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
-                if (!isFinishing && !isDestroyed) {
-                    val fail = getString(R.string.search_fail)
-                    if (history.isNotEmpty() && history.last().role == "assistant") {
-                        history[history.size - 1] = history.last().copy(content = fail)
-                        adapter.updateLast(fail)
-                    }
-                    persistHistory()
-                    speakLocal(fail)
-                }
-            } finally {
-                isSending = false
-                tvStatus.text = getString(R.string.status_idle)
-                if (!tts.isSpeaking) scheduleRestartListening()
-            }
-        }
+        sendToLlm(userText)
     }
 
     private fun replyLocal(userText: String, reply: String) {

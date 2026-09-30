@@ -72,7 +72,7 @@ class TavernPluginEditActivity : AppCompatActivity() {
                 Toast.makeText(this, R.string.toast_plugin_bad_regex, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            if (pluginId.isBlank() && store.load().size >= 32) {
+            if (pluginId.isBlank() && store.load().size >= TavernPluginStore.MAX_PLUGINS) {
                 Toast.makeText(this, R.string.toast_plugin_limit, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }

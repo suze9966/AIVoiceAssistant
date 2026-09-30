@@ -206,6 +206,26 @@
             android:label="@string/emotion_title"
             android:windowSoftInputMode="adjustResize" />
         <activity
+            android:name=".TodoActivity"
+            android:exported="false"
+            android:label="@string/todo_title"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".ReminderActivity"
+            android:exported="false"
+            android:label="@string/remind_title"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".CalendarActivity"
+            android:exported="false"
+            android:label="@string/calendar_title"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".MindActivity"
+            android:exported="false"
+            android:label="@string/mind_title"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
             android:name=".SettingsActivity"
             android:exported="false"
             android:label="设置"

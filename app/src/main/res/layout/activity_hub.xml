@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+    <FrameLayout
+        android:id="@+id/pageContent"
+        android:layout_width="match_parent" android:layout_height="match_parent"
+        android:background="@drawable/glass_page_bg">
+        <androidx.recyclerview.widget.RecyclerView android:id="@+id/recyclerHub"
+            android:layout_width="match_parent" android:layout_height="match_parent"
+            android:clipToPadding="false" android:paddingStart="16dp" android:paddingEnd="16dp"
+            android:paddingTop="12dp" android:paddingBottom="12dp"/>
+        <TextView android:id="@+id/tvHubEmpty" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_gravity="center" android:gravity="center" android:padding="24dp"
+            android:textColor="@color/text_secondary" android:textSize="14sp"
+            android:visibility="gone"/>
+    </FrameLayout>
+    <com.suze.aivoice.LiquidGlassView
+        android:id="@+id/headerGlass"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="top"/>
+    <LinearLayout android:id="@+id/headerBar"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:orientation="horizontal" android:gravity="center_vertical" android:background="@android:color/transparent"
+        android:elevation="10dp" android:paddingStart="14dp" android:paddingEnd="14dp" android:paddingTop="16dp" android:paddingBottom="16dp">
+        <TextView android:id="@+id/btnHubBack" android:layout_width="48dp" android:layout_height="48dp"
+            android:gravity="center" android:background="@drawable/icon_touch_bg" android:text="‹"
+            android:textColor="@color/purple_700" android:textSize="28sp" android:textStyle="bold"
+            android:contentDescription="@string/role_back"/>
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginStart="8dp" android:orientation="vertical">
+            <TextView android:id="@+id/tvHubTitle" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textColor="@color/text_primary"
+                android:textSize="20sp" android:textStyle="bold"/>
+            <TextView android:id="@+id/tvHubSubtitle" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="@color/text_secondary" android:textSize="12sp"/>
+        </LinearLayout>
+        <TextView android:id="@+id/btnHubAdd" android:layout_width="48dp" android:layout_height="48dp"
+            android:gravity="center" android:background="@drawable/icon_touch_bg" android:text="+"
+            android:textColor="@color/purple_700" android:textSize="26sp" android:textStyle="bold"/>
+    </LinearLayout>
+    <com.suze.aivoice.LiquidGlassView
+        android:id="@+id/bottomGlass"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="bottom"/>
+    <LinearLayout android:id="@+id/bottomBar"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="bottom" android:orientation="vertical"
+        android:background="@android:color/transparent" android:elevation="12dp"
+        android:paddingStart="16dp" android:paddingEnd="16dp" android:paddingTop="10dp" android:paddingBottom="12dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <Button android:id="@+id/btnHubAction1" android:layout_width="0dp" android:layout_height="44dp"
+                android:layout_weight="1" android:background="@drawable/s_btn_ghost"
+                android:textColor="@color/purple_700" android:textSize="13sp"/>
+            <Button android:id="@+id/btnHubAction2" android:layout_width="0dp" android:layout_height="44dp"
+                android:layout_weight="1" android:layout_marginStart="8dp" android:background="@drawable/s_btn_ghost"
+                android:textColor="@color/purple_700" android:textSize="13sp"/>
+            <Button android:id="@+id/btnHubAction3" android:layout_width="0dp" android:layout_height="44dp"
+                android:layout_weight="1" android:layout_marginStart="8dp" android:background="@drawable/s_btn_ghost"
+                android:textColor="@color/purple_700" android:textSize="13sp"/>
+        </LinearLayout>
+        <TextView android:id="@+id/tvHubHelp" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="@color/text_secondary" android:textSize="12sp"/>
+    </LinearLayout>
+</FrameLayout>

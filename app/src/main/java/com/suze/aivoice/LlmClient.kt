@@ -27,6 +27,9 @@ class LlmClient(private val prefs: Prefs) {
     var applyCloudThink: Boolean = false
     /** 角色聊天关闭后，未接模型或云端失败时不要用小沫本地闲聊顶替。 */
     var allowLocalFallback: Boolean = true
+    /** 最近一次云端失败原因，给界面直说，不再假装陪聊。 */
+    var lastCloudError: String? = null
+        private set
 
     fun isConfigured(): Boolean = llmConfigured()
 
@@ -149,6 +152,11 @@ class LlmClient(private val prefs: Prefs) {
     private fun localReply(history: List<ChatMessage>): String =
         if (allowLocalFallback) local.reply(history) else ""
 
+    private fun cloudFail(reason: String): String {
+        lastCloudError = reason
+        return ""
+    }
+
     private fun ResponseBody.readUtf8Limited(maxBytes: Int): String? {
         if (contentLength() > maxBytes.toLong()) return null
         val output = ByteArrayOutputStream(minOf(maxBytes, 32 * 1024))
@@ -167,6 +175,7 @@ class LlmClient(private val prefs: Prefs) {
     }
 
     suspend fun chat(history: List<ChatMessage>): String = withContext(Dispatchers.IO) {
+        lastCloudError = null
         if (!llmConfigured()) {
             if (allowLocalFallback && freeChatEnabled()) {
                 free.reply(freeHistory(history))?.takeIf { it.isNotBlank() }?.let { return@withContext it }
@@ -175,22 +184,24 @@ class LlmClient(private val prefs: Prefs) {
         }
         try {
             client.newCall(buildRequest(false, buildBody(history, false))).execute().use { resp ->
-                // 已配置私有模型后，任何失败都只回本地，不再把对话转交公共免费服务。
-                if (!resp.isSuccessful || resp.isRedirect) return@withContext localReply(history)
-                val body = resp.body ?: return@withContext localReply(history)
-                val text = body.readUtf8Limited(MAX_RESPONSE_BYTES) ?: return@withContext localReply(history)
+                if (resp.isRedirect) return@withContext cloudFail("接口发生了跳转")
+                if (!resp.isSuccessful) return@withContext cloudFail("HTTP ${resp.code}")
+                val body = resp.body ?: return@withContext cloudFail("返回为空")
+                val text = body.readUtf8Limited(MAX_RESPONSE_BYTES) ?: return@withContext cloudFail("返回内容过大或为空")
                 val choices = JSONObject(text).optJSONArray("choices")
                 extractContent(choices?.optJSONObject(0)?.optJSONObject("message"))
-                    .take(MAX_OUTPUT_CHARS).takeIf { it.isNotBlank() } ?: localReply(history)
+                    .take(MAX_OUTPUT_CHARS).takeIf { it.isNotBlank() }
+                    ?: cloudFail("接口已通，但没有返回内容")
             }
-        } catch (_: Exception) {
-            localReply(history)
+        } catch (e: Exception) {
+            cloudFail(e.message?.take(80).orEmpty().ifBlank { "网络异常或接口不可达" })
         }
     }
 
     suspend fun chatStream(history: List<ChatMessage>, onDelta: (String) -> Unit): String =
         withContext(Dispatchers.IO) {
             val sb = StringBuilder()
+            lastCloudError = null
             if (!llmConfigured()) {
                 val online = if (allowLocalFallback && freeChatEnabled()) free.reply(freeHistory(history)) else null
                 val ans = online?.takeIf { it.isNotBlank() } ?: localReply(history)
@@ -199,8 +210,9 @@ class LlmClient(private val prefs: Prefs) {
             }
             try {
                 client.newCall(buildRequest(true, buildBody(history, true))).execute().use { resp ->
-                    if (!resp.isSuccessful || resp.isRedirect || resp.body == null) {
-                        val ans = localReply(history); onDelta(ans); return@withContext ans
+                    if (resp.isRedirect) return@withContext cloudFail("接口发生了跳转")
+                    if (!resp.isSuccessful || resp.body == null) {
+                        return@withContext cloudFail(if (!resp.isSuccessful) "HTTP ${resp.code}" else "返回为空")
                     }
                     val reader: BufferedReader = resp.body!!.source().inputStream().bufferedReader(Charsets.UTF_8)
                     while (sb.length < MAX_OUTPUT_CHARS) {
@@ -224,12 +236,12 @@ class LlmClient(private val prefs: Prefs) {
                         }
                     }
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
                 if (sb.isEmpty()) {
-                    val ans = localReply(history); onDelta(ans); return@withContext ans
+                    return@withContext cloudFail(e.message?.take(80).orEmpty().ifBlank { "网络异常或接口不可达" })
                 }
             }
-            stripReasoning(sb.toString())
+            stripReasoning(sb.toString()).ifBlank { cloudFail("接口已通，但没有返回内容") }
         }
 
     /** 探测云端接口是否可用，不回落到本地闲聊。 */

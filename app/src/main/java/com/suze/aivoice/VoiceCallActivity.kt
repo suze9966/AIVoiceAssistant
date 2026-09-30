@@ -32,6 +32,7 @@ class VoiceCallActivity : AppCompatActivity() {
     private lateinit var tts: TtsHelper
     private lateinit var store: HistoryStore
     private lateinit var emotion: EmotionEngine
+    private val searcher = SearchClient()
     private lateinit var tvDuration: TextView
     private lateinit var tvStatus: TextView
     private lateinit var tvCaption: TextView
@@ -238,17 +239,28 @@ class VoiceCallActivity : AppCompatActivity() {
         llm.systemPromptOverride = prefs.chattingPersona()
         val extra = StringBuilder(CALL_PROMPT)
         if (prefs.emotionEnabled) extra.append('\n').append(emotion.emotionPrompt())
-        llm.extraSystemPrompt = extra.toString()
 
         lifecycleScope.launch {
             var reply = ""
             try {
-                reply = llm.chat(history.takeLast(16)).ifBlank { getString(R.string.voice_call_fallback) }
+                if (prefs.webSearchEnabled && KnowledgeAssist.needsWeb(userText)) {
+                    setStatus(getString(R.string.status_searching), Halo.IDLE)
+                    val notes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        searcher.gatherNotes(KnowledgeAssist.queryOf(userText))
+                    }
+                    if (hungUp || isFinishing || isDestroyed) return@launch
+                    KnowledgeAssist.notesPrompt(notes, "call").takeIf { it.isNotBlank() }?.let {
+                        extra.append('\n').append(it)
+                    }
+                    setStatus(getString(R.string.voice_call_thinking), Halo.IDLE)
+                }
+                llm.extraSystemPrompt = extra.toString()
+                reply = llm.chat(history.takeLast(16)).ifBlank { callFailText() }
                 reply = llm.stripReasoning(reply)
                 reply = shortenCallReply(reply)
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                reply = getString(R.string.voice_call_fallback)
+                reply = callFailText()
             }
             if (hungUp || isFinishing || isDestroyed) return@launch
             history.add(ChatMessage("assistant", reply, isMe = false))
@@ -341,6 +353,12 @@ class VoiceCallActivity : AppCompatActivity() {
         val t = text.replace(" ", "")
         return t.contains("挂了") || t.contains("挂断") || t.contains("结束通话") ||
             t.contains("不聊了") || t == "拜拜" || t == "再见" || t.contains("先挂")
+    }
+
+    private fun callFailText(): String {
+        val reason = llm.lastCloudError.orEmpty()
+        return if (reason.isNotBlank()) getString(R.string.toast_llm_fail, reason)
+        else getString(R.string.voice_call_fallback)
     }
 
     private fun shortenCallReply(raw: String): String {

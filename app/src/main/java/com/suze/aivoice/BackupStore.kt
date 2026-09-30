@@ -12,7 +12,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
-/** 会话 / 角色卡 / 待办 / 提醒 / 部分设置 的本地备份。不含 API Key。 */
+/** 会话 / 角色卡 / 待办 / 提醒 / 记忆 / 情感树 / 思考 / 部分设置 的本地备份。不含 API Key。 */
 class BackupStore(private val context: Context) {
     private val exportDir = File(context.cacheDir, "backup_export").apply { mkdirs() }
 
@@ -30,6 +30,9 @@ class BackupStore(private val context: Context) {
                 zip.putNextEntry(ZipEntry("prefs-safe.json"))
                 zip.write(safePrefs().toString().toByteArray(Charsets.UTF_8))
                 zip.closeEntry()
+                zip.putNextEntry(ZipEntry("ai_mind.json"))
+                zip.write(mindPrefs().toString().toByteArray(Charsets.UTF_8))
+                zip.closeEntry()
             }
             outFile.takeIf { it.isFile && it.length() > 0L }
         } catch (_: Exception) { null }
@@ -43,9 +46,15 @@ class BackupStore(private val context: Context) {
                     while (entry != null) {
                         val name = entry.name.trimStart('/').replace("\\", "/")
                         if (!entry.isDirectory && name.isNotBlank() && !name.contains("..")) {
-                            val dest = File(context.filesDir, name)
-                            dest.parentFile?.mkdirs()
-                            dest.outputStream().use { out -> zip.copyTo(out) }
+                            if (name == "ai_mind.json") {
+                                restoreMind(zip.readBytes().toString(Charsets.UTF_8))
+                            } else if (name == "prefs-safe.json") {
+                                zip.readBytes()
+                            } else {
+                                val dest = File(context.filesDir, name)
+                                dest.parentFile?.mkdirs()
+                                dest.outputStream().use { out -> zip.copyTo(out) }
+                            }
                         }
                         zip.closeEntry()
                         entry = zip.nextEntry
@@ -73,6 +82,26 @@ class BackupStore(private val context: Context) {
             file.writeText(sb.toString())
             file
         } catch (_: Exception) { null }
+    }
+
+    private fun mindPrefs(): JSONObject {
+        val sp = context.getSharedPreferences("ai_mind", Context.MODE_PRIVATE)
+        val o = JSONObject()
+        listOf("goal", "selfView", "exp").forEach { k ->
+            sp.getString(k, null)?.let { o.put(k, it) }
+        }
+        if (sp.contains("expCount")) o.put("expCount", sp.getInt("expCount", 0))
+        return o
+    }
+
+    private fun restoreMind(text: String) {
+        val o = JSONObject(text)
+        val edit = context.getSharedPreferences("ai_mind", Context.MODE_PRIVATE).edit()
+        if (o.has("goal")) edit.putString("goal", o.optString("goal"))
+        if (o.has("selfView")) edit.putString("selfView", o.optString("selfView"))
+        if (o.has("exp")) edit.putString("exp", o.optString("exp"))
+        if (o.has("expCount")) edit.putInt("expCount", o.optInt("expCount", 0))
+        edit.apply()
     }
 
     private fun safePrefs(): JSONObject {

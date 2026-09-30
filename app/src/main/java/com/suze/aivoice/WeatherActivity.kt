@@ -80,7 +80,7 @@ class WeatherActivity : AppCompatActivity() {
         row.removeAllViews()
         if (items.isEmpty()) {
             row.addView(TextView(this).apply {
-                text = "小米系统天气暂不提供逐小时明细"
+                text = getString(R.string.weather_hourly_empty)
                 textSize = 13f; gravity = Gravity.CENTER; setTextColor(0xFFFFFFFF.toInt())
                 setPadding(dp(16), dp(14), dp(16), dp(14)); background = getDrawable(R.drawable.weather_chip)
             })

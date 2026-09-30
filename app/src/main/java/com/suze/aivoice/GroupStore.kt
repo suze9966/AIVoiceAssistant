@@ -100,7 +100,7 @@ class GroupStore(context: Context) {
         return GroupRoom(
             id = o.optString("id").ifBlank { newId() },
             name = o.optString("name").ifBlank { "群聊" },
-            memberIds = ids.distinct().take(6),
+            memberIds = ids.distinct().take(MAX_MEMBERS),
             scene = o.optString("scene"),
             greeting = o.optString("greeting"),
             updatedAt = o.optLong("updatedAt"),
@@ -109,7 +109,8 @@ class GroupStore(context: Context) {
     }
 
     companion object {
-        const val MAX_ROOMS = 40
+        const val MAX_ROOMS = 80
+        const val MAX_MEMBERS = 12
         fun newId(): String = UUID.randomUUID().toString()
     }
 }

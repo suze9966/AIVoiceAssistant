@@ -54,7 +54,7 @@ class TavernPluginStore(context: Context) {
     fun save(items: List<TavernPlugin>) {
         try {
             val arr = JSONArray()
-            items.take(32).forEach { p ->
+            items.take(MAX_PLUGINS).forEach { p ->
                 arr.put(
                     JSONObject()
                         .put("id", p.id)
@@ -134,6 +134,7 @@ class TavernPluginStore(context: Context) {
     }
 
     companion object {
+        const val MAX_PLUGINS = 64
         fun newId(): String = UUID.randomUUID().toString()
     }
 }

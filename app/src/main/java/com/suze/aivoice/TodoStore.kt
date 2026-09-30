@@ -15,7 +15,7 @@ data class TodoItem(
 
 class TodoStore(context: Context) {
     private val file = File(context.filesDir, "todos.json")
-    private val maxKeep = 80
+    private val maxKeep = 200
 
     fun load(): MutableList<TodoItem> {
         val list = mutableListOf<TodoItem>()
@@ -66,6 +66,35 @@ class TodoStore(context: Context) {
 
     fun pending(): List<TodoItem> = load().filter { !it.done }
 
+    fun update(id: String, text: String): Boolean {
+        val next = text.trim().take(80)
+        if (next.isEmpty()) return false
+        val list = load()
+        val idx = list.indexOfFirst { it.id == id }
+        if (idx < 0) return false
+        list[idx] = list[idx].copy(text = next)
+        save(list)
+        return true
+    }
+
+    fun toggle(id: String): TodoItem? {
+        val list = load()
+        val idx = list.indexOfFirst { it.id == id }
+        if (idx < 0) return null
+        val item = list[idx].copy(done = !list[idx].done)
+        list[idx] = item
+        save(list)
+        return item
+    }
+
+    fun delete(id: String): Boolean {
+        val list = load()
+        val next = list.filterNot { it.id == id }
+        if (next.size == list.size) return false
+        save(next)
+        return true
+    }
+
     fun markDone(query: String): TodoItem? {
         val q = query.trim()
         if (q.isEmpty()) return null
@@ -80,6 +109,12 @@ class TodoStore(context: Context) {
 
     fun clearAll() {
         save(emptyList())
+    }
+
+    fun summary(): String {
+        val list = load()
+        val pending = list.count { !it.done }
+        return "待办 ${list.size} 条，未完成 $pending 条"
     }
 
     fun formatList(): String {

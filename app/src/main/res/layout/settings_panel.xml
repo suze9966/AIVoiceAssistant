@@ -103,6 +103,7 @@
             <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/label_mind" android:textColor="@color/text_primary" android:textSize="14sp"/>
             <androidx.appcompat.widget.SwitchCompat android:id="@+id/switchMind" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
         </LinearLayout>
+        <Button android:id="@+id/btnMindHub" android:layout_width="match_parent" android:layout_height="44dp" android:background="@drawable/s_btn_ghost" android:text="@string/btn_mind_hub" android:textColor="@color/purple_700" android:textSize="14sp" android:layout_marginTop="8dp" android:layout_marginBottom="4dp"/>
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="52dp">
             <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/label_grow" android:textColor="@color/text_primary" android:textSize="14sp"/>
             <androidx.appcompat.widget.SwitchCompat android:id="@+id/switchGrow" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
@@ -112,6 +113,9 @@
             <androidx.appcompat.widget.SwitchCompat android:id="@+id/switchMemory" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
         </LinearLayout>
         <Button android:id="@+id/btnMemorySummary" android:layout_width="match_parent" android:layout_height="44dp" android:background="@drawable/s_btn_ghost" android:text="@string/btn_memory_summary" android:textColor="@color/purple_700" android:textSize="14sp" android:layout_marginTop="12dp"/>
+        <Button android:id="@+id/btnTodoHub" android:layout_width="match_parent" android:layout_height="44dp" android:background="@drawable/s_btn_ghost" android:text="@string/btn_todo_hub" android:textColor="@color/purple_700" android:textSize="14sp" android:layout_marginTop="8dp"/>
+        <Button android:id="@+id/btnRemindHub" android:layout_width="match_parent" android:layout_height="44dp" android:background="@drawable/s_btn_ghost" android:text="@string/btn_remind_hub" android:textColor="@color/purple_700" android:textSize="14sp" android:layout_marginTop="8dp"/>
+        <Button android:id="@+id/btnCalendarHub" android:layout_width="match_parent" android:layout_height="44dp" android:background="@drawable/s_btn_ghost" android:text="@string/btn_calendar_hub" android:textColor="@color/purple_700" android:textSize="14sp" android:layout_marginTop="8dp"/>
     </LinearLayout>
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="18dp" android:layout_marginBottom="8dp">
         <View android:layout_width="4dp" android:layout_height="16dp" android:background="@drawable/s_accent_bar"/>

@@ -24,7 +24,7 @@ data class ReminderItem(
 
 class ReminderStore(private val context: Context) {
     private val file = File(context.filesDir, "reminders.json")
-    private val maxKeep = 40
+    private val maxKeep = 80
 
     fun load(): MutableList<ReminderItem> {
         val list = mutableListOf<ReminderItem>()
@@ -96,6 +96,24 @@ class ReminderStore(private val context: Context) {
         return item
     }
 
+    fun update(id: String, text: String, atMillis: Long, repeatDaily: Boolean, advanceMin: Int): ReminderItem? {
+        val list = load()
+        val idx = list.indexOfFirst { it.id == id }
+        if (idx < 0) return null
+        unschedule(list[idx])
+        val item = list[idx].copy(
+            text = text.trim().ifBlank { list[idx].text }.take(80),
+            atMillis = atMillis,
+            repeatDaily = repeatDaily,
+            advanceMin = advanceMin.coerceIn(0, 60)
+        )
+        list[idx] = item
+        save(list)
+        schedule(item)
+        XiaomoWidgetProvider.refresh(context)
+        return item
+    }
+
     fun cancel(id: String): Boolean {
         val list = load()
         val found = list.firstOrNull { it.id == id } ?: return false
@@ -127,6 +145,11 @@ class ReminderStore(private val context: Context) {
 
     fun rescheduleAll() {
         upcoming().forEach { schedule(it) }
+    }
+
+    fun summary(): String {
+        val n = upcoming().size
+        return if (n == 0) "现在没有提醒" else "还有 $n 条提醒"
     }
 
     fun formatWhen(atMillis: Long): String {

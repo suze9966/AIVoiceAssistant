@@ -34,17 +34,16 @@ class MindEngine(context: Context) {
     private val expBuffer: MutableList<String> = mutableListOf()
 
     init {
-        // 恢复历史经历（换行分隔，最多保留 40 条）
+        // 恢复历史经历（换行分隔，最多保留 80 条）
         val raw = sp.getString("exp", "") ?: ""
-        raw.split("\n").filter { it.isNotBlank() }.takeLast(40).forEach { expBuffer.add(it) }
+        raw.split("\n").filter { it.isNotBlank() }.takeLast(80).forEach { expBuffer.add(it) }
     }
 
     /** 记录一条经历（用户说了什么 / 发生了什么） */
     fun record(exp: String) {
         if (exp.isBlank()) return
         expBuffer.add(exp)
-        while (expBuffer.size > 40) expBuffer.removeAt(0)
-        sp.edit().putString("exp", expBuffer.joinToString("\n")).apply()
+        persistExperiences()
         expCount = expCount + 1
     }
 
@@ -108,6 +107,55 @@ class MindEngine(context: Context) {
             goal = m.groupValues[2].trim().take(60)
             sp.edit().putString("selfView", m.groupValues[1].trim()).apply()
         }
+    }
+
+    fun experiences(): List<String> = expBuffer.toList()
+
+    fun setGoal(text: String) {
+        goal = text.trim().take(80)
+    }
+
+    fun setSelfView(text: String) {
+        sp.edit().putString("selfView", text.trim().take(120)).apply()
+    }
+
+    fun addExperience(text: String): Boolean {
+        val line = text.trim().take(120)
+        if (line.isBlank()) return false
+        record(line)
+        return true
+    }
+
+    fun updateExperience(index: Int, text: String): Boolean {
+        if (index !in expBuffer.indices) return false
+        val line = text.trim().take(120)
+        if (line.isBlank()) return false
+        expBuffer[index] = line
+        persistExperiences()
+        return true
+    }
+
+    fun deleteExperience(index: Int): Boolean {
+        if (index !in expBuffer.indices) return false
+        expBuffer.removeAt(index)
+        persistExperiences()
+        return true
+    }
+
+    fun clearExperiences() {
+        expBuffer.clear()
+        expCount = 0
+        persistExperiences()
+    }
+
+    fun summary(): String {
+        val g = if (goal.isBlank()) "还没有自主目标" else "目标：$goal"
+        return "经历 ${expBuffer.size} 条 · $g"
+    }
+
+    private fun persistExperiences() {
+        while (expBuffer.size > 80) expBuffer.removeAt(0)
+        sp.edit().putString("exp", expBuffer.joinToString("\n")).apply()
     }
 
     /** 当前“自我认知”（长期反思沉淀） */

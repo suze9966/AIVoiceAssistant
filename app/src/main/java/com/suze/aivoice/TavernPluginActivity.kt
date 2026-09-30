@@ -26,7 +26,7 @@ class TavernPluginActivity : AppCompatActivity() {
         emptyView = findViewById(R.id.tvPluginEmpty)
         findViewById<View>(R.id.btnPluginBack).setOnClickListener { finish() }
         findViewById<View>(R.id.btnPluginAdd).setOnClickListener {
-            if (store.load().size >= 32) {
+            if (store.load().size >= TavernPluginStore.MAX_PLUGINS) {
                 Toast.makeText(this, R.string.toast_plugin_limit, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }

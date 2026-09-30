@@ -181,6 +181,18 @@ class SettingsBinder(
         btnMemorySummary.setOnClickListener {
             activity.startActivity(Intent(activity, MemoryActivity::class.java))
         }
+        activity.findViewById<Button>(R.id.btnMindHub).setOnClickListener {
+            activity.startActivity(Intent(activity, MindActivity::class.java))
+        }
+        activity.findViewById<Button>(R.id.btnTodoHub).setOnClickListener {
+            activity.startActivity(Intent(activity, TodoActivity::class.java))
+        }
+        activity.findViewById<Button>(R.id.btnRemindHub).setOnClickListener {
+            activity.startActivity(Intent(activity, ReminderActivity::class.java))
+        }
+        activity.findViewById<Button>(R.id.btnCalendarHub).setOnClickListener {
+            activity.startActivity(Intent(activity, CalendarActivity::class.java))
+        }
         btnSave.setOnClickListener {
             val baseUrl = editBaseUrl.text.toString().trim()
             if (!isSafeHttpsBaseUrl(baseUrl)) {

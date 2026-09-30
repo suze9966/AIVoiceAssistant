@@ -29,6 +29,7 @@ class RoleChatActivity : AppCompatActivity() {
     private lateinit var store: RoleStore
     private lateinit var plugins: TavernPluginStore
     private lateinit var tts: TtsHelper
+    private val searcher = SearchClient()
     private lateinit var adapter: ChatAdapter
     private lateinit var recycler: RecyclerView
     private lateinit var editInput: EditText
@@ -509,6 +510,22 @@ class RoleChatActivity : AppCompatActivity() {
         sendJob?.cancel()
         sendJob = lifecycleScope.launch {
             try {
+                if (prefs.webSearchEnabled && KnowledgeAssist.needsWeb(processed)) {
+                    tvStatus.text = getString(R.string.status_searching)
+                    val notes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        searcher.gatherNotes(KnowledgeAssist.queryOf(processed))
+                    }
+                    if (session != speechSession || isFinishing || isDestroyed) {
+                        persistChat()
+                        return@launch
+                    }
+                    llm.extraSystemPrompt = KnowledgeAssist.notesPrompt(notes, "role").takeIf { it.isNotBlank() }
+                    tvStatus.text = if (prefs.cloudThinkEnabled) {
+                        getString(R.string.role_status_thinking)
+                    } else {
+                        getString(R.string.status_speaking)
+                    }
+                }
                 val requestHistory = history.dropLast(1).filter { it.content.isNotBlank() }
                 val rawBuffer = StringBuilder()
                 val rawText = try {
@@ -529,14 +546,14 @@ class RoleChatActivity : AppCompatActivity() {
                     }
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e
-                    getString(R.string.role_empty_reply)
+                    roleFailText()
                 }
                 if (session != speechSession || isFinishing || isDestroyed) {
                     persistChat()
                     return@launch
                 }
                 val finalText = plugins.applyOutput(
-                    llm.stripReasoning(rawText).ifBlank { getString(R.string.role_empty_reply) },
+                    llm.stripReasoning(rawText).ifBlank { roleFailText() },
                     user,
                     c.name
                 )
@@ -547,10 +564,16 @@ class RoleChatActivity : AppCompatActivity() {
                     return@launch
                 }
                 if (session == speechSession && !isFinishing && !isDestroyed) {
-                    finishAssistant(getString(R.string.role_empty_reply), c, session)
+                    finishAssistant(roleFailText(), c, session)
                 }
             }
         }
+    }
+
+    private fun roleFailText(): String {
+        val reason = llm.lastCloudError.orEmpty()
+        return if (reason.isNotBlank()) getString(R.string.toast_llm_fail, reason)
+        else getString(R.string.role_empty_reply)
     }
 
     private fun finishAssistant(text: String, c: RoleCharacter, session: Long = speechSession) {

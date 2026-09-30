@@ -39,7 +39,6 @@ object VoiceCommandParser {
         parseFindChat(text)?.let { return it }
         parseTodo(text)?.let { return it }
         parseCalendar(text)?.let { return it }
-        parseSearch(text)?.let { return it }
         parseListOrCancel(text)?.let { return it }
         parseCountdown(text)?.let { return it }
         parseClock(text)?.let { return it }

@@ -116,18 +116,23 @@ class WeatherClient(context: Context, private val prefs: Prefs) {
                         icon = skyconEmoji(daySky), tempMax = number(cursor.text("tmphighs")),
                         tempMin = number(cursor.text("tmplows")), pop = number(cursor.text("water")).toIntOrMinusOne()
                     )
-                } while (cursor.moveToNext() && days.size < 5)
+                    } while (cursor.moveToNext() && days.size < 5)
                 WeatherInfo(
                     place = cityName, temp = currentTemp, feelsLike = currentTemp,
                     humidity = cursor.firstInt("humidity", -1), windSpeed = Double.NaN,
                     windDirection = Double.NaN, skycon = skycon, desc = description,
                     icon = skyconEmoji(skycon), aqi = cursor.firstInt("aqilevel", -1),
-                    comfort = cursor.firstText("wind"), minutely = "系统天气数据已同步",
+                    comfort = cursor.firstText("wind"),
+                    minutely = "系统天气数据已同步",
                     alert = "", hourly = emptyList(), days = days.distinctBy { it.date },
                     source = "小米天气", updatedAt = if (publishMillis > 0L)
                         SimpleDateFormat("HH:mm", Locale.CHINA).format(Date(normalizeEpochMillis(publishMillis)))
                     else SimpleDateFormat("HH:mm", Locale.CHINA).format(Date())
                 )
+            }?.let { info ->
+                val hourly = runCatching { queryOpenMeteo(info.place)?.hourly }.getOrNull().orEmpty()
+                if (hourly.isEmpty()) info
+                else info.copy(hourly = hourly, minutely = "系统天气数据已同步 · 逐小时来自 Open-Meteo")
             }
         } catch (_: SecurityException) {
             null

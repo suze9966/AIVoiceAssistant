@@ -27,6 +27,7 @@ class GroupChatActivity : AppCompatActivity() {
     private lateinit var store: GroupStore
     private lateinit var plugins: TavernPluginStore
     private lateinit var tts: TtsHelper
+    private val searcher = SearchClient()
     private lateinit var adapter: ChatAdapter
     private lateinit var recycler: RecyclerView
     private lateinit var editInput: EditText
@@ -319,6 +320,17 @@ class GroupChatActivity : AppCompatActivity() {
         sendJob?.cancel()
         sendJob = lifecycleScope.launch {
             try {
+                if (prefs.webSearchEnabled && KnowledgeAssist.needsWeb(processed)) {
+                    tvStatus.text = getString(R.string.status_searching)
+                    val notes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        searcher.gatherNotes(KnowledgeAssist.queryOf(processed))
+                    }
+                    if (session != speechSession || isFinishing || isDestroyed) {
+                        persistChat()
+                        return@launch
+                    }
+                    llm.extraSystemPrompt = KnowledgeAssist.notesPrompt(notes, "role").takeIf { it.isNotBlank() }
+                }
                 for (speaker in members) {
                     if (session != speechSession || isFinishing || isDestroyed) return@launch
                     tvStatus.text = getString(R.string.group_status_thinking, speaker.name)
@@ -359,14 +371,14 @@ class GroupChatActivity : AppCompatActivity() {
                         }
                     } catch (e: Exception) {
                         if (e is kotlinx.coroutines.CancellationException) throw e
-                        getString(R.string.group_empty_reply)
+                        groupFailText()
                     }
                     if (session != speechSession || isFinishing || isDestroyed) {
                         persistChat()
                         return@launch
                     }
                     val finalText = plugins.applyOutput(
-                        llm.stripReasoning(rawText).ifBlank { getString(R.string.group_empty_reply) },
+                        llm.stripReasoning(rawText).ifBlank { groupFailText() },
                         user,
                         speaker.name
                     )
@@ -389,6 +401,12 @@ class GroupChatActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun groupFailText(): String {
+        val reason = llm.lastCloudError.orEmpty()
+        return if (reason.isNotBlank()) getString(R.string.toast_llm_fail, reason)
+        else getString(R.string.group_empty_reply)
     }
 
     private fun finishSpeaker(text: String, speaker: RoleCharacter, session: Long) {
