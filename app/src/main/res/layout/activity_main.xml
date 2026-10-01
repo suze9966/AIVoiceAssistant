@@ -16,7 +16,7 @@
                 android:contentDescription="@string/label_chat_background"/>
             <View android:id="@+id/chatBgScrim"
                 android:layout_width="match_parent" android:layout_height="match_parent"
-                android:background="990E0E11" android:visibility="gone"/>
+                android:background="#990E0E11" android:visibility="gone"/>
             <androidx.recyclerview.widget.RecyclerView android:id="@+id/recyclerChat"
                 android:layout_width="match_parent" android:layout_height="match_parent"
                 android:clipToPadding="false" android:paddingStart="12dp" android:paddingEnd="12dp"

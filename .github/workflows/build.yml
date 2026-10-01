@@ -27,9 +27,9 @@ jobs:
           rc=${PIPESTATUS[0]}
           echo "$rc" > build-debug.exit
           echo '## Android compiler diagnostics' >> "$GITHUB_STEP_SUMMARY"
-          echo ' ```text' >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
           grep -nE 'e: |error: |Error |unresolved|expecting|none of the following candidates|cannot be called|AAPT|Execution failed for task' build-debug.log | head -400 >> "$GITHUB_STEP_SUMMARY" || true
-          echo ' ```' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
           exit 0
       - name: Upload compiler log
         uses: actions/upload-artifact@v4
