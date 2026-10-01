@@ -524,7 +524,6 @@ class MainActivity : AppCompatActivity() {
      */
     private fun maybeReachOutProactively() {
         if (!::proactive.isInitialized || !::llm.isInitialized || !::adapter.isInitialized) return
-        if (!::history.isInitialized) return
         if (isSending || greetingBusy || tts.isSpeaking || tts.hasQueuedSpeech()) return
         if (!proactive.shouldReachOut()) return
         greetingBusy = true

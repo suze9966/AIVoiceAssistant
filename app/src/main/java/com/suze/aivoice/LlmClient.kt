@@ -436,7 +436,6 @@ class LlmClient(private val prefs: Prefs) {
                 cloudFail(e.message?.take(80).orEmpty().ifBlank { "网络异常或接口不可达" })
             }
         }
-        }
 
     /** 探测云端接口是否可用，不回落到本地闲聊。 */
     suspend fun chatVision(prompt: String, imageBytes: ByteArray, mime: String = "image/jpeg"): String =
