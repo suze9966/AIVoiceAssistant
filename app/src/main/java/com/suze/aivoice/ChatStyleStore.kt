@@ -104,6 +104,10 @@ object ChatStyleStore {
         return bmp
     }
 
+    /** 对外提供壁纸 Bitmap（供气泡跟随壁纸取色用）。 */
+    fun loadBackgroundBitmap(context: Context, maxSide: Int = 240): Bitmap? =
+        loadBackground(context, maxSide)
+
     private fun loadBackground(context: Context, maxSide: Int): Bitmap? {
         backgroundCache?.let { return it }
         val file = backgroundFile(context)

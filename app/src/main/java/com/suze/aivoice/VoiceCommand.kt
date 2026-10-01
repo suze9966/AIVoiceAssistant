@@ -51,6 +51,9 @@ sealed class VoiceCommand {
         val deleteName: String? = null,
         val listFavorites: Boolean = false,
         val bindRole: Boolean = false,
+        val followWallpaper: Boolean = false,
+        val exportJson: Boolean = false,
+        val importJson: Boolean = false,
         val preset: String? = null,
         val random: Boolean = false,
         val reset: Boolean = false,
@@ -92,8 +95,10 @@ object VoiceCommandParser {
      *   - 重置：恢复默认气泡 / 重置气泡样式
      */
     private fun parseBubbleStyle(text: String): VoiceCommand.BubbleStyle? {
-        // 必须提到「气泡」，避免误捕普通聊天
-        if (!text.contains("气泡") && !text.contains("泡泡")) return null
+        // 必须提到「气泡/泡泡」，或命中壁纸取色口令（跟随壁纸等不含「气泡」二字）
+        val bubbleWord = text.contains("气泡") || text.contains("泡泡")
+        val wallpaperWord = hit(text, "跟随壁纸", "壁纸取色", "跟壁纸颜色", "配壁纸", "和壁纸搭", "按壁纸配")
+        if (!bubbleWord && !wallpaperWord) return null
         // 别把「气泡」相关的普通闲聊（问句）当命令
         if (hit(text, "气泡是什么", "什么是气泡")) return null
 
@@ -115,17 +120,25 @@ object VoiceCommandParser {
         }
 
         // 收藏夹：收藏 / 套用 / 删除 / 列表
-        if (hit(text, "收藏了哪些气泡", "气泡收藏列表", "我收藏的气泡", "有哪些气泡样式")) {
+        if (hit(text, "收藏了哪些气泡", "气泡收藏列表", "我收藏的气泡", "有哪些气泡样式",
+                "气泡收藏有哪些", "收藏的气泡有哪些")) {
             return VoiceCommand.BubbleStyle(listFavorites = true)
         }
-        BubbleStyleStore.deleteNameFromText(text)?.let { name ->
-            if (hit(text, "删除", "删掉", "去掉")) return VoiceCommand.BubbleStyle(deleteName = name)
+        // 删除收藏：优先判断，避免「删除XX」被误判成收藏
+        if (hit(text, "删除", "删掉", "去掉", "移除")) {
+            BubbleStyleStore.deleteNameFromText(text)?.let { name ->
+                return VoiceCommand.BubbleStyle(deleteName = name)
+            }
         }
-        BubbleStyleStore.favoriteNameFromText(text)?.let { name ->
-            if (hit(text, "收藏")) return VoiceCommand.BubbleStyle(favoriteName = name)
+        if (hit(text, "收藏")) {
+            BubbleStyleStore.favoriteNameFromText(text)?.let { name ->
+                return VoiceCommand.BubbleStyle(favoriteName = name)
+            }
         }
-        BubbleStyleStore.applyNameFromText(text)?.let { name ->
-            if (hit(text, "套用", "用回", "切换", "用到")) return VoiceCommand.BubbleStyle(applyName = name)
+        if (hit(text, "套用", "用回", "切换", "用到")) {
+            BubbleStyleStore.applyNameFromText(text)?.let { name ->
+                return VoiceCommand.BubbleStyle(applyName = name)
+            }
         }
 
         // 按角色绑定：给这个角色单独设样式 / 恢复跟随全局
@@ -134,6 +147,19 @@ object VoiceCommandParser {
         }
         if (hit(text, "给这个角色", "这个角色单独", "角色专属气泡", "绑定到角色")) {
             return VoiceCommand.BubbleStyle(bindRole = true)
+        }
+
+        // 跟随壁纸取色
+        if (hit(text, "跟随壁纸", "壁纸取色", "跟壁纸颜色", "配壁纸", "和壁纸搭", "按壁纸配")) {
+            return VoiceCommand.BubbleStyle(followWallpaper = true)
+        }
+
+        // 导入导出
+        if (hit(text, "导出气泡", "气泡导出", "备份气泡样式")) {
+            return VoiceCommand.BubbleStyle(exportJson = true)
+        }
+        if (hit(text, "导入气泡", "气泡导入", "恢复气泡样式文件")) {
+            return VoiceCommand.BubbleStyle(importJson = true)
         }
 
         // 预设主题（优先级高：命中就整包套用，不再逐项解析）

@@ -219,6 +219,17 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
     fun removeAt(position: Int) {
         if (position !in items.indices) return
         items.removeAt(position)
+        // 同步收缩 animOnce 里的索引：删除位置之后的整体前移一位，并移除被删位置
+        val shifted = mutableSetOf<Int>()
+        for (p in animOnce) {
+            when {
+                p == position -> { /* 被删条目，直接丢弃 */ }
+                p > position -> shifted.add(p - 1)
+                else -> shifted.add(p)
+            }
+        }
+        animOnce.clear()
+        animOnce.addAll(shifted)
         notifyItemRemoved(position)
         notifyItemRangeChanged(position, items.size - position)
     }

@@ -89,6 +89,25 @@ class MainActivity : AppCompatActivity() {
         if (uri == null) return@registerForActivityResult
         askAboutImage(uri)
     }
+    private val pickBubbleStyleJson = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri == null) return@registerForActivityResult
+        val json = runCatching {
+            contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+        }.getOrNull()
+        if (json.isNullOrBlank()) {
+            Toast.makeText(this, R.string.toast_bubble_import_fail, Toast.LENGTH_LONG).show()
+            return@registerForActivityResult
+        }
+        val n = BubbleStyleStore.importJson(this, json)
+        if (n > 0) {
+            adapter.useCustomBubbleStyle = true
+            adapter.notifyDataSetChanged()
+            settingsBinder?.refreshBubblePreview()
+            Toast.makeText(this, getString(R.string.toast_bubble_imported, n), Toast.LENGTH_LONG).show()
+        } else {
+            Toast.makeText(this, R.string.toast_bubble_import_fail, Toast.LENGTH_LONG).show()
+        }
+    }
     private val takeVisionPhoto = registerForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
         val uri = pendingCameraUri
         pendingCameraUri = null
@@ -398,6 +417,40 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, R.string.toast_bubble_role_bound, Toast.LENGTH_SHORT).show()
     }
 
+    /** 导出气泡样式 JSON 到缓存目录并提供分享。 */
+    private fun exportBubbleStyle() {
+        try {
+            val dir = java.io.File(cacheDir, "bubble_export").apply { mkdirs() }
+            val name = "xiaomo-bubble-" +
+                java.text.SimpleDateFormat("MMdd-HHmm", java.util.Locale.CHINA).format(java.util.Date()) + ".json"
+            val file = java.io.File(dir, name)
+            file.writeText(BubbleStyleStore.exportJson(this))
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                this, packageName + ".fileprovider", file
+            )
+            startActivity(
+                Intent.createChooser(
+                    Intent(Intent.ACTION_SEND).apply {
+                        type = "application/json"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    },
+                    getString(R.string.toast_bubble_export_ok)
+                )
+            )
+        } catch (e: Exception) {
+            Toast.makeText(this, getString(R.string.toast_bubble_export_fail, e.message.orEmpty()), Toast.LENGTH_LONG).show()
+        }
+    }
+
+    /** 选一个气泡样式 JSON 文件导入。 */
+    private fun pickBubbleStyleFile() {
+        runCatching { pickBubbleStyleJson.launch("application/json") }
+            .onFailure {
+                runCatching { pickBubbleStyleJson.launch("*/*") }
+            }
+    }
+
     // ---------------- 语音唤醒 ----------------
     private fun toggleWake(enable: Boolean) {
         if (enable) {
@@ -563,6 +616,8 @@ class MainActivity : AppCompatActivity() {
                     closeSettingsDrawer()
                 }
             )
+            settingsBinder?.onBubbleExport = { exportBubbleStyle() }
+            settingsBinder?.onBubbleImport = { pickBubbleStyleFile() }
             settingsBinder?.bind()
         } catch (t: Throwable) {
             Toast.makeText(this, "设置栏初始化失败：" + t.message, Toast.LENGTH_LONG).show()
@@ -1202,13 +1257,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        super.onDestroy()
         listeningEnabled = false
-        ListenKeepAliveService.stop(this)
+        runCatching { ListenKeepAliveService.stop(this) }
         tts.onSpeakDone = null
-        recognizer?.destroy()
-        wakeHelper?.stop()
-        tts.shutdown()
+        runCatching { recognizer?.destroy() }
+        recognizer = null
+        runCatching { wakeHelper?.stop() }
+        runCatching { tts.shutdown() }
+        super.onDestroy()
     }
 
     private fun persistHistory() {
@@ -1384,8 +1440,11 @@ class MainActivity : AppCompatActivity() {
         }
         if (command.applyName != null) {
             val ok = BubbleStyleStore.applyFavorite(this, command.applyName)
-            adapter.useCustomBubbleStyle = true
-            adapter.notifyDataSetChanged()
+            if (ok) {
+                adapter.useCustomBubbleStyle = true
+                adapter.notifyDataSetChanged()
+                settingsBinder?.refreshBubblePreview()
+            }
             replyLocal(
                 userText,
                 if (ok) getString(R.string.toast_bubble_fav_applied, command.applyName, BubbleStyleStore.describe(BubbleStyleStore.load(this)))
@@ -1411,6 +1470,29 @@ class MainActivity : AppCompatActivity() {
                 BubbleStyleStore.bindRole(this, cid)
                 replyLocal(userText, getString(R.string.toast_bubble_role_bound))
             }
+            return
+        }
+        // 跟随壁纸取色
+        if (command.followWallpaper) {
+            val s = BubbleStyleStore.applyFromWallpaper(this)
+            if (s == null) {
+                replyLocal(userText, getString(R.string.toast_bubble_no_wallpaper))
+            } else {
+                adapter.useCustomBubbleStyle = true
+                adapter.notifyDataSetChanged()
+                replyLocal(userText, getString(R.string.toast_bubble_wallpaper, BubbleStyleStore.describe(s)))
+            }
+            return
+        }
+        // 导入导出
+        if (command.exportJson) {
+            exportBubbleStyle()
+            replyLocal(userText, getString(R.string.toast_bubble_export_ok))
+            return
+        }
+        if (command.importJson) {
+            pickBubbleStyleFile()
+            replyLocal(userText, getString(R.string.toast_bubble_import_pick))
             return
         }
         // 查询当前样式

@@ -438,7 +438,34 @@ class SettingsBinder(
             BubbleStyleStore.save(activity, now.copy(trimQuotes = checked))
             refreshBubblePreview()
         }
+
+        // 跟随壁纸取色
+        activity.findViewById<Button>(R.id.btnBubbleWallpaper).setOnClickListener {
+            val s = BubbleStyleStore.applyFromWallpaper(activity)
+            if (s == null) {
+                Toast.makeText(activity, R.string.toast_bubble_no_wallpaper, Toast.LENGTH_LONG).show()
+            } else {
+                refreshBubblePreview()
+                Toast.makeText(
+                    activity,
+                    activity.getString(R.string.toast_bubble_wallpaper, BubbleStyleStore.describe(s)),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+        // 导出 / 导入
+        activity.findViewById<Button>(R.id.btnBubbleExport).setOnClickListener {
+            onBubbleExport?.invoke()
+        }
+        activity.findViewById<Button>(R.id.btnBubbleImport).setOnClickListener {
+            onBubbleImport?.invoke()
+        }
     }
+
+    /** 气泡导出回调（由 Activity 负责写文件与分享）。 */
+    var onBubbleExport: (() -> Unit)? = null
+    /** 气泡导入回调（由 Activity 负责选文件与读取）。 */
+    var onBubbleImport: (() -> Unit)? = null
 
     /** 刷新设置页里的气泡预览（两个假气泡按当前样式现画）。 */
     fun refreshBubblePreview() {

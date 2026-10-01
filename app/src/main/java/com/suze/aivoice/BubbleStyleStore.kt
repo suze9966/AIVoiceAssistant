@@ -390,19 +390,19 @@ object BubbleStyleStore {
 
     /** 从「收藏成XX样式」口令里取名字。 */
     fun favoriteNameFromText(text: String): String? {
-        val m = Regex("收藏(?:成|为|叫)?[「\\\"']?([^「\\\"'，,。\\s]{1,12})[」\\\"']?").find(text)
+        val m = Regex("收藏(?:成|为|叫)?[「\"']?([^「\"'，,。\\s|]{1,12})[」\"']?").find(text)
         return m?.groupValues?.getOrNull(1)
     }
 
     /** 从「套用XX样式」口令里取名字。 */
     fun applyNameFromText(text: String): String? {
-        val m = Regex("(?:套用|用回|切换?到|换成)[「\\\"']?([^「\\\"'，,。\\s]{1,12})(?:样式|气泡)").find(text)
+        val m = Regex("(?:套用|用回|切换?到|换成)[「\"']?([^「\"'，,。\\s|]{1,12})(?:样式|气泡)?").find(text)
         return m?.groupValues?.getOrNull(1)
     }
 
-    /** 从「删除XX样式」口令里取名字。 */
+    /** 从「删除XX样式」口令里取名字（允许省略「样式/气泡」后缀）。 */
     fun deleteNameFromText(text: String): String? {
-        val m = Regex("(?:删除|去掉|删掉)[「\\\"']?([^「\\\"'，,。\\s]{1,12})(?:样式|气泡)").find(text)
+        val m = Regex("(?:删除|去掉|删掉|移除)[「\"']?([^「\"'，,。\\s|]{1,12})(?:样式|气泡)?").find(text)
         return m?.groupValues?.getOrNull(1)
     }
 
@@ -452,6 +452,151 @@ object BubbleStyleStore {
     fun unbindRole(context: Context, characterId: String) {
         if (characterId.isBlank()) return
         sp(context).edit().remove(KEY_ROLE_PREFIX + characterId).apply()
+    }
+
+    // ---- 跟随壁纸取色 ----
+
+    /**
+     * 从聊天壁纸里取一组主题色（主色 + 辅色），生成一套气泡样式并落库。
+     * 不引入任何依赖：直接用 ChatStyleStore 的背景 Bitmap 采样。
+     */
+    fun applyFromWallpaper(context: Context): Style? {
+        val bmp = ChatStyleStore.loadBackgroundBitmap(context) ?: return null
+        val (primary, secondary) = extractThemeColors(bmp)
+        val textDark = (0.299 * Color.red(primary) + 0.587 * Color.green(primary) + 0.114 * Color.blue(primary)) / 255.0 > 0.6
+        val ai = if (textDark) mix(primary, Color.WHITE, 0.72f) else mix(primary, Color.BLACK, 0.55f)
+        val me = primary
+        val ai2 = mix(ai, secondary, 0.35f)
+        val me2 = mix(me, secondary, 0.35f)
+        val style = Style(
+            shape = SHAPE_ROUND,
+            aiColor = hexOf(ai),
+            meColor = hexOf(me),
+            aiColor2 = hexOf(ai2),
+            meColor2 = hexOf(me2),
+            borderDp = 1,
+            cornerDp = CORNER_PRESET_NORMAL
+        )
+        save(context, style)
+        return style
+    }
+
+    /** 壁纸是否可用（有背景图才能取色）。 */
+    fun hasWallpaper(context: Context): Boolean = ChatStyleStore.hasBackground(context)
+
+    /** 从 Bitmap 抽两个代表色：整体均色 + 最饱和区域色。 */
+    private fun extractThemeColors(bmp: android.graphics.Bitmap): Pair<Int, Int> {
+        val step = (minOf(bmp.width, bmp.height) / 32).coerceAtLeast(1)
+        var rSum = 0L; var gSum = 0L; var bSum = 0L; var n = 0
+        var bestSat = -1f; var bestColor = 0
+        var x = 0
+        while (x < bmp.width) {
+            var y = 0
+            while (y < bmp.height) {
+                val c = bmp.getPixel(x, y)
+                val r = Color.red(c); val g = Color.green(c); val b = Color.blue(c)
+                rSum += r; gSum += g; bSum += b; n++
+                val maxC = maxOf(r, g, b); val minC = minOf(r, g, b)
+                val sat = if (maxC == 0) 0f else (maxC - minC).toFloat() / maxC
+                // 避开过亮过暗的像素，挑饱和且亮度适中的
+                val lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0
+                if (sat > bestSat && lum in 0.2..0.85) { bestSat = sat; bestColor = c }
+                y += step
+            }
+            x += step
+        }
+        val avg = if (n == 0) Color.GRAY else Color.rgb(
+            (rSum / n).toInt().coerceIn(0, 255),
+            (gSum / n).toInt().coerceIn(0, 255),
+            (bSum / n).toInt().coerceIn(0, 255)
+        )
+        val accent = if (bestSat > 0.15f) bestColor else avg
+        // 让主色更适合当气泡底：稍微提亮
+        return mix(avg, accent, 0.5f) to accent
+    }
+
+    private fun mix(a: Int, b: Int, ratio: Float): Int {
+        val r = ratio.coerceIn(0f, 1f)
+        return Color.rgb(
+            (Color.red(a) * (1 - r) + Color.red(b) * r).toInt().coerceIn(0, 255),
+            (Color.green(a) * (1 - r) + Color.green(b) * r).toInt().coerceIn(0, 255),
+            (Color.blue(a) * (1 - r) + Color.blue(b) * r).toInt().coerceIn(0, 255)
+        )
+    }
+
+    private fun hexOf(color: Int): String =
+        String.format("#%06X", 0xFFFFFF and color)
+
+    // ---- JSON 导入导出 ----
+
+    /** 导出全部气泡相关设置（全局样式 + 收藏夹 + 按角色样式）为 JSON 字符串。 */
+    fun exportJson(context: Context): String {
+        val root = org.json.JSONObject()
+        root.put("version", 1)
+        root.put("style", encodeStyle(load(context)))
+        val favArr = org.json.JSONArray()
+        favorites(context).forEach { f ->
+            favArr.put(org.json.JSONObject().put("name", f.name).put("style", encodeStyle(f.style)))
+        }
+        root.put("favorites", favArr)
+        val roleArr = org.json.JSONArray()
+        sp(context).all.forEach { (k, v) ->
+            if (k.startsWith(KEY_ROLE_PREFIX) && v is String) {
+                roleArr.put(org.json.JSONObject().put("characterId", k.removePrefix(KEY_ROLE_PREFIX)).put("style", v))
+            }
+        }
+        root.put("roles", roleArr)
+        return root.toString(2)
+    }
+
+    /** 从 JSON 导入（merge=true 时只补不覆盖全局样式）。 */
+    fun importJson(context: Context, json: String, applyGlobal: Boolean = true): Int {
+        return try {
+            val root = org.json.JSONObject(json)
+            var count = 0
+            if (applyGlobal) {
+                (root.optString("style").takeIf { it.isNotBlank() })?.let { raw ->
+                    parseStyle(raw)?.let { save(context, it); count++ }
+                }
+            }
+            val favArr = root.optJSONArray("favorites")
+            if (favArr != null) {
+                for (i in 0 until favArr.length()) {
+                    val o = favArr.optJSONObject(i) ?: continue
+                    val name = o.optString("name").take(12)
+                    val raw = o.optString("style")
+                    if (name.isNotBlank() && raw.isNotBlank()) {
+                        runCatching {
+                            sp(context).edit().putString(KEY_FAV_PREFIX + name, raw).apply()
+                        }
+                        count++
+                    }
+                }
+                // 重建收藏名索引
+                val names = mutableListOf<String>()
+                for (i in 0 until favArr.length()) {
+                    favArr.optJSONObject(i)?.optString("name")?.take(12)?.takeIf { it.isNotBlank() }?.let { names.add(it) }
+                }
+                if (names.isNotEmpty()) {
+                    val old = sp(context).getString(KEY_FAVORITES, "")?.split("|")?.filter { it.isNotBlank() } ?: emptyList()
+                    val merged = (old + names).distinct()
+                    sp(context).edit().putString(KEY_FAVORITES, merged.joinToString("|")).apply()
+                }
+            }
+            val roleArr = root.optJSONArray("roles")
+            if (roleArr != null) {
+                for (i in 0 until roleArr.length()) {
+                    val o = roleArr.optJSONObject(i) ?: continue
+                    val cid = o.optString("characterId")
+                    val raw = o.optString("style")
+                    if (cid.isNotBlank() && raw.isNotBlank()) {
+                        sp(context).edit().putString(KEY_ROLE_PREFIX + cid, raw).apply()
+                        count++
+                    }
+                }
+            }
+            count
+        } catch (_: Exception) { 0 }
     }
 
     /** 只算出预设对应的 Style，不落库（供比对用）。 */

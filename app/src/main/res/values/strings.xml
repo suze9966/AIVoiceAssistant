@@ -431,6 +431,16 @@
     <string name="menu_bubble_role">给这个角色单独用</string>
     <string name="hint_bubble_fav_name">给这套样式起个名字</string>
     <string name="btn_bubble_fav_ok">收藏</string>
+    <string name="btn_bubble_wallpaper">跟随壁纸取色</string>
+    <string name="btn_bubble_export">导出样式</string>
+    <string name="btn_bubble_import">导入样式</string>
+    <string name="toast_bubble_wallpaper">已按壁纸配好气泡啦：%1$s</string>
+    <string name="toast_bubble_no_wallpaper">还没设聊天背景呢，先在下面换一张图再让沫沫取色～</string>
+    <string name="toast_bubble_export_ok">气泡样式已导出</string>
+    <string name="toast_bubble_export_fail">导出失败：%1$s</string>
+    <string name="toast_bubble_import_pick">选一个气泡样式 JSON 文件吧～</string>
+    <string name="toast_bubble_imported">已导入 %1$d 项气泡设置</string>
+    <string name="toast_bubble_import_fail">这不是能识别的小沫气泡样式文件</string>
     <string name="toast_todo_done">已勾掉：%1$s</string>
     <string name="toast_todo_missing">没有找到这条待办</string>
     <string name="toast_todo_cleared">待办清空啦</string>
