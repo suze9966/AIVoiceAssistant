@@ -17,7 +17,6 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission android:name="android.permission.SET_WALLPAPER" />
     <!-- Android 11+ 包可见性：声明后才能探测到系统语音识别服务，否则
          SpeechRecognizer.isRecognitionAvailable() 会返回 false（报“设备不支持语音唤醒”） -->
     <queries>
@@ -101,18 +100,6 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/xiaomo_widget_info" />
         </receiver>
-        <service
-            android:name=".XiaomoWallpaperService"
-            android:exported="true"
-            android:label="@string/wallpaper_title"
-            android:permission="android.permission.BIND_WALLPAPER">
-            <intent-filter>
-                <action android:name="android.service.wallpaper.WallpaperService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.service.wallpaper"
-                android:resource="@xml/xiaomo_wallpaper" />
-        </service>
         <receiver
             android:name=".HeadsetWakeReceiver"
             android:exported="true">
@@ -242,11 +229,6 @@
             android:name=".SettingsActivity"
             android:exported="false"
             android:label="设置"
-            android:windowSoftInputMode="adjustResize" />
-        <activity
-            android:name=".WallpaperPreviewActivity"
-            android:exported="true"
-            android:label="@string/wallpaper_title"
             android:windowSoftInputMode="adjustResize" />
     </application>
 </manifest>

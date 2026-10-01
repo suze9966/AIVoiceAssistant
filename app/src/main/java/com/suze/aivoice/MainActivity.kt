@@ -407,7 +407,7 @@ class MainActivity : AppCompatActivity() {
 
     /** 应用可更换的小沫头像和聊天背景 */
 
-    /** 从设置页回来时重载 Edge 音色/语速/音调；CosyVoice 读 Prefs，不走这里。 */
+    /** 从设置页回来时重载豆包音色/语速/音调。 */
     private fun applySavedVoice() {
         if (!::tts.isInitialized || !::prefs.isInitialized) return
         if (prefs.taiwanVoice) {
@@ -923,7 +923,6 @@ class MainActivity : AppCompatActivity() {
             }
             val text = info.toSpeakText()
             prefs.lastWeatherBrief = text.take(48)
-            prefs.lastWeatherSkycon = info.skycon
             XiaomoWidgetProvider.refresh(this@MainActivity)
             WeatherActivity.pendingInfo = info
             startActivity(Intent(this@MainActivity, WeatherActivity::class.java).putExtra(WeatherActivity.EXTRA_CITY, c))
@@ -1551,11 +1550,9 @@ class MainActivity : AppCompatActivity() {
             try {
                 val city = locationCity() ?: prefs.lastCity
                 if (city.isNotBlank()) prefs.lastCity = city
-                val info = runCatching { weather.query(city) }.getOrNull()
-                val weatherText = info?.toSpeakText().orEmpty()
-                if (info != null) {
+                val weatherText = runCatching { weather.query(city)?.toSpeakText().orEmpty() }.getOrDefault("")
+                if (weatherText.isNotBlank()) {
                     prefs.lastWeatherBrief = weatherText.take(48)
-                    prefs.lastWeatherSkycon = info.skycon
                     XiaomoWidgetProvider.refresh(this@MainActivity)
                 }
                 val next = reminders.upcoming().firstOrNull()?.let { reminders.formatItem(it) } ?: "暂无提醒"

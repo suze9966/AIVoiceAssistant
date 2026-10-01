@@ -29,7 +29,7 @@ import java.io.RandomAccessFile
 
 /**
  * 声音克隆：录一段 8~10 秒参考音频，或从相册/文件选 mp3/wav，
- * 上传到硅基流动 CosyVoice，拿到 speech: URI 后给小沫说话。
+ * 上传到硅基流动克隆接口，拿到 speech: URI 后给小沫说话。
  */
 class VoiceCloneActivity : AppCompatActivity() {
     private lateinit var prefs: Prefs

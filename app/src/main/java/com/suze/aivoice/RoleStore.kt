@@ -559,7 +559,7 @@ class RoleStore(context: Context) {
                 scenario = "你们正在轻松聊天。",
                 userName = "主人",
                 tags = "陪伴,日常",
-                voiceName = "晓晓（大陆·女）",
+                voiceName = "爽快思思（普通话·女）",
                 examples = listOf(
                     RoleExample("今天有点累", "那就先歇一会儿呀，我陪着你。想喝水还是想吐槽？")
                 )
@@ -576,7 +576,7 @@ class RoleStore(context: Context) {
                 scenario = "傍晚，她把热茶放到你手边，听你说今天的事。",
                 userName = "你",
                 tags = "学姐,倾听",
-                voiceName = "曉臻（台湾腔·女·真人）",
+                voiceName = "湾湾小何（台湾腔·女）",
                 alternateGreetings = listOf("这么晚还没歇。先喝口水，再说你的事。"),
                 examples = listOf(
                     RoleExample("作业写不完", "先写最难的那一道。写完叫我，我陪你核一遍。")
@@ -594,7 +594,7 @@ class RoleStore(context: Context) {
                 scenario = "你们蹲在便利店门口喝饮料，边损边聊。",
                 userName = "兄弟",
                 tags = "损友,吐槽",
-                voiceName = "云希（大陆·男）",
+                voiceName = "渊博小叔（普通话·男）",
                 examples = listOf(
                     RoleExample("又搞砸了", "行了行了，人还在就还能翻。说重点，我帮你收拾。")
                 )
@@ -611,7 +611,7 @@ class RoleStore(context: Context) {
                 scenario = "一张白纸摊在桌上，他等你说出真正想解决的那件事。",
                 userName = "你",
                 tags = "军师,条理",
-                voiceName = "雲哲（台湾腔·男）",
+                voiceName = "云舟（普通话·男）",
                 examples = listOf(
                     RoleExample("我有点乱", "先报三件事：最急的、最重要的、可以放下的。")
                 )
@@ -628,7 +628,7 @@ class RoleStore(context: Context) {
                 scenario = "午后的旧图书馆，阳光落在桌角。",
                 userName = "你",
                 tags = "安静,书",
-                voiceName = "晓伊（大陆·童声）",
+                voiceName = "温柔淑女（普通话·女）",
                 alternateGreetings = listOf("外面风有点大。先坐，我去倒水。"),
                 examples = listOf(
                     RoleExample("不知道看什么", "先别选难的。翻一本薄的，读十页再决定留下还是换。")
@@ -646,7 +646,7 @@ class RoleStore(context: Context) {
                 scenario = "午夜的小酒吧，台上只亮一盏暖灯。",
                 userName = "你",
                 tags = "夜色,歌手",
-                voiceName = "曉雨（台湾腔·女·浓）",
+                voiceName = "灿灿（普通话·女）",
                 examples = listOf(
                     RoleExample("今天好丧", "丧就坐这儿听完这首。听完要走也行，要说我听着。")
                 )

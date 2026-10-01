@@ -14,8 +14,8 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 
 /**
- * 硅基流动声音复刻：上传参考音频拿到 speech: URI，再交给 CosyVoice 合成。
- * 比小智只选预设音色更进一步，小沫可以变成主人指定的声音。
+ * 硅基流动声音复刻：上传参考音频拿到 speech: URI，再交给克隆引擎合成。
+ * 小沫可以变成主人指定的声音。
  */
 class VoiceCloneClient(private val prefs: Prefs) {
     private val client = OkHttpClient.Builder()

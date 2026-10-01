@@ -87,21 +87,34 @@ class Prefs(context: Context) {
             "不要刻意解释自己在说台湾腔。禁止恶意侮辱、歧视、霸凌或攻击主人；" +
             "主人认真求助或难过时立刻停止吐槽，改为温柔可靠。尽量使用繁体口语常见措辞，" +
             "例如软体、网路、影片、资讯、品质，但不要为了转换而影响信息准确性。"
+        const val DEFAULT_VOLC_SPEAKER = "zh_female_shuangkuaisisi_moon_bigtts"
+        const val DEFAULT_VOLC_RESOURCE = "seed-tts-2.0"
         val TTS_ENGINE_OPTIONS = listOf(
-            "auto" to "自动（有 CosyVoice Key 用小智同款，否则 Edge）",
-            "cosyvoice" to "小智 CosyVoice（更真人，需硅基流动 Key）",
-            "edge" to "EdgeTTS（小智默认免费方案）",
+            "auto" to "自动（有克隆用克隆，否则火山引擎，再否则系统）",
+            "volcano" to "火山引擎豆包 TTS（需填写凭证）",
+            "clone" to "硅基流动克隆音色（需 Key 和已上传音色）",
             "system" to "系统 TTS（离线兜底，不走网络）"
         )
-        val COSY_VOICE_OPTIONS = listOf(
-            "FunAudioLLM/CosyVoice2-0.5B:claire" to "Claire（温柔女声·台湾腔推荐）",
-            "FunAudioLLM/CosyVoice2-0.5B:diana" to "Diana（欢快女声）",
-            "FunAudioLLM/CosyVoice2-0.5B:bella" to "Bella（激情女声）",
-            "FunAudioLLM/CosyVoice2-0.5B:anna" to "Anna（沉稳女声）",
-            "FunAudioLLM/CosyVoice2-0.5B:alex" to "Alex（沉稳男声）",
-            "FunAudioLLM/CosyVoice2-0.5B:benjamin" to "Benjamin（低沉男声）",
-            "FunAudioLLM/CosyVoice2-0.5B:charles" to "Charles（磁性男声）",
-            "FunAudioLLM/CosyVoice2-0.5B:david" to "David（欢快男声）"
+        val VOLC_RESOURCE_OPTIONS = listOf(
+            "seed-tts-2.0" to "豆包语音 2.0",
+            "seed-tts-1.0" to "豆包语音 1.0",
+            "seed-tts-1.0-concurr" to "豆包语音 1.0 并发"
+        )
+        val VOLC_VOICE_OPTIONS = listOf(
+            "zh_female_shuangkuaisisi_moon_bigtts" to "爽快思思（普通话·女）",
+            "zh_female_tianmeixiaoyuan_moon_bigtts" to "甜美小源（普通话·女）",
+            "zh_female_wanwanxiaohe_moon_bigtts" to "湾湾小何（台湾腔·女）",
+            "zh_female_qingxinnvsheng_moon_bigtts" to "清新女声（普通话·女）",
+            "zh_female_wenroushunv_moon_bigtts" to "温柔淑女（普通话·女）",
+            "zh_female_sajiaonvyou_moon_bigtts" to "撒娇女友（普通话·女）",
+            "zh_female_daimengchuanmei_moon_bigtts" to "呆萌川妹（普通话·女）",
+            "zh_female_kailingvivi_moon_bigtts" to "开朗 Vivi（普通话·女）",
+            "zh_female_cancan_mars_bigtts" to "灿灿（普通话·女）",
+            "zh_male_yuanboxiaoshu_moon_bigtts" to "渊博小叔（普通话·男）",
+            "zh_male_yunzhou_moon_bigtts" to "云舟（普通话·男）",
+            "zh_male_chunhou_moon_bigtts" to "淳厚男声（普通话·男）",
+            "zh_male_shaonianzixin_moon_bigtts" to "少年自信（普通话·男）",
+            "zh_male_jingqiangkanye_moon_bigtts" to "精英侃爷（普通话·男）"
         )
         val WEATHER_SOURCE_OPTIONS = listOf(
             "auto" to "自动（免费优先）",
@@ -184,27 +197,52 @@ class Prefs(context: Context) {
         }
         set(v) = sp.edit().putString("weatherSource", v).apply()
 
-    /** TTS 引擎：auto / cosyvoice / edge / system。auto 时有硅基流动 Key 就走小智 CosyVoice。 */
+    /** TTS 引擎：auto / volcano / clone / system。旧的 cosyvoice/edge 会迁到 auto。 */
     var ttsEngine: String
         get() {
             val saved = sp.getString("ttsEngine", "auto") ?: "auto"
-            return if (saved in setOf("auto", "cosyvoice", "edge", "system")) saved else "auto"
+            return when (saved) {
+                "volcano", "clone", "system", "auto" -> saved
+                "cosyvoice", "edge" -> "auto"
+                else -> "auto"
+            }
         }
         set(v) = sp.edit().putString("ttsEngine", v).apply()
 
-    /** 硅基流动 CosyVoice Key，走 KeyVault 加密。 */
+    /** 硅基流动 Key，只给克隆音色用，走 KeyVault 加密。 */
     var siliconflowKey: String
         get() = KeyVault.readNamed(sp, "siliconflowKeyEnc")
         set(v) = KeyVault.writeNamed(sp, "siliconflowKeyEnc", v)
 
-    var cosyVoice: String
+    /** 火山引擎新控制台 API Key。槽名不复用 siliconflowKeyEnc。 */
+    var volcApiKey: String
+        get() = KeyVault.readNamed(sp, "volcApiKeyEnc")
+        set(v) = KeyVault.writeNamed(sp, "volcApiKeyEnc", v)
+
+    var volcAppId: String
+        get() = KeyVault.readNamed(sp, "volcAppIdEnc")
+        set(v) = KeyVault.writeNamed(sp, "volcAppIdEnc", v)
+
+    var volcAccessKey: String
+        get() = KeyVault.readNamed(sp, "volcAccessKeyEnc")
+        set(v) = KeyVault.writeNamed(sp, "volcAccessKeyEnc", v)
+
+    var volcResourceId: String
         get() {
-            val saved = sp.getString("cosyVoice", "FunAudioLLM/CosyVoice2-0.5B:claire")
-                ?: "FunAudioLLM/CosyVoice2-0.5B:claire"
-            return if (COSY_VOICE_OPTIONS.any { it.first == saved }) saved
-            else "FunAudioLLM/CosyVoice2-0.5B:claire"
+            val saved = sp.getString("volcResourceId", DEFAULT_VOLC_RESOURCE) ?: DEFAULT_VOLC_RESOURCE
+            return saved.ifBlank { DEFAULT_VOLC_RESOURCE }
         }
-        set(v) = sp.edit().putString("cosyVoice", v).apply()
+        set(v) = sp.edit().putString("volcResourceId", v.ifBlank { DEFAULT_VOLC_RESOURCE }).apply()
+
+    var volcSpeaker: String
+        get() {
+            val saved = sp.getString("volcSpeaker", DEFAULT_VOLC_SPEAKER) ?: DEFAULT_VOLC_SPEAKER
+            return if (VOLC_VOICE_OPTIONS.any { it.first == saved }) saved else DEFAULT_VOLC_SPEAKER
+        }
+        set(v) = sp.edit().putString("volcSpeaker", v).apply()
+
+    fun hasVolcanoCredential(): Boolean =
+        volcApiKey.isNotBlank() || (volcAppId.isNotBlank() && volcAccessKey.isNotBlank())
 
     /** 已上传到硅基流动的克隆音色 URI（speech:...）。 */
     var cloneVoiceUri: String
@@ -218,9 +256,6 @@ class Prefs(context: Context) {
     var cloneVoiceEnabled: Boolean
         get() = sp.getBoolean("cloneVoiceEnabled", false) && cloneVoiceUri.startsWith("speech:")
         set(v) = sp.edit().putBoolean("cloneVoiceEnabled", v).apply()
-
-    fun effectiveCosyVoice(): String =
-        if (cloneVoiceEnabled) cloneVoiceUri else cosyVoice
 
     fun weatherSourceLabel(): String =
         WEATHER_SOURCE_OPTIONS.firstOrNull { it.first == weatherSource }?.second ?: "自动（免费优先）"
@@ -274,30 +309,5 @@ class Prefs(context: Context) {
             return if (PortraitLibrary.resFor(saved) != null) saved else PortraitLibrary.DEFAULT_ID
         }
         set(v) = sp.edit().putString("portraitId", v).apply()
-
-    /** 动态壁纸用的最近天气码，例如 CLEAR_DAY / RAIN / CLEAR_NIGHT。 */
-    var lastWeatherSkycon: String
-        get() = sp.getString("lastWeatherSkycon", "") ?: ""
-        set(v) = sp.edit().putString("lastWeatherSkycon", v).apply()
-
-    /** 桌面动态壁纸：心情换姿势。默认开。 */
-    var wallpaperMoodEnabled: Boolean
-        get() = sp.getBoolean("wallpaperMoodEnabled", true)
-        set(v) = sp.edit().putBoolean("wallpaperMoodEnabled", v).apply()
-
-    /** 桌面动态壁纸：天气与夜景。默认开。 */
-    var wallpaperWeatherEnabled: Boolean
-        get() = sp.getBoolean("wallpaperWeatherEnabled", true)
-        set(v) = sp.edit().putBoolean("wallpaperWeatherEnabled", v).apply()
-
-    /** 桌面动态壁纸：触摸招手、爱心。默认开。 */
-    var wallpaperTouchEnabled: Boolean
-        get() = sp.getBoolean("wallpaperTouchEnabled", true)
-        set(v) = sp.edit().putBoolean("wallpaperTouchEnabled", v).apply()
-
-    /** 桌面动态壁纸：天气/提醒/心情玻璃卡。默认开。 */
-    var wallpaperCardsEnabled: Boolean
-        get() = sp.getBoolean("wallpaperCardsEnabled", true)
-        set(v) = sp.edit().putBoolean("wallpaperCardsEnabled", v).apply()
 }
 

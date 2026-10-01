@@ -109,16 +109,14 @@ class BackupStore(private val context: Context) {
         val o = JSONObject()
         listOf(
             "baseUrl", "model", "systemPrompt", "wakeWord", "voiceLocaleName",
-            "lastCity", "weatherSource", "ttsEngine", "cosyVoice", "activeChatId", "portraitId",
-            "lastWeatherBrief", "lastWeatherSkycon"
+            "lastCity", "weatherSource", "ttsEngine", "volcSpeaker", "volcResourceId", "activeChatId", "portraitId"
         ).forEach { k ->
             sp.getString(k, null)?.let { o.put(k, it) }
         }
         listOf(
             "streamEnabled", "taiwanVoice", "emotionEnabled", "mindEnabled",
             "growEnabled", "memoryEnabled", "keepListenInBackground", "webSearchEnabled",
-            "welcomeEnabled", "notifySpeakEnabled", "headsetWakeEnabled", "localKwsEnabled",
-            "wallpaperMoodEnabled", "wallpaperWeatherEnabled", "wallpaperTouchEnabled", "wallpaperCardsEnabled"
+            "welcomeEnabled", "notifySpeakEnabled", "headsetWakeEnabled", "localKwsEnabled"
         ).forEach { k ->
             if (sp.contains(k)) o.put(k, sp.getBoolean(k, false))
         }

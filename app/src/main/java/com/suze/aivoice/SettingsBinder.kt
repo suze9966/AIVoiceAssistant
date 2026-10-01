@@ -32,7 +32,10 @@ class SettingsBinder(
         val editTaiwanPrompt = activity.findViewById<EditText>(R.id.editTaiwanPrompt)
         val spinnerVoice = activity.findViewById<Spinner>(R.id.spinnerVoice)
         val spinnerTtsEngine = activity.findViewById<Spinner>(R.id.spinnerTtsEngine)
-        val spinnerCosyVoice = activity.findViewById<Spinner>(R.id.spinnerCosyVoice)
+        val spinnerVolcResource = activity.findViewById<Spinner>(R.id.spinnerVolcResource)
+        val editVolcApiKey = activity.findViewById<EditText>(R.id.editVolcApiKey)
+        val editVolcAppId = activity.findViewById<EditText>(R.id.editVolcAppId)
+        val editVolcAccessKey = activity.findViewById<EditText>(R.id.editVolcAccessKey)
         val editSiliconflowKey = activity.findViewById<EditText>(R.id.editSiliconflowKey)
         val editCaiyunKey = activity.findViewById<EditText>(R.id.editCaiyunKey)
         val editCaiyunSecret = activity.findViewById<EditText>(R.id.editCaiyunSecret)
@@ -70,11 +73,17 @@ class SettingsBinder(
         val hasKey = prefs.apiKey.isNotBlank()
         editApiKey.setText("")
         editApiKey.hint = if (hasKey) "已加密保存（留空则不修改）" else activity.getString(R.string.label_apikey_hint)
-        listOf(editApiKey, editCaiyunKey, editCaiyunSecret, editCaiyunToken, editSiliconflowKey).forEach {
+        listOf(editApiKey, editCaiyunKey, editCaiyunSecret, editCaiyunToken, editSiliconflowKey, editVolcApiKey, editVolcAppId, editVolcAccessKey).forEach {
             it.filterTouchesWhenObscured = true
         }
         editSiliconflowKey.setText("")
         editSiliconflowKey.hint = if (prefs.siliconflowKey.isNotBlank()) "已加密保存 · 留空不修改" else "硅基流动 API Key（cloud.siliconflow.cn）"
+        editVolcApiKey.setText("")
+        editVolcApiKey.hint = if (prefs.volcApiKey.isNotBlank()) "已加密保存 · 留空不修改" else activity.getString(R.string.label_volc_api_key_hint)
+        editVolcAppId.setText("")
+        editVolcAppId.hint = if (prefs.volcAppId.isNotBlank()) "已加密保存 · 留空不修改" else activity.getString(R.string.label_volc_app_id_hint)
+        editVolcAccessKey.setText("")
+        editVolcAccessKey.hint = if (prefs.volcAccessKey.isNotBlank()) "已加密保存 · 留空不修改" else activity.getString(R.string.label_volc_access_key_hint)
         editModel.setText(prefs.model)
         editSystem.setText(prefs.systemPrompt)
         editCaiyunKey.hint = if (prefs.caiyunAppKey.isNotBlank()) "已加密保存 · 留空不修改" else "请输入彩云 App Key"
@@ -134,7 +143,7 @@ class SettingsBinder(
                 val twIdx = localeLabels.indexOfFirst { it.contains("台湾") }
                 if (twIdx >= 0) spinnerLocale.setSelection(twIdx)
                 refreshVoices(spinnerVoice)
-                val strongTwIndex = tts.availableVoices().indexOfFirst { it.contains("台湾腔·女·真人") }
+                val strongTwIndex = tts.availableVoices().indexOfFirst { it.contains("湾湾小何") || it.contains("台湾腔") }
                 if (strongTwIndex >= 0) spinnerVoice.setSelection(strongTwIndex)
                 Toast.makeText(activity, if (name != null) "已切换台湾音色：$name" else "未找到台湾音色，已回退中文音色", Toast.LENGTH_SHORT).show()
             } else {
@@ -146,10 +155,10 @@ class SettingsBinder(
         spinnerTtsEngine.adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item, engineLabels)
         val engineIdx = Prefs.TTS_ENGINE_OPTIONS.indexOfFirst { it.first == prefs.ttsEngine }
         if (engineIdx >= 0) spinnerTtsEngine.setSelection(engineIdx)
-        val cosyLabels = Prefs.COSY_VOICE_OPTIONS.map { it.second }
-        spinnerCosyVoice.adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item, cosyLabels)
-        val cosyIdx = Prefs.COSY_VOICE_OPTIONS.indexOfFirst { it.first == prefs.cosyVoice }
-        if (cosyIdx >= 0) spinnerCosyVoice.setSelection(cosyIdx)
+        val resourceLabels = Prefs.VOLC_RESOURCE_OPTIONS.map { it.second }
+        spinnerVolcResource.adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item, resourceLabels)
+        val resourceIdx = Prefs.VOLC_RESOURCE_OPTIONS.indexOfFirst { it.first == prefs.volcResourceId }
+        if (resourceIdx >= 0) spinnerVolcResource.setSelection(resourceIdx)
         val weatherLabels = Prefs.WEATHER_SOURCE_OPTIONS.map { it.second }
         spinnerWeatherSource.adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item, weatherLabels)
         val weatherIdx = Prefs.WEATHER_SOURCE_OPTIONS.indexOfFirst { it.first == prefs.weatherSource }
@@ -164,7 +173,6 @@ class SettingsBinder(
             previewCurrentVoice(
                 spinnerVoice,
                 spinnerTtsEngine,
-                spinnerCosyVoice,
                 switchTaiwan.isChecked,
                 0.5f + seekRate.progress / 100f,
                 0.5f + seekPitch.progress / 100f,
@@ -246,9 +254,17 @@ class SettingsBinder(
             prefs.voiceIndex = spinnerVoice.selectedItemPosition
             prefs.weatherSource = Prefs.WEATHER_SOURCE_OPTIONS.getOrNull(spinnerWeatherSource.selectedItemPosition)?.first ?: "auto"
             prefs.ttsEngine = Prefs.TTS_ENGINE_OPTIONS.getOrNull(spinnerTtsEngine.selectedItemPosition)?.first ?: "auto"
-            prefs.cosyVoice = Prefs.COSY_VOICE_OPTIONS.getOrNull(spinnerCosyVoice.selectedItemPosition)?.first ?: prefs.cosyVoice
+            prefs.volcResourceId = Prefs.VOLC_RESOURCE_OPTIONS.getOrNull(spinnerVolcResource.selectedItemPosition)?.first ?: prefs.volcResourceId
+            val voiceName = spinnerVoice.selectedItem?.toString()
+            Prefs.VOLC_VOICE_OPTIONS.firstOrNull { it.second == voiceName }?.first?.let { prefs.volcSpeaker = it }
             editSiliconflowKey.text.toString().trim().takeIf { it.isNotEmpty() }?.let { prefs.siliconflowKey = it }
             editSiliconflowKey.setText("")
+            editVolcApiKey.text.toString().trim().takeIf { it.isNotEmpty() }?.let { prefs.volcApiKey = it }
+            editVolcAppId.text.toString().trim().takeIf { it.isNotEmpty() }?.let { prefs.volcAppId = it }
+            editVolcAccessKey.text.toString().trim().takeIf { it.isNotEmpty() }?.let { prefs.volcAccessKey = it }
+            editVolcApiKey.setText("")
+            editVolcAppId.setText("")
+            editVolcAccessKey.setText("")
             prefs.ttsRate = 0.5f + seekRate.progress / 100f
             prefs.ttsPitch = 0.5f + seekPitch.progress / 100f
             val vName = spinnerVoice.selectedItem?.toString()
@@ -267,7 +283,6 @@ class SettingsBinder(
     private fun previewCurrentVoice(
         spinnerVoice: Spinner,
         spinnerTtsEngine: Spinner,
-        spinnerCosyVoice: Spinner,
         taiwan: Boolean,
         rate: Float,
         pitch: Float,
@@ -280,15 +295,15 @@ class SettingsBinder(
             tts.setVoiceByName(vName)
         }
         val prevEngine = prefs.ttsEngine
-        val prevCosy = prefs.cosyVoice
+        val prevSpeaker = prefs.volcSpeaker
         prefs.ttsEngine = Prefs.TTS_ENGINE_OPTIONS.getOrNull(spinnerTtsEngine.selectedItemPosition)?.first ?: prevEngine
-        prefs.cosyVoice = Prefs.COSY_VOICE_OPTIONS.getOrNull(spinnerCosyVoice.selectedItemPosition)?.first ?: prevCosy
+        Prefs.VOLC_VOICE_OPTIONS.firstOrNull { it.second == vName }?.first?.let { prefs.volcSpeaker = it }
         if (prefs.cloneVoiceEnabled) {
             Toast.makeText(activity, activity.getString(R.string.toast_clone_covers_cosy), Toast.LENGTH_LONG).show()
         }
         tts.speak(demo, taiwan)
         prefs.ttsEngine = prevEngine
-        prefs.cosyVoice = prevCosy
+        prefs.volcSpeaker = prevSpeaker
     }
 
     private fun bindAppearance() {
@@ -314,9 +329,6 @@ class SettingsBinder(
             ChatStyleStore.clearBackground(activity)
             refreshAppearancePreview()
             Toast.makeText(activity, R.string.toast_background_reset, Toast.LENGTH_SHORT).show()
-        }
-        activity.findViewById<Button>(R.id.btnDesktopWallpaper).setOnClickListener {
-            activity.startActivity(Intent(activity, WallpaperPreviewActivity::class.java))
         }
         refreshAppearancePreview()
     }
