@@ -671,6 +671,13 @@ class EmotionEngine(context: Context) {
             nodes.clear()
             incoming.forEach { n -> if (n.id.isNotBlank() && n.text.isNotBlank()) nodes.add(n) }
             ensureRoot()
+            // 恢复随包导出的心情/好感/精力（兼容没有这些字段的旧包）
+            runCatching {
+                val o = JSONObject(text.trim())
+                if (o.has("mood")) mood = o.optInt("mood", mood)
+                if (o.has("affinity")) affinity = o.optInt("affinity", affinity)
+                if (o.has("energy")) energy = o.optInt("energy", energy)
+            }
             persist()
             sp.edit().putBoolean("treeMigrated", true).apply()
             return nodes.size

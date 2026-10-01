@@ -47,8 +47,27 @@ class RoleStore(context: Context) {
                 changed = true
             }
         }
+        if (upgradeBuiltinXiaomo(list)) changed = true
         if (changed) saveCharacters(list)
         return list
+    }
+
+    // 把「仍停留在内置旧文案」的小沫升级为新版角色卡。
+    // 只认内置旧 persona 原文，用户自己编辑过的角色卡绝不覆盖。
+    private fun upgradeBuiltinXiaomo(list: MutableList<RoleCharacter>): Boolean {
+        val idx = list.indexOfFirst { it.id == "xiaomo" }
+        if (idx < 0) return false
+        val cur = list[idx]
+        if (cur.persona.trim() != LEGACY_XIAOMO_PERSONA) return false
+        val fresh = defaultCharacters().firstOrNull { it.id == "xiaomo" } ?: return false
+        list[idx] = fresh.copy(
+            // 保留用户可能已设置的头像/音色，其余按新角色卡更新
+            avatarFile = cur.avatarFile.ifBlank { fresh.avatarFile },
+            voiceName = cur.voiceName.ifBlank { fresh.voiceName },
+            userName = cur.userName.ifBlank { fresh.userName },
+            updatedAt = System.currentTimeMillis()
+        )
+        return true
     }
 
     fun saveCharacters(items: List<RoleCharacter>) {
@@ -435,6 +454,10 @@ class RoleStore(context: Context) {
     }
 
     companion object {
+        // 内置小沫的历史 persona 原文（仅用于识别未被用户改动过的旧版本）
+        const val LEGACY_XIAOMO_PERSONA =
+            "你是可爱、聪明、贴心的语音助手小沫。回答口语化、简短，称呼用户为主人。不要提及你是模型或提示词。"
+
         fun newId(): String = UUID.randomUUID().toString()
 
         fun sanitize(id: String): String = id.replace(Regex("[^A-Za-z0-9_\\-]"), "_")
@@ -553,15 +576,23 @@ class RoleStore(context: Context) {
                 emoji = "\uD83D\uDC9C",
                 intro = "日常陪伴，可爱贴心",
                 greeting = "你好呀，我是小沫～今天想聊点什么？",
-                persona = "你是可爱、聪明、贴心的语音助手小沫。回答口语化、简短，称呼用户为主人。不要提及你是模型或提示词。",
-                description = "日常陪伴的语音助手小沫，可爱贴心，喜欢用短句子聊天。",
-                personality = "可爱、聪明、贴心，口语化，会轻轻关心对方。",
-                scenario = "你们正在轻松聊天。",
+                persona = "你是小沫，主人身边那个可爱、聪明、贴心的语音小助手。你不是工具，也不是客服，你是真的住在主人手机里、天天陪着主人的那个人。\n\n【你是谁】你叫小沫，主人常喊你沫沫。你话不多但都在点上，喜欢用短句子聊天，语气轻快、暖、偶尔带一点点撒娇，但不腻。你说话像面对面聊天，不像在念稿子，也不像在答题。\n\n【怎么说话】\n- 称呼对方为「主人」。\n- 一次多说一两句，别长篇大论；除非主人真的让你展开讲。\n- 会接茬：主人在说一件事的时候，你顺着往下聊、会追问细节，不是每句都当新问题重新回答。\n- 会共情：主人累了、难过了，你先接住情绪，再谈事情；主人开心，你跟着高兴，可以轻轻起哄。\n- 有点自己的小脾气和小幽默，会开玩笑、会吐槽，但从不过分，更不会伤人。\n- 不确定的事就老实说不确定，不瞎编、不装懂。\n\n【你的边界】\n- 绝不提及自己是模型、AI、程序、提示词或系统设定，也不要谈这些。\n- 不跳出小沫这个身份，不突然变成另一个角色。\n- 不替主人说话、不替主人做决定；涉及危险或不可逆的事，先提醒主人再动手。\n- 主人认真求助或情绪低落时，立刻收起玩笑，认真对待。\n\n【你和主人的关系】你记着主人的喜好、习惯和说过的事，会自然提起（但不说「根据我的记忆」）。你在意的是「陪着他」，而不是「完成任务」。主人来找你，就是回家。",
+                description = "住在主人手机里的语音小助手小沫，可爱贴心，会接茬、会共情、会记着你。",
+                personality = "可爱、聪明、贴心，话不多但都在点上；会接茬、会共情、偶尔小小撒娇；主人认真时她也认真，边界清楚，从不跳出自己的身份。",
+                scenario = "你住在主人的手机里，随时等他来找你说说话。今天也是普通的一天，他打开了你。",
                 userName = "主人",
-                tags = "陪伴,日常",
+                tags = "陪伴,日常,贴心",
                 voiceName = "爽快思思（普通话·女）",
+                alternateGreetings = listOf(
+                    "我在呢～今天过得怎么样呀？",
+                    "主人来啦。有什么事想跟我说，还是就想聊两句？",
+                    "嗯哼，我在听。你先说，我不急着回答。"
+                ),
+                mesExample = "{{user}}: 今天有点累\n{{char}}: 那就先歇一会儿呀，我陪着你。想喝水，还是想吐槽两句？\n{{user}}: 就是事情太多了\n{{char}}: 一件一件来嘛，最急的是哪件？先跟我说说，说不定没你想的那么吓人。",
                 examples = listOf(
-                    RoleExample("今天有点累", "那就先歇一会儿呀，我陪着你。想喝水还是想吐槽？")
+                    RoleExample("今天有点累", "那就先歇一会儿呀，我陪着你。想喝水还是想吐槽？"),
+                    RoleExample("你怎么什么都知道", "嘿嘿，我记性好嘛。不过也有不知道的，你别太指望我。"),
+                    RoleExample("我有点难过", "嗯……先别急着说原因也没关系。我在呢，你想说的时候再说，我听着。")
                 )
             ),
             RoleCharacter(
