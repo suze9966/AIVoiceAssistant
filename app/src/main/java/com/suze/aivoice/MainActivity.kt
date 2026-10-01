@@ -332,6 +332,8 @@ class MainActivity : AppCompatActivity() {
             popup.menu.add(0, 2, 1, getString(R.string.menu_delete))
             popup.menu.add(0, 3, 2, getString(R.string.menu_respeak))
             if (!adapter.isMeAt(pos)) popup.menu.add(0, 4, 3, getString(R.string.menu_regenerate))
+            popup.menu.add(0, 5, 4, getString(R.string.menu_bubble_save))
+            popup.menu.add(0, 6, 5, getString(R.string.menu_bubble_role))
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     1 -> {
@@ -349,6 +351,8 @@ class MainActivity : AppCompatActivity() {
                         if (text.isNotBlank()) speakLocal(text)
                     }
                     4 -> regenerateLast()
+                    5 -> quickSaveBubbleStyle()
+                    6 -> quickBindRoleStyle()
                 }
                 true
             }
@@ -362,6 +366,38 @@ class MainActivity : AppCompatActivity() {
         val res = if (on) R.drawable.halo_ring_active else R.drawable.halo_ring
         micHalo.setBackgroundResource(res)
     }
+
+    /** 长按菜单：把当前气泡样式收藏成命名样式。 */
+    private fun quickSaveBubbleStyle() {
+        val input = EditText(this)
+        input.hint = getString(R.string.hint_bubble_fav_name)
+        AlertDialog.Builder(this)
+            .setTitle(R.string.menu_bubble_save)
+            .setView(input)
+            .setPositiveButton(R.string.btn_bubble_fav_ok, null) { _, _ ->
+                val name = input.text.toString().trim()
+                if (name.isBlank()) {
+                    Toast.makeText(this, R.string.toast_bubble_fav_fail, Toast.LENGTH_SHORT).show()
+                } else {
+                    BubbleStyleStore.saveFavorite(this, name)
+                    Toast.makeText(this, getString(R.string.toast_bubble_fav_saved, name), Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton(R.string.role_cancel, null)
+            .show()
+    }
+
+    /** 长按菜单：把当前气泡样式单独绑给最近打开的角色。 */
+    private fun quickBindRoleStyle() {
+        val cid = prefs.lastRoleId
+        if (cid.isBlank()) {
+            Toast.makeText(this, R.string.toast_bubble_role_none, Toast.LENGTH_LONG).show()
+            return
+        }
+        BubbleStyleStore.bindRole(this, cid)
+        Toast.makeText(this, R.string.toast_bubble_role_bound, Toast.LENGTH_SHORT).show()
+    }
+
     // ---------------- 语音唤醒 ----------------
     private fun toggleWake(enable: Boolean) {
         if (enable) {
@@ -449,6 +485,8 @@ class MainActivity : AppCompatActivity() {
                 persistHistory()
                 scrollToBottom()
                 proactive.markReachedOut()
+                // 主人不在聊天页（退到后台/锁屏）时，发一条锁屏可见的消息通知
+                notifyMessageIfBackground(msg, fromProactive = true)
                 if (::tts.isInitialized && !streamSpeechCancelled) {
                     tts.setEmotion(emotion.ttsRate(), emotion.ttsPitch())
                     tts.setRate(prefs.ttsRate)
@@ -1085,6 +1123,8 @@ class MainActivity : AppCompatActivity() {
         }
         scrollToBottom()
         persistHistory()
+        // 主人切到后台/锁屏时收到小沫回复，也让它出现在锁屏上
+        notifyMessageIfBackground(finalText, fromProactive = false)
         if (session == speechSession && !streamSpeechCancelled) {
             val speakable = visibleSpeakable(if (streamSpeakStarted) rawText else finalText)
             val remain = if (streamSpeakStarted) {
@@ -1318,7 +1358,158 @@ class MainActivity : AppCompatActivity() {
             is VoiceCommand.CalendarAdd -> handleCalendarAdd(userText, command.atMillis, command.text)
             is VoiceCommand.FindChat -> replyLocal(userText, findInHistory(command.query))
             VoiceCommand.DailyBrief -> speakDailyBrief(userText)
+            is VoiceCommand.BubbleStyle -> handleBubbleStyle(userText, command)
         }
+    }
+
+    /** 处理「改气泡形状/颜色/字号/宽度/预设」口令：落库 → 刷新列表 → 回话确认。 */
+    private fun handleBubbleStyle(userText: String, command: VoiceCommand.BubbleStyle) {
+        // 收藏夹：列表
+        if (command.listFavorites) {
+            val list = BubbleStyleStore.favorites(this)
+            val reply = if (list.isEmpty()) getString(R.string.toast_bubble_fav_empty)
+            else list.joinToString("、") { "「${it.name}」" }
+            replyLocal(userText, getString(R.string.toast_bubble_fav_list, reply))
+            return
+        }
+        // 收藏夹：收藏当前 / 套用 / 删除
+        if (command.favoriteName != null) {
+            val ok = BubbleStyleStore.saveFavorite(this, command.favoriteName)
+            replyLocal(
+                userText,
+                if (ok) getString(R.string.toast_bubble_fav_saved, command.favoriteName)
+                else getString(R.string.toast_bubble_fav_fail)
+            )
+            return
+        }
+        if (command.applyName != null) {
+            val ok = BubbleStyleStore.applyFavorite(this, command.applyName)
+            adapter.useCustomBubbleStyle = true
+            adapter.notifyDataSetChanged()
+            replyLocal(
+                userText,
+                if (ok) getString(R.string.toast_bubble_fav_applied, command.applyName, BubbleStyleStore.describe(BubbleStyleStore.load(this)))
+                else getString(R.string.toast_bubble_fav_missing, command.applyName)
+            )
+            return
+        }
+        if (command.deleteName != null) {
+            val ok = BubbleStyleStore.deleteFavorite(this, command.deleteName)
+            replyLocal(
+                userText,
+                if (ok) getString(R.string.toast_bubble_fav_deleted, command.deleteName)
+                else getString(R.string.toast_bubble_fav_missing, command.deleteName)
+            )
+            return
+        }
+        // 按角色绑定：把当前样式单独给这个角色
+        if (command.bindRole) {
+            val cid = prefs.lastRoleId
+            if (cid.isBlank()) {
+                replyLocal(userText, getString(R.string.toast_bubble_role_none))
+            } else {
+                BubbleStyleStore.bindRole(this, cid)
+                replyLocal(userText, getString(R.string.toast_bubble_role_bound))
+            }
+            return
+        }
+        // 查询当前样式
+        if (command.query) {
+            replyLocal(userText, getString(R.string.toast_bubble_query, BubbleStyleStore.describe(BubbleStyleStore.load(this))))
+            return
+        }
+        if (command.reset) {
+            BubbleStyleStore.reset(this)
+            adapter.useCustomBubbleStyle = false
+            adapter.notifyDataSetChanged()
+            replyLocal(userText, getString(R.string.toast_bubble_reset))
+            return
+        }
+        // 随机换肤
+        if (command.random) {
+            val current = BubbleStyleStore.detectCurrentPreset(this)
+            val picked = BubbleStyleStore.randomPreset(this, current)
+            adapter.useCustomBubbleStyle = true
+            adapter.notifyDataSetChanged()
+            replyLocal(
+                userText,
+                getString(
+                    R.string.toast_bubble_random,
+                    BubbleStyleStore.presetLabel(picked),
+                    BubbleStyleStore.describe(BubbleStyleStore.load(this))
+                )
+            )
+            return
+        }
+        // 预设主题：整包套用
+        if (command.preset != null) {
+            val applied = BubbleStyleStore.preset(this, command.preset)
+            adapter.useCustomBubbleStyle = true
+            adapter.notifyDataSetChanged()
+            replyLocal(
+                userText,
+                getString(
+                    R.string.toast_bubble_preset,
+                    BubbleStyleStore.presetLabel(command.preset),
+                    BubbleStyleStore.describe(applied)
+                )
+            )
+            return
+        }
+        val old = BubbleStyleStore.load(this)
+        val next = BubbleStyleStore.Style(
+            shape = command.shape ?: old.shape,
+            aiColor = command.aiColor ?: old.aiColor,
+            meColor = command.meColor ?: old.meColor,
+            aiColor2 = command.aiColor2 ?: old.aiColor2,
+            meColor2 = command.meColor2 ?: old.meColor2,
+            transparent = command.transparent ?: old.transparent,
+            fontSp = command.fontSp ?: old.fontSp,
+            maxWidthPercent = command.maxWidthPercent ?: old.maxWidthPercent,
+            padH = command.padH ?: old.padH,
+            padV = command.padV ?: old.padV,
+            borderDp = command.borderDp ?: old.borderDp,
+            shadow = command.shadow ?: old.shadow,
+            avatarDp = command.avatarDp ?: old.avatarDp,
+            gapH = command.gapH ?: old.gapH,
+            gapV = command.gapV ?: old.gapV,
+            tailSide = command.tailSide ?: old.tailSide,
+            anim = command.anim ?: old.anim,
+            cornerDp = command.cornerDp ?: old.cornerDp,
+            trimQuotes = command.trimQuotes ?: old.trimQuotes
+        )
+        BubbleStyleStore.save(this, next)
+        adapter.useCustomBubbleStyle = true
+        adapter.notifyDataSetChanged()
+
+        val parts = mutableListOf<String>()
+        if (command.shape != null) parts.add("形状改成「${BubbleStyleStore.shapeLabel(next.shape)}」")
+        if (command.aiColor != null) parts.add("小沫气泡色改成「${BubbleStyleStore.colorLabel(next.aiColor)}」")
+        if (command.meColor != null) parts.add("我的气泡色改成「${BubbleStyleStore.colorLabel(next.meColor)}」")
+        if (command.aiColor2 != null || command.meColor2 != null) {
+            parts.add("渐变已生效（${BubbleStyleStore.colorLabel(next.aiColor)}→${BubbleStyleStore.colorLabel(next.aiColor2)}）")
+        }
+        if (command.fontSp != null) parts.add("字号改成「${BubbleStyleStore.sizeLabel(next.fontSp)}」")
+        if (command.maxWidthPercent != null) parts.add("宽度改成 ${next.maxWidthPercent}%")
+        if (command.padH != null || command.padV != null) {
+            val l = when {
+                next.padH <= BubbleStyleStore.PAD_TIGHT.h -> "紧凑"
+                next.padH >= BubbleStyleStore.PAD_LOOSE.h -> "宽松"
+                else -> "适中"
+            }
+            parts.add("内边距改成「$l」")
+        }
+        if (command.borderDp != null) parts.add(if (next.borderDp == 0) "去掉边框" else "边框改成「${next.borderDp}dp」")
+        if (command.shadow != null) parts.add(if (next.shadow) "加上阴影" else "去掉阴影")
+        if (command.avatarDp != null) parts.add(if (next.avatarDp > BubbleStyleStore.AVATAR_NORMAL) "头像变大" else "头像变小")
+        if (command.gapH != null || command.gapV != null) parts.add(if (next.gapH > BubbleStyleStore.GAP_NORMAL.h) "间距变宽" else "间距变紧")
+        if (command.tailSide != null) parts.add("尾巴改成「${BubbleStyleStore.tailLabel(next.tailSide)}」")
+        if (command.anim != null) parts.add("出现动效改成「${BubbleStyleStore.animLabel(next.anim)}」")
+        if (command.cornerDp != null) parts.add("圆角改成「${BubbleStyleStore.cornerLabel(next.cornerDp)}」")
+        if (command.trimQuotes != null) parts.add(if (next.trimQuotes) "去掉引号" else "保留引号")
+        if (command.transparent != null) parts.add(if (next.transparent) "改成半透明" else "恢复不透明")
+        val desc = if (parts.isEmpty()) "气泡样式已经更新啦" else parts.joinToString("、")
+        replyLocal(userText, getString(R.string.toast_bubble_changed, desc))
     }
 
     private fun addReminder(
@@ -1375,6 +1566,12 @@ class MainActivity : AppCompatActivity() {
             intent.removeExtra(EXTRA_HEADSET_WAKE)
             toggleWake(true)
         }
+        // 从「小沫的消息」通知点进来：清掉通知、落在聊天页
+        if (intent.getStringExtra(EXTRA_OPEN_CHAT) != null) {
+            intent.removeExtra(EXTRA_OPEN_CHAT)
+            MessageNotifier.clear(this)
+            scrollToBottom()
+        }
         val text = intent.getStringExtra(EXTRA_REMIND_SPEAK).orEmpty()
         if (text.isBlank()) return
         intent.removeExtra(EXTRA_REMIND_SPEAK)
@@ -1383,6 +1580,18 @@ class MainActivity : AppCompatActivity() {
         persistHistory()
         scrollToBottom()
         speakLocal(line)
+    }
+
+    /**
+     * 小沫说话后，如果主人不在前台（切走或锁屏），就发一条锁屏可见的通知。
+     * 前台时静默——聊天页已经能看到，不必重复打扰。
+     */
+    private fun notifyMessageIfBackground(text: String, fromProactive: Boolean) {
+        if (text.isBlank()) return
+        val am = getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager
+        val p = am.runningAppProcesses?.firstOrNull { it.pid == android.os.Process.myPid() }
+        val foreground = p?.importance == android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
+        if (!foreground) MessageNotifier.show(this, text, fromProactive)
     }
 
     private fun ensureNotifyPermission() {
@@ -1667,5 +1876,6 @@ class MainActivity : AppCompatActivity() {
         const val EXTRA_REMIND_SPEAK = "remind_speak"
         const val EXTRA_NOTIFY_SPEAK = "notify_speak"
         const val EXTRA_HEADSET_WAKE = "headset_wake"
+        const val EXTRA_OPEN_CHAT = "open_chat"
     }
 }

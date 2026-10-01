@@ -22,6 +22,42 @@ data class ImportedTavernCard(
 object TavernCardIO {
     fun importUri(context: Context, uri: Uri): RoleCharacter? = importUriFull(context, uri)?.character
 
+    /**
+     * 把一批世界书条目导出为标准 World Info JSON（兼容 SillyTavern 的 world info 结构）。
+     */
+    fun worldInfoToJson(entries: List<WorldEntry>): String {
+        val obj = JSONObject()
+        val map = JSONObject()
+        entries.forEachIndexed { index, e ->
+            val keys = JSONArray()
+            splitWorldKeys(e.keys).forEach { keys.put(it) }
+            map.put(
+                index.toString(),
+                JSONObject()
+                    .put("uid", index)
+                    .put("key", keys)
+                    .put("keysecondary", JSONArray())
+                    .put("comment", e.comment)
+                    .put("content", e.content)
+                    .put("constant", e.constant)
+                    .put("selective", !e.constant && splitWorldKeys(e.keys).isNotEmpty())
+                    .put("disable", !e.enabled)
+                    .put("order", e.order)
+            )
+        }
+        obj.put("entries", map)
+        return obj.toString(2)
+    }
+
+    /** 从 World Info JSON 读回世界书条目（兼容 entries 为对象/数组两种写法）。 */
+    fun worldInfoFromJson(text: String): List<WorldEntry> {
+        val root = runCatching { JSONObject(text.trim()) }.getOrNull() ?: return emptyList()
+        return parseCharacterBook(root)
+    }
+
+    private fun splitWorldKeys(raw: String): List<String> =
+        raw.split(',', '，', ';', '；', '\n').map { it.trim() }.filter { it.isNotEmpty() }
+
     fun importUriFull(context: Context, uri: Uri): ImportedTavernCard? {
         val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return null
         val name = displayName(context, uri)

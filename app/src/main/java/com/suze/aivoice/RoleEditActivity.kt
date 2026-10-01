@@ -39,6 +39,25 @@ class RoleEditActivity : AppCompatActivity() {
         }
     }
 
+    private val importWorld = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) return@registerForActivityResult
+        runCatching {
+            contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        val text = runCatching {
+            contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+        }.getOrNull()
+        val entries = text?.let { TavernCardIO.worldInfoFromJson(it) }.orEmpty()
+        if (entries.isEmpty()) {
+            Toast.makeText(this, R.string.toast_world_import_empty, Toast.LENGTH_SHORT).show()
+            return@registerForActivityResult
+        }
+        entries.forEach { addWorldRow(it) }
+        Toast.makeText(this, getString(R.string.toast_world_imported, entries.size), Toast.LENGTH_SHORT).show()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_role_edit)
@@ -110,6 +129,10 @@ class RoleEditActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnRoleExportPng).setOnClickListener { exportCard(png = true) }
         findViewById<Button>(R.id.btnRoleAddExample).setOnClickListener { addExampleRow() }
         findViewById<Button>(R.id.btnRoleAddWorld).setOnClickListener { addWorldRow() }
+        findViewById<Button>(R.id.btnRoleImportWorld).setOnClickListener {
+            importWorld.launch(arrayOf("application/json", "text/plain", "*/*"))
+        }
+        findViewById<Button>(R.id.btnRoleExportWorld).setOnClickListener { exportWorld() }
 
         findViewById<Button>(R.id.btnRoleSave).setOnClickListener {
             val name = editName.text.toString().trim()
@@ -265,6 +288,37 @@ class RoleEditActivity : AppCompatActivity() {
         view.visibility = if (has) View.VISIBLE else View.GONE
         emoji.visibility = if (has) View.GONE else View.VISIBLE
         emoji.text = findViewById<EditText>(R.id.editRoleEmoji).text.toString().ifBlank { "\uD83C\uDFAD" }
+    }
+
+    /** 导出当前编辑中的世界书为标准 World Info JSON，可分享给别的酒馆。 */
+    private fun exportWorld() {
+        val entries = collectWorld()
+        if (entries.isEmpty()) {
+            Toast.makeText(this, R.string.toast_world_export_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val dir = File(cacheDir, "role_export")
+        dir.mkdirs()
+        val base = findViewById<EditText>(R.id.editRoleName).text.toString().trim()
+            .ifBlank { getString(R.string.role_label_world) }
+        val file = File(dir, RoleStore.sanitize(base) + "_world.json")
+        try {
+            file.writeText(TavernCardIO.worldInfoToJson(entries))
+        } catch (_: Exception) {
+            Toast.makeText(this, R.string.toast_role_export_failed, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+        startActivity(
+            Intent.createChooser(
+                Intent(Intent.ACTION_SEND).apply {
+                    type = "application/json"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                },
+                getString(R.string.role_export_world)
+            )
+        )
     }
 
     private fun exportCard(png: Boolean) {

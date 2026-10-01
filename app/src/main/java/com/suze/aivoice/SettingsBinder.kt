@@ -53,6 +53,7 @@ class SettingsBinder(
         val switchKeepListen = activity.findViewById<SwitchCompat>(R.id.switchKeepListen)
         val switchWebSearch = activity.findViewById<SwitchCompat>(R.id.switchWebSearch)
         val switchNotifySpeak = activity.findViewById<SwitchCompat>(R.id.switchNotifySpeak)
+        val switchLockScreenMsg = activity.findViewById<SwitchCompat>(R.id.switchLockScreenMsg)
         val switchHeadsetWake = activity.findViewById<SwitchCompat>(R.id.switchHeadsetWake)
         val switchLocalKws = activity.findViewById<SwitchCompat>(R.id.switchLocalKws)
         val switchWelcome = activity.findViewById<SwitchCompat>(R.id.switchWelcome)
@@ -104,6 +105,7 @@ class SettingsBinder(
         switchKeepListen.isChecked = prefs.keepListenInBackground
         switchWebSearch.isChecked = prefs.webSearchEnabled
         switchNotifySpeak.isChecked = prefs.notifySpeakEnabled
+        switchLockScreenMsg.isChecked = prefs.lockScreenNotifyEnabled
         switchHeadsetWake.isChecked = prefs.headsetWakeEnabled
         switchLocalKws.isChecked = prefs.localKwsEnabled
         switchWelcome.isChecked = prefs.welcomeEnabled
@@ -226,6 +228,8 @@ class SettingsBinder(
             prefs.webSearchEnabled = switchWebSearch.isChecked
             val turnOnNotify = switchNotifySpeak.isChecked && !prefs.notifySpeakEnabled
             prefs.notifySpeakEnabled = switchNotifySpeak.isChecked
+            val turnOnLockMsg = switchLockScreenMsg.isChecked && !prefs.lockScreenNotifyEnabled
+            prefs.lockScreenNotifyEnabled = switchLockScreenMsg.isChecked
             prefs.headsetWakeEnabled = switchHeadsetWake.isChecked
             prefs.localKwsEnabled = switchLocalKws.isChecked
             prefs.welcomeEnabled = switchWelcome.isChecked
@@ -233,6 +237,18 @@ class SettingsBinder(
             if (turnOnNotify) {
                 runCatching {
                     activity.startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
+                }
+            }
+            if (turnOnLockMsg) {
+                // 提前建好渠道，并提示：若系统没给通知权限，锁屏就看不到
+                MessageNotifier.ensureChannel(activity)
+                if (android.os.Build.VERSION.SDK_INT >= 33) {
+                    val granted = androidx.core.content.ContextCompat.checkSelfPermission(
+                        activity, android.Manifest.permission.POST_NOTIFICATIONS
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                    if (!granted) {
+                        Toast.makeText(activity, R.string.toast_lock_msg_need_notify, Toast.LENGTH_LONG).show()
+                    }
                 }
             }
             prefs.taiwanVoice = switchTaiwan.isChecked
@@ -319,8 +335,145 @@ class SettingsBinder(
             refreshAppearancePreview()
             Toast.makeText(activity, R.string.toast_background_reset, Toast.LENGTH_SHORT).show()
         }
+        // 气泡样式：预设 Spinner + 重置
+        val spinnerBubble = activity.findViewById<Spinner>(R.id.spinnerBubblePreset)
+        val bubbleIds = listOf("", BubbleStyleStore.PRESET_GIRL, BubbleStyleStore.PRESET_WECHAT,
+            BubbleStyleStore.PRESET_MINIMAL, BubbleStyleStore.PRESET_DARK,
+            BubbleStyleStore.PRESET_OCEAN, BubbleStyleStore.PRESET_CANDY,
+            BubbleStyleStore.PRESET_CYBER, BubbleStyleStore.PRESET_FOREST)
+        val bubbleLabels = listOf(
+            activity.getString(R.string.bubble_preset_default),
+            activity.getString(R.string.bubble_preset_girl),
+            activity.getString(R.string.bubble_preset_wechat),
+            activity.getString(R.string.bubble_preset_minimal),
+            activity.getString(R.string.bubble_preset_dark),
+            activity.getString(R.string.bubble_preset_ocean),
+            activity.getString(R.string.bubble_preset_candy),
+            activity.getString(R.string.bubble_preset_cyber),
+            activity.getString(R.string.bubble_preset_forest)
+        )
+        spinnerBubble.adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item, bubbleLabels)
+        spinnerBubble.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(p: AdapterView<*>?, v: android.view.View?, pos: Int, id: Long) {
+                val presetId = bubbleIds.getOrNull(pos) ?: ""
+                if (presetId.isEmpty()) {
+                    BubbleStyleStore.reset(activity)
+                } else {
+                    BubbleStyleStore.preset(activity, presetId)
+                }
+                refreshBubblePreview()
+            }
+            override fun onNothingSelected(p: AdapterView<*>?) {}
+        }
+        activity.findViewById<Button>(R.id.btnBubbleReset).setOnClickListener {
+            BubbleStyleStore.reset(activity)
+            spinnerBubble.setSelection(0, false)
+            refreshBubblePreview()
+            Toast.makeText(activity, R.string.toast_bubble_reset, Toast.LENGTH_SHORT).show()
+        }
+        activity.findViewById<Button>(R.id.btnBubbleRandom).setOnClickListener {
+            val current = BubbleStyleStore.detectCurrentPreset(activity)
+            val picked = BubbleStyleStore.randomPreset(activity, current)
+            val idx = bubbleIds.indexOf(picked)
+            if (idx >= 0) spinnerBubble.setSelection(idx, false)
+            refreshBubblePreview()
+            Toast.makeText(
+                activity,
+                activity.getString(R.string.toast_bubble_random, BubbleStyleStore.presetLabel(picked), ""),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+        bindBubbleExtras()
         refreshAppearancePreview()
     }
+
+    /** 尾巴方向 / 出现动效 / 去引号 三个维度的绑定。 */
+    private fun bindBubbleExtras() {
+        val spinnerTail = activity.findViewById<Spinner>(R.id.spinnerBubbleTail)
+        val tailIds = listOf(BubbleStyleStore.TAIL_AUTO, BubbleStyleStore.TAIL_LEFT,
+            BubbleStyleStore.TAIL_RIGHT, BubbleStyleStore.TAIL_NONE)
+        val tailLabels = listOf(
+            activity.getString(R.string.bubble_tail_auto),
+            activity.getString(R.string.bubble_tail_left),
+            activity.getString(R.string.bubble_tail_right),
+            activity.getString(R.string.bubble_tail_none)
+        )
+        spinnerTail.adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item, tailLabels)
+        spinnerTail.setSelection(tailIds.indexOf(BubbleStyleStore.load(activity).tailSide).coerceAtLeast(0), false)
+        spinnerTail.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(p: AdapterView<*>?, v: android.view.View?, pos: Int, id: Long) {
+                val tail = tailIds.getOrNull(pos) ?: return
+                val now = BubbleStyleStore.load(activity)
+                BubbleStyleStore.save(activity, now.copy(tailSide = tail))
+                refreshBubblePreview()
+            }
+            override fun onNothingSelected(p: AdapterView<*>?) {}
+        }
+
+        val spinnerAnim = activity.findViewById<Spinner>(R.id.spinnerBubbleAnim)
+        val animIds = listOf(BubbleStyleStore.ANIM_NONE, BubbleStyleStore.ANIM_FADE,
+            BubbleStyleStore.ANIM_POP, BubbleStyleStore.ANIM_SLIDE)
+        val animLabels = listOf(
+            activity.getString(R.string.bubble_anim_none),
+            activity.getString(R.string.bubble_anim_fade),
+            activity.getString(R.string.bubble_anim_pop),
+            activity.getString(R.string.bubble_anim_slide)
+        )
+        spinnerAnim.adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item, animLabels)
+        spinnerAnim.setSelection(animIds.indexOf(BubbleStyleStore.load(activity).anim).coerceAtLeast(0), false)
+        spinnerAnim.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(p: AdapterView<*>?, v: android.view.View?, pos: Int, id: Long) {
+                val anim = animIds.getOrNull(pos) ?: return
+                val now = BubbleStyleStore.load(activity)
+                BubbleStyleStore.save(activity, now.copy(anim = anim))
+                refreshBubblePreview()
+            }
+            override fun onNothingSelected(p: AdapterView<*>?) {}
+        }
+
+        val cbTrim = activity.findViewById<android.widget.CheckBox>(R.id.switchBubbleTrimQuotes)
+        cbTrim.isChecked = BubbleStyleStore.load(activity).trimQuotes
+        cbTrim.setOnCheckedChangeListener { _, checked ->
+            val now = BubbleStyleStore.load(activity)
+            BubbleStyleStore.save(activity, now.copy(trimQuotes = checked))
+            refreshBubblePreview()
+        }
+    }
+
+    /** 刷新设置页里的气泡预览（两个假气泡按当前样式现画）。 */
+    fun refreshBubblePreview() {
+        val style = BubbleStyleStore.load(activity)
+        val ai = activity.findViewById<android.widget.TextView>(R.id.tvBubblePreviewAi)
+        val me = activity.findViewById<android.widget.TextView>(R.id.tvBubblePreviewMe)
+        if (style.isDefault) {
+            ai.background = androidx.core.content.ContextCompat.getDrawable(activity, R.drawable.bubble_ai_bg)
+            me.background = androidx.core.content.ContextCompat.getDrawable(activity, R.drawable.bubble_me_bg)
+            // 默认 AI 气泡是浅底、我的气泡是紫底，各自配深色字
+            ai.setTextColor(0xFF1F1F1F.toInt())
+            me.setTextColor(0xFF1F1F1F.toInt())
+            ai.textSize = BubbleStyleStore.SIZE_NORMAL
+            me.textSize = BubbleStyleStore.SIZE_NORMAL
+            ai.setPadding(dp(14), dp(10), dp(14), dp(10))
+            me.setPadding(dp(14), dp(10), dp(14), dp(10))
+        } else {
+            ai.background = BubbleStyleStore.drawableFor(activity, false, style)
+            me.background = BubbleStyleStore.drawableFor(activity, true, style)
+            ai.setTextColor(BubbleStyleStore.textColorFor(false, style))
+            me.setTextColor(BubbleStyleStore.textColorFor(true, style))
+            ai.textSize = style.fontSp
+            me.textSize = style.fontSp
+            val el = if (style.shadow) activity.resources.displayMetrics.density * 4f else 0f
+            ai.elevation = el
+            me.elevation = el
+            ai.setPadding(BubbleStyleStore.padHpx(activity, style), BubbleStyleStore.padVpx(activity, style),
+                BubbleStyleStore.padHpx(activity, style), BubbleStyleStore.padVpx(activity, style))
+            me.setPadding(BubbleStyleStore.padHpx(activity, style), BubbleStyleStore.padVpx(activity, style),
+                BubbleStyleStore.padHpx(activity, style), BubbleStyleStore.padVpx(activity, style))
+        }
+    }
+
+    private fun dp(v: Int): Int =
+        (v * activity.resources.displayMetrics.density + 0.5f).toInt()
 
     fun refreshAppearancePreview() {
         val avatar = activity.findViewById<android.widget.ImageView>(R.id.ivAvatarPreview)
@@ -336,6 +489,7 @@ class SettingsBinder(
             }
         }
         ChatStyleStore.applyBackgroundPreview(activity.findViewById(R.id.ivBackgroundPreview))
+        runCatching { refreshBubblePreview() }
     }
 
     private fun isSafeHttpsBaseUrl(value: String): Boolean = runCatching {

@@ -25,12 +25,44 @@ sealed class VoiceCommand {
     data class CalendarAdd(val atMillis: Long, val text: String) : VoiceCommand()
     data class FindChat(val query: String) : VoiceCommand()
     data object DailyBrief : VoiceCommand()
+    /** 改气泡样式：null 表示不改这一项。 */
+    data class BubbleStyle(
+        val shape: String? = null,
+        val aiColor: String? = null,
+        val meColor: String? = null,
+        val aiColor2: String? = null,
+        val meColor2: String? = null,
+        val transparent: Boolean? = null,
+        val fontSp: Float? = null,
+        val maxWidthPercent: Int? = null,
+        val padH: Int? = null,
+        val padV: Int? = null,
+        val borderDp: Int? = null,
+        val shadow: Boolean? = null,
+        val avatarDp: Int? = null,
+        val gapH: Int? = null,
+        val gapV: Int? = null,
+        val tailSide: String? = null,
+        val anim: String? = null,
+        val cornerDp: Int? = null,
+        val trimQuotes: Boolean? = null,
+        val favoriteName: String? = null,
+        val applyName: String? = null,
+        val deleteName: String? = null,
+        val listFavorites: Boolean = false,
+        val bindRole: Boolean = false,
+        val preset: String? = null,
+        val random: Boolean = false,
+        val reset: Boolean = false,
+        val query: Boolean = false
+    ) : VoiceCommand()
 }
 
 object VoiceCommandParser {
     fun parse(raw: String): VoiceCommand? {
         val text = raw.trim()
         if (text.isEmpty()) return null
+        parseBubbleStyle(text)?.let { return it }
         parseNews(text)?.let { return it }
         parseBrief(text)?.let { return it }
         parseWorldClock(text)?.let { return it }
@@ -43,6 +75,145 @@ object VoiceCommandParser {
         parseCountdown(text)?.let { return it }
         parseClock(text)?.let { return it }
         return null
+    }
+
+    /**
+     * 「给沫沫提要求改气泡」——识别成 [VoiceCommand.BubbleStyle]。
+     *
+     * 支持的口令举例：
+     *   - 形状：气泡方一点 / 改成胶囊 / 加个小尾巴 / 圆润一点
+     *   - 颜色：气泡换成粉色 / 我的气泡改成蓝色 / 小沫的气泡弄成薄荷绿
+     *   - 字号：气泡字大一点 / 字小一点 / 超大字号
+     *   - 宽度：气泡宽一点 / 窄一点 / 拉满
+     *   - 内边距：气泡松一点 / 紧凑一点
+     *   - 透明：气泡透明一点 / 不透明
+     *   - 预设：换个少女风气泡 / 微信风 / 极简风 / 暗黑风
+     *   - 查询：我的气泡什么样 / 现在气泡是什么样
+     *   - 重置：恢复默认气泡 / 重置气泡样式
+     */
+    private fun parseBubbleStyle(text: String): VoiceCommand.BubbleStyle? {
+        // 必须提到「气泡」，避免误捕普通聊天
+        if (!text.contains("气泡") && !text.contains("泡泡")) return null
+        // 别把「气泡」相关的普通闲聊（问句）当命令
+        if (hit(text, "气泡是什么", "什么是气泡")) return null
+
+        // 查询当前样式
+        if (hit(text, "气泡什么样", "气泡是什么样", "现在气泡", "当前气泡", "气泡设置是什么",
+                "看看气泡", "气泡长啥样", "气泡样式是什么")) {
+            return VoiceCommand.BubbleStyle(query = true)
+        }
+
+        // 重置
+        if (hit(text, "恢复默认气泡", "重置气泡", "默认气泡", "气泡恢复", "还原气泡", "气泡变回来",
+                "气泡改回来")) {
+            return VoiceCommand.BubbleStyle(reset = true)
+        }
+
+        // 随机换肤
+        if (BubbleStyleStore.isRandomRequest(text)) {
+            return VoiceCommand.BubbleStyle(random = true)
+        }
+
+        // 收藏夹：收藏 / 套用 / 删除 / 列表
+        if (hit(text, "收藏了哪些气泡", "气泡收藏列表", "我收藏的气泡", "有哪些气泡样式")) {
+            return VoiceCommand.BubbleStyle(listFavorites = true)
+        }
+        BubbleStyleStore.deleteNameFromText(text)?.let { name ->
+            if (hit(text, "删除", "删掉", "去掉")) return VoiceCommand.BubbleStyle(deleteName = name)
+        }
+        BubbleStyleStore.favoriteNameFromText(text)?.let { name ->
+            if (hit(text, "收藏")) return VoiceCommand.BubbleStyle(favoriteName = name)
+        }
+        BubbleStyleStore.applyNameFromText(text)?.let { name ->
+            if (hit(text, "套用", "用回", "切换", "用到")) return VoiceCommand.BubbleStyle(applyName = name)
+        }
+
+        // 按角色绑定：给这个角色单独设样式 / 恢复跟随全局
+        if (hit(text, "恢复跟随全局", "取消角色气泡", "角色气泡恢复")) {
+            return VoiceCommand.BubbleStyle(bindRole = false, reset = true)
+        }
+        if (hit(text, "给这个角色", "这个角色单独", "角色专属气泡", "绑定到角色")) {
+            return VoiceCommand.BubbleStyle(bindRole = true)
+        }
+
+        // 预设主题（优先级高：命中就整包套用，不再逐项解析）
+        BubbleStyleStore.presetFromText(text)?.let { preset ->
+            return VoiceCommand.BubbleStyle(preset = preset)
+        }
+
+        val shape = BubbleStyleStore.shapeFromText(text)
+        val color = BubbleStyleStore.colorFromText(text)
+        val gradient = BubbleStyleStore.gradientFromText(text)
+        val fontSp = BubbleStyleStore.sizeFromText(text)
+        val width = BubbleStyleStore.widthFromText(text)
+        val pad = BubbleStyleStore.paddingFromText(text)
+        val border = BubbleStyleStore.borderFromText(text)
+        val shadow = BubbleStyleStore.shadowFromText(text)
+        val avatar = BubbleStyleStore.avatarFromText(text)
+        val gap = BubbleStyleStore.gapFromText(text)
+        val tailSide = BubbleStyleStore.tailFromText(text)
+        val anim = BubbleStyleStore.animFromText(text)
+        val cornerDp = BubbleStyleStore.cornerFromText(text)
+        val trimQuotes = BubbleStyleStore.trimQuotesFromText(text)
+        val transparent = when {
+            hit(text, "不透明", "别透明", "恢复不透明") -> false
+            hit(text, "透明一点", "半透明", "气泡透明", "透一点", "透明") -> true
+            else -> null
+        }
+
+        if (shape == null && color == null && gradient == null && fontSp == null && width == null &&
+            pad == null && transparent == null && border == null && shadow == null &&
+            avatar == null && gap == null && tailSide == null && anim == null &&
+            cornerDp == null && trimQuotes == null) return null
+
+        // 区分「我的气泡」和「小沫的气泡」
+        val mine = hit(text, "我的气泡", "我这边", "自己气泡", "右侧气泡", "我发的")
+        val hers = hit(text, "小沫的气泡", "你的气泡", "左侧气泡", "沫沫的气泡", "你发的")
+
+        var aiColor: String? = null
+        var meColor: String? = null
+        var aiColor2: String? = null
+        var meColor2: String? = null
+        if (gradient != null) {
+            when {
+                mine && !hers -> { meColor = gradient.first; meColor2 = gradient.second }
+                hers && !mine -> { aiColor = gradient.first; aiColor2 = gradient.second }
+                else -> {
+                    aiColor = gradient.first; aiColor2 = gradient.second
+                    meColor = gradient.first; meColor2 = gradient.second
+                }
+            }
+        } else if (color != null) {
+            when {
+                mine && !hers -> meColor = color
+                hers && !mine -> aiColor = color
+                else -> { aiColor = color; meColor = color }
+            }
+        }
+        return VoiceCommand.BubbleStyle(
+            shape = shape,
+            aiColor = aiColor,
+            meColor = meColor,
+            aiColor2 = aiColor2,
+            meColor2 = meColor2,
+            transparent = transparent,
+            fontSp = fontSp,
+            maxWidthPercent = width,
+            padH = pad?.h,
+            padV = pad?.v,
+            borderDp = border,
+            shadow = shadow,
+            avatarDp = avatar,
+            gapH = gap?.h,
+            gapV = gap?.v,
+            tailSide = tailSide,
+            anim = anim,
+            cornerDp = cornerDp,
+            trimQuotes = trimQuotes,
+            favoriteName = BubbleStyleStore.favoriteNameFromText(text),
+            applyName = BubbleStyleStore.applyNameFromText(text),
+            deleteName = BubbleStyleStore.deleteNameFromText(text)
+        )
     }
 
     private fun parseNews(text: String): VoiceCommand? {

@@ -302,6 +302,11 @@ class Prefs(context: Context) {
         get() = sp.getString("activeChatId", "") ?: ""
         set(v) = sp.edit().putString("activeChatId", v).apply()
 
+    /** 最近打开过的角色 id（供「给这个角色设气泡」等口令使用） */
+    var lastRoleId: String
+        get() = sp.getString("lastRoleId", "") ?: ""
+        set(v) = sp.edit().putString("lastRoleId", v).apply()
+
     /** 小组件用的最近天气摘要 */
     var lastWeatherBrief: String
         get() = sp.getString("lastWeatherBrief", "") ?: ""
@@ -316,6 +321,11 @@ class Prefs(context: Context) {
     var notifySpeakEnabled: Boolean
         get() = sp.getBoolean("notifySpeakEnabled", false)
         set(v) = sp.edit().putBoolean("notifySpeakEnabled", v).apply()
+
+    /** 锁屏也能看到小沫的消息（通知栏 + 锁屏显示聊天内容），默认开 */
+    var lockScreenNotifyEnabled: Boolean
+        get() = sp.getBoolean("lockScreenNotifyEnabled", true)
+        set(v) = sp.edit().putBoolean("lockScreenNotifyEnabled", v).apply()
 
     /** 插上耳机或连上蓝牙后自动开唤醒 */
     var headsetWakeEnabled: Boolean

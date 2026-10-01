@@ -61,6 +61,7 @@ class RoleChatActivity : AppCompatActivity() {
         store = RoleStore(this)
         plugins = TavernPluginStore(this)
         val id = intent.getStringExtra(EXTRA_ROLE_ID).orEmpty()
+        if (id.isNotBlank()) prefs.lastRoleId = id
         character = store.get(id)
         if (character == null) {
             Toast.makeText(this, R.string.toast_role_missing, Toast.LENGTH_SHORT).show()
@@ -80,6 +81,10 @@ class RoleChatActivity : AppCompatActivity() {
         }
         adapter = ChatAdapter(history)
         adapter.bindAiAvatar = { view -> bindBubbleAvatar(view) }
+        // 按角色区分气泡：该角色设过专属样式就用它，否则跟随全局
+        adapter.styleProvider = {
+            BubbleStyleStore.roleStyle(this, character?.id.orEmpty())
+        }
         recycler.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
         recycler.adapter = adapter
         GlassKit.attachPage(this, recycler)

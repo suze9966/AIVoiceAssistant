@@ -17,8 +17,10 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
+import androidx.core.content.FileProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import java.io.File
 import java.util.Date
 
 class RoleLoungeActivity : AppCompatActivity() {
@@ -156,8 +158,10 @@ class RoleLoungeActivity : AppCompatActivity() {
         val pop = PopupMenu(this, anchor)
         pop.menu.add(0, 1, 0, getString(R.string.role_edit))
         pop.menu.add(0, 4, 1, getString(R.string.role_chats))
-        pop.menu.add(0, 3, 2, getString(R.string.role_duplicate))
-        pop.menu.add(0, 2, 3, getString(R.string.role_delete))
+        pop.menu.add(0, 5, 2, getString(R.string.role_export_card))
+        pop.menu.add(0, 6, 3, getString(R.string.role_share_card))
+        pop.menu.add(0, 3, 4, getString(R.string.role_duplicate))
+        pop.menu.add(0, 2, 5, getString(R.string.role_delete))
         pop.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 1 -> {
@@ -173,6 +177,14 @@ class RoleLoungeActivity : AppCompatActivity() {
                             .putExtra(RoleChatActivity.EXTRA_ROLE_ID, character.id)
                             .putExtra(RoleChatActivity.EXTRA_OPEN_CHATS, true)
                     )
+                    true
+                }
+                5 -> {
+                    promptExportCard(character)
+                    true
+                }
+                6 -> {
+                    shareCard(character, png = true)
                     true
                 }
                 3 -> {
@@ -191,6 +203,51 @@ class RoleLoungeActivity : AppCompatActivity() {
             }
         }
         pop.show()
+    }
+
+    /** 导出角色卡：让主人选 JSON（小沫格式）还是 PNG（酒馆 V2，可被 SillyTavern 读）。 */
+    private fun promptExportCard(character: RoleCharacter) {
+        val options = arrayOf(
+            getString(R.string.role_export_json),
+            getString(R.string.role_export_png)
+        )
+        AlertDialog.Builder(this)
+            .setTitle(R.string.role_export_card)
+            .setItems(options) { _, which ->
+                shareCard(character, png = which == 1)
+            }
+            .setNegativeButton(R.string.role_cancel, null)
+            .show()
+    }
+
+    /** 真正导出并分享一张角色卡（PNG 会内嵌头像与 V2 数据）。 */
+    private fun shareCard(character: RoleCharacter, png: Boolean) {
+        val dir = File(cacheDir, "role_export")
+        val file = try {
+            if (png) {
+                TavernCardIO.writeExportPng(dir, character, store.avatarAbs(character).takeIf { it.isFile })
+            } else {
+                TavernCardIO.writeExportJson(dir, character)
+            }
+        } catch (_: Exception) {
+            null
+        }
+        if (file == null || !file.isFile) {
+            Toast.makeText(this, R.string.toast_role_export_failed, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+        val mime = if (png) "image/png" else "application/json"
+        startActivity(
+            Intent.createChooser(
+                Intent(Intent.ACTION_SEND).apply {
+                    type = mime
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                },
+                getString(R.string.role_share_card)
+            )
+        )
     }
 
     private fun confirmDelete(character: RoleCharacter) {
