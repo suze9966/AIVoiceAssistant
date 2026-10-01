@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 扬声器（免提） -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M3,9v6h4l5,5V4L7,9H3z"/>
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M16,7.97v8.05c1.48,-0.73 2.5,-2.25 2.5,-4.02S17.48,8.7 16,7.97z"/>
+</vector>

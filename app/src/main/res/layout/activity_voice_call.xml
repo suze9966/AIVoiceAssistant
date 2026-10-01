@@ -1,114 +1,198 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- 语音通话页：完全对标微信通话布局 -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@drawable/call_page_bg"
-    android:keepScreenOn="true"
-    android:paddingStart="24dp"
-    android:paddingEnd="24dp"
-    android:paddingTop="20dp"
-    android:paddingBottom="28dp">
-
-    <TextView
-        android:id="@+id/btnCallBack"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:gravity="center"
-        android:background="@drawable/icon_touch_bg"
-        android:text="‹"
-        android:textColor="@color/white"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:contentDescription="@string/voice_call_hangup"/>
+    android:keepScreenOn="true">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
         android:orientation="vertical"
-        android:gravity="center_horizontal">
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="40dp">
 
+        <!-- 顶部：收起 / 返回 箭头 -->
         <TextView
-            android:id="@+id/tvCallDuration"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="00:00"
+            android:id="@+id/btnCallBack"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:gravity="center"
+            android:background="@drawable/icon_touch_bg"
+            android:text="⌄"
             android:textColor="@color/white"
-            android:textSize="14sp"/>
+            android:textSize="24sp"
+            android:contentDescription="@string/voice_call_hangup"/>
 
-        <FrameLayout
-            android:layout_width="176dp"
-            android:layout_height="176dp"
-            android:layout_marginTop="28dp">
-            <View
-                android:id="@+id/callHalo"
-                android:layout_width="176dp"
-                android:layout_height="176dp"
-                android:background="@drawable/halo_ring"/>
-            <ImageView
-                android:id="@+id/ivCallAvatar"
-                android:layout_width="132dp"
-                android:layout_height="132dp"
-                android:layout_gravity="center"
-                android:src="@drawable/ic_bot"
-                android:scaleType="centerCrop"
-                android:background="@drawable/glass_avatar"
-                android:contentDescription="@string/app_name"/>
-        </FrameLayout>
+        <!-- 中部：头像 + 名字 + 状态 + 字幕 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
 
+            <FrameLayout
+                android:layout_width="200dp"
+                android:layout_height="200dp"
+                android:layout_marginTop="24dp">
+                <View
+                    android:id="@+id/callHalo"
+                    android:layout_width="200dp"
+                    android:layout_height="200dp"
+                    android:background="@drawable/halo_ring"/>
+                <ImageView
+                    android:id="@+id/ivCallAvatar"
+                    android:layout_width="152dp"
+                    android:layout_height="152dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_bot"
+                    android:scaleType="centerCrop"
+                    android:background="@drawable/glass_avatar"
+                    android:contentDescription="@string/app_name"/>
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/tvCallName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="22dp"
+                android:text="@string/voice_call_name"
+                android:textColor="@color/white"
+                android:textSize="28sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:id="@+id/tvCallDuration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="00:00"
+                android:textColor="#99FFFFFF"
+                android:textSize="15sp"/>
+
+            <TextView
+                android:id="@+id/tvCallStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="@string/voice_call_dialing"
+                android:textColor="#E6FFFFFF"
+                android:textSize="14sp"/>
+
+            <TextView
+                android:id="@+id/tvCallCaption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="26dp"
+                android:gravity="center"
+                android:maxLines="4"
+                android:ellipsize="end"
+                android:lineSpacingExtra="6dp"
+                android:textColor="#D9FFFFFF"
+                android:textSize="16sp"/>
+        </LinearLayout>
+
+        <!-- 底部提示 -->
         <TextView
-            android:id="@+id/tvCallName"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
-            android:text="@string/voice_call_name"
-            android:textColor="@color/white"
-            android:textSize="26sp"
-            android:textStyle="bold"/>
-
-        <TextView
-            android:id="@+id/tvCallStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/voice_call_dialing"
-            android:textColor="#E6FFFFFF"
-            android:textSize="15sp"/>
-
-        <TextView
-            android:id="@+id/tvCallCaption"
+            android:id="@+id/tvCallHint"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
             android:gravity="center"
-            android:maxLines="4"
-            android:ellipsize="end"
-            android:textColor="#CCFFFFFF"
-            android:textSize="15sp"/>
+            android:layout_marginBottom="28dp"
+            android:text="@string/voice_call_hint"
+            android:textColor="#80FFFFFF"
+            android:textSize="12sp"/>
+
+        <!-- 底部按钮栏：静音 / 免提 / 挂断（微信通话式横排） -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <LinearLayout
+                android:id="@+id/btnMute"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal">
+
+                <ImageView
+                    android:id="@+id/ivMute"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:padding="18dp"
+                    android:background="@drawable/call_btn_round"
+                    android:src="@drawable/ic_call_mic"
+                    android:contentDescription="@string/voice_call_mute"/>
+
+                <TextView
+                    android:id="@+id/tvMute"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/voice_call_mute"
+                    android:textColor="#CCFFFFFF"
+                    android:textSize="13sp"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/btnSpeaker"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal">
+
+                <ImageView
+                    android:id="@+id/ivSpeaker"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:padding="18dp"
+                    android:background="@drawable/call_btn_round"
+                    android:src="@drawable/ic_call_speaker"
+                    android:contentDescription="@string/voice_call_speaker"/>
+
+                <TextView
+                    android:id="@+id/tvSpeaker"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/voice_call_speaker"
+                    android:textColor="#CCFFFFFF"
+                    android:textSize="13sp"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/btnHangup"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal">
+
+                <ImageView
+                    android:id="@+id/ivHangup"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:padding="16dp"
+                    android:background="@drawable/call_btn_hangup"
+                    android:src="@drawable/ic_call_hangup"
+                    android:contentDescription="@string/voice_call_hangup"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/voice_call_hangup"
+                    android:textColor="#CCFFFFFF"
+                    android:textSize="13sp"/>
+            </LinearLayout>
+        </LinearLayout>
     </LinearLayout>
-
-    <TextView
-        android:id="@+id/tvCallHint"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:layout_marginBottom="16dp"
-        android:text="@string/voice_call_hint"
-        android:textColor="#B3FFFFFF"
-        android:textSize="12sp"/>
-
-    <TextView
-        android:id="@+id/btnHangup"
-        android:layout_width="72dp"
-        android:layout_height="72dp"
-        android:layout_gravity="center_horizontal"
-        android:gravity="center"
-        android:background="@drawable/btn_hangup_bg"
-        android:text="@string/voice_call_hangup"
-        android:textColor="@color/white"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        android:contentDescription="@string/voice_call_hangup"/>
-</LinearLayout>
+</FrameLayout>

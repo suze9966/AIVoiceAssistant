@@ -48,7 +48,6 @@
     <string name="label_proactive_interval">主动找你的最短间隔</string>
     <string name="label_grow">学习成长（等级·经验·越来越懂你）</string>
     <string name="label_memory">本地记忆库（对话数据只存本机）</string>
-    <string name="btn_memory_summary">管理本地记忆</string>
     <string name="memory_title">本地记忆</string>
     <string name="memory_subtitle">查看、修改、导入和导出都在本机</string>
     <string name="memory_empty">还没有记忆。点右上角 + 自己加一条，或从 JSON 导入。</string>
@@ -78,7 +77,6 @@
     <string name="toast_memory_import_failed">导入失败，请选小沫导出的 JSON</string>
     <string name="toast_memory_exported">已导出 %1$s</string>
     <string name="toast_memory_export_failed">导出失败</string>
-    <string name="btn_emotion_tree">查看情感记忆</string>
     <string name="emotion_title">情感记忆</string>
     <string name="emotion_subtitle">按心情分枝，叶子会慢慢沉淀</string>
     <string name="emotion_empty">还没有情感记忆。跟小沫说话后，疲惫、想念、被凶这些枝会自己长出来。</string>
@@ -404,12 +402,16 @@
     <string name="menu_mind">💭 独立思考</string>
     <string name="voice_call_title">语音通话</string>
     <string name="voice_call_name">小沫</string>
-    <string name="voice_call_dialing">正在接通…</string>
-    <string name="voice_call_listening">你说，我在听</string>
-    <string name="voice_call_thinking">小沫想了一下…</string>
+    <string name="voice_call_dialing">正在等待小沫接听…</string>
+    <string name="voice_call_listening">正在通话中</string>
+    <string name="voice_call_thinking">小沫正在想…</string>
     <string name="voice_call_speaking">小沫正在说话</string>
     <string name="voice_call_hangup">挂断</string>
-    <string name="voice_call_hint">说完一句等小沫答；说「挂了」或点红键结束</string>
+    <string name="voice_call_mute">静音</string>
+    <string name="voice_call_mute_on">已静音</string>
+    <string name="voice_call_speaker">免提</string>
+    <string name="voice_call_speaker_on">免提中</string>
+    <string name="voice_call_hint">可以直接说话；说「挂了」或点红键结束</string>
     <string name="voice_call_greeting">喂，主人，我是小沫。你说，我听着。</string>
     <string name="voice_call_bye">好，那先挂啦，想我再打过来。</string>
     <string name="voice_call_fallback">嗯，我在。你再说一次？</string>
@@ -482,10 +484,6 @@
     <string name="group_empty_reply">（没有收到回复）</string>
     <string name="role_open_plugins">酒馆插件</string>
     <string name="role_open_groups">酒馆群聊</string>
-    <string name="btn_todo_hub">管理待办</string>
-    <string name="btn_remind_hub">管理提醒</string>
-    <string name="btn_calendar_hub">管理系统日程</string>
-    <string name="btn_mind_hub">管理独立思考</string>
     <string name="todo_title">待办备忘</string>
     <string name="todo_empty">还没有待办。点右上角 + 添加，也可以对我说「记一下」。</string>
     <string name="todo_help">点一条可改内容或勾掉，长按删除。口令和本页共用同一份待办。</string>

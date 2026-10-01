@@ -1,8 +1,10 @@
 package com.suze.aivoice
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -38,6 +40,15 @@ class VoiceCallActivity : AppCompatActivity() {
     private lateinit var tvCaption: TextView
     private lateinit var callHalo: View
     private lateinit var ivAvatar: ImageView
+    private lateinit var ivMute: ImageView
+    private lateinit var ivSpeaker: ImageView
+    private lateinit var tvMute: TextView
+    private lateinit var tvSpeaker: TextView
+
+    private var muted = false
+    private var speakerOn = true
+    private var audioManager: AudioManager? = null
+    private var savedAudioMode = AudioManager.MODE_NORMAL
 
     private var recognizer: SpeechRecognizer? = null
     private val history = mutableListOf<ChatMessage>()
@@ -88,6 +99,14 @@ class VoiceCallActivity : AppCompatActivity() {
         ivAvatar = findViewById(R.id.ivCallAvatar)
         ChatStyleStore.applyAvatar(ivAvatar)
 
+        ivMute = findViewById(R.id.ivMute)
+        ivSpeaker = findViewById(R.id.ivSpeaker)
+        tvMute = findViewById(R.id.tvMute)
+        tvSpeaker = findViewById(R.id.tvSpeaker)
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        findViewById<View>(R.id.btnMute).setOnClickListener { toggleMute() }
+        findViewById<View>(R.id.btnSpeaker).setOnClickListener { toggleSpeaker() }
+
         chatId = store.migrateAndActive(prefs)
         history.addAll(store.load(chatId))
 
@@ -132,10 +151,73 @@ class VoiceCallActivity : AppCompatActivity() {
         startedAt = System.currentTimeMillis()
         tickDuration()
         initRecognizer()
+        enterCallAudio()
+        updateMuteUi()
+        updateSpeakerUi()
         setStatus(getString(R.string.voice_call_dialing), Halo.IDLE)
         val hello = getString(R.string.voice_call_greeting)
         tvCaption.text = hello
         speakThenListen(hello, persistAsAssistant = true)
+    }
+
+    /** 进入通话音频模式：切到通话音量流、打开免提路由，让声音从外放出来。 */
+    private fun enterCallAudio() {
+        val am = audioManager ?: return
+        runCatching {
+            savedAudioMode = am.mode
+            am.mode = AudioManager.MODE_IN_COMMUNICATION
+            @Suppress("DEPRECATION")
+            am.isSpeakerphoneOn = true
+        }
+        speakerOn = true
+    }
+
+    /** 退出通话：还原音频模式与免提。 */
+    private fun exitCallAudio() {
+        val am = audioManager ?: return
+        runCatching {
+            @Suppress("DEPRECATION")
+            am.isSpeakerphoneOn = false
+            am.mode = savedAudioMode
+        }
+    }
+
+    private fun toggleMute() {
+        muted = !muted
+        // 录音期间无法暂停系统识别，静音时直接取消本轮识别并停止续听
+        if (muted) {
+            suspendListen()
+        } else if (inCall && !hungUp && !isSending && !tts.isSpeaking) {
+            scheduleListen()
+        }
+        updateMuteUi()
+    }
+
+    private fun toggleSpeaker() {
+        speakerOn = !speakerOn
+        val am = audioManager
+        if (am != null) {
+            runCatching {
+                @Suppress("DEPRECATION")
+                am.isSpeakerphoneOn = speakerOn
+            }
+        }
+        updateSpeakerUi()
+    }
+
+    private fun updateMuteUi() {
+        if (!::ivMute.isInitialized) return
+        ivMute.setImageResource(if (muted) R.drawable.ic_call_mic_off else R.drawable.ic_call_mic)
+        ivMute.setBackgroundResource(if (muted) R.drawable.call_btn_round_on else R.drawable.call_btn_round)
+        tvMute.text = getString(if (muted) R.string.voice_call_mute_on else R.string.voice_call_mute)
+        tvMute.setTextColor(if (muted) 0xFF33BB55.toInt() else 0xCCFFFFFF.toInt())
+    }
+
+    private fun updateSpeakerUi() {
+        if (!::ivSpeaker.isInitialized) return
+        ivSpeaker.setBackgroundResource(if (speakerOn) R.drawable.call_btn_round_on else R.drawable.call_btn_round)
+        tvSpeaker.text = getString(if (speakerOn) R.string.voice_call_speaker_on else R.string.voice_call_speaker)
+        tvSpeaker.setTextColor(if (speakerOn) 0xFF111315.toInt() else 0xCCFFFFFF.toInt())
     }
 
     private fun tickDuration() {
@@ -199,6 +281,7 @@ class VoiceCallActivity : AppCompatActivity() {
 
     private fun startListening() {
         if (hungUp || !inCall || recognizer == null) return
+        if (muted) return
         if (isListening || isSending || tts.isSpeaking || isFinishing || isDestroyed) return
         if (System.currentTimeMillis() < notBeforeListenAt) {
             scheduleListen()
@@ -217,7 +300,7 @@ class VoiceCallActivity : AppCompatActivity() {
     }
 
     private fun scheduleListen() {
-        if (!inCall || hungUp) return
+        if (!inCall || hungUp || muted) return
         val wait = (notBeforeListenAt - System.currentTimeMillis()).coerceAtLeast(320L)
         main.postDelayed({
             if (inCall && !hungUp && !isListening && !isSending && !tts.isSpeaking) startListening()
@@ -331,6 +414,7 @@ class VoiceCallActivity : AppCompatActivity() {
         recognizer = null
         tts.onSpeakDone = null
         tts.stop()
+        exitCallAudio()
         persist()
         Toast.makeText(this, R.string.toast_voice_call_ended, Toast.LENGTH_SHORT).show()
         if (speakBye) {
@@ -406,6 +490,7 @@ class VoiceCallActivity : AppCompatActivity() {
             tts.stop()
             tts.shutdown()
         }
+        exitCallAudio()
         super.onDestroy()
     }
 

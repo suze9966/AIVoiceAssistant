@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 微信语音通话背景：自上而下由深灰绿渐变到近黑 -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
     <gradient
         android:angle="270"
-        android:startColor="#141420"
-        android:centerColor="#17171C"
-        android:endColor="#0E0E11"
+        android:startColor="#2A2F33"
+        android:centerColor="#1C2023"
+        android:endColor="#111315"
         android:type="linear"/>
 </shape>

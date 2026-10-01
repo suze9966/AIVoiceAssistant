@@ -57,8 +57,6 @@ class SettingsBinder(
         val switchLocalKws = activity.findViewById<SwitchCompat>(R.id.switchLocalKws)
         val switchWelcome = activity.findViewById<SwitchCompat>(R.id.switchWelcome)
         val spinnerPortrait = activity.findViewById<Spinner>(R.id.spinnerPortrait)
-        val btnEmotionTree = activity.findViewById<Button>(R.id.btnEmotionTree)
-        val btnMemorySummary = activity.findViewById<Button>(R.id.btnMemorySummary)
         val btnTest = activity.findViewById<Button>(R.id.btnTestVoice)
         val seekRate = activity.findViewById<SeekBar>(R.id.seekRate)
         val seekPitch = activity.findViewById<SeekBar>(R.id.seekPitch)
@@ -189,24 +187,6 @@ class SettingsBinder(
         btnStopSpeak.setOnClickListener {
             tts.stop()
             Toast.makeText(activity, R.string.toast_stopped, Toast.LENGTH_SHORT).show()
-        }
-        btnEmotionTree.setOnClickListener {
-            activity.startActivity(Intent(activity, EmotionActivity::class.java))
-        }
-        btnMemorySummary.setOnClickListener {
-            activity.startActivity(Intent(activity, MemoryActivity::class.java))
-        }
-        activity.findViewById<Button>(R.id.btnMindHub).setOnClickListener {
-            activity.startActivity(Intent(activity, MindActivity::class.java))
-        }
-        activity.findViewById<Button>(R.id.btnTodoHub).setOnClickListener {
-            activity.startActivity(Intent(activity, TodoActivity::class.java))
-        }
-        activity.findViewById<Button>(R.id.btnRemindHub).setOnClickListener {
-            activity.startActivity(Intent(activity, ReminderActivity::class.java))
-        }
-        activity.findViewById<Button>(R.id.btnCalendarHub).setOnClickListener {
-            activity.startActivity(Intent(activity, CalendarActivity::class.java))
         }
         btnSave.setOnClickListener {
             val baseUrl = editBaseUrl.text.toString().trim()
