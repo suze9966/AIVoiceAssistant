@@ -45,6 +45,16 @@ class GroupChatActivity : AppCompatActivity() {
         prefs = Prefs(this)
         llm = LlmClient(prefs)
         llm.allowLocalFallback = false
+        llm.toolHost = DefaultLlmToolHost(
+            this,
+            prefs,
+            searcher,
+            WeatherClient(this, prefs),
+            MemoryEngine(this),
+            UtilityClient(),
+            TodoStore(this),
+            ReminderStore(this)
+        )
         tts = TtsHelper(this, prefs)
         roles = RoleStore(this)
         store = GroupStore(this)
@@ -61,6 +71,11 @@ class GroupChatActivity : AppCompatActivity() {
         editInput = findViewById(R.id.editRoleInput)
         editInput.hint = getString(R.string.group_hint_input)
         tvStatus = findViewById(R.id.tvRoleChatStatus)
+        llm.onToolStatus = { label ->
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed) tvStatus.text = label
+            }
+        }
         adapter = ChatAdapter(history)
         adapter.bindMessageAvatar = { view, msg -> bindBubbleAvatar(view, msg) }
         recycler.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
@@ -316,21 +331,11 @@ class GroupChatActivity : AppCompatActivity() {
         }
         llm.applyCloudThink = true
         llm.allowLocalFallback = false
+        llm.toolsEnabled = true
         llm.extraSystemPrompt = null
         sendJob?.cancel()
         sendJob = lifecycleScope.launch {
             try {
-                if (prefs.webSearchEnabled && KnowledgeAssist.needsWeb(processed)) {
-                    tvStatus.text = getString(R.string.status_searching)
-                    val notes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        searcher.gatherNotes(KnowledgeAssist.queryOf(processed))
-                    }
-                    if (session != speechSession || isFinishing || isDestroyed) {
-                        persistChat()
-                        return@launch
-                    }
-                    llm.extraSystemPrompt = KnowledgeAssist.notesPrompt(notes, "role").takeIf { it.isNotBlank() }
-                }
                 for (speaker in members) {
                     if (session != speechSession || isFinishing || isDestroyed) return@launch
                     tvStatus.text = getString(R.string.group_status_thinking, speaker.name)

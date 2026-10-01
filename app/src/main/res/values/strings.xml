@@ -34,7 +34,7 @@
     <string name="label_taiwan_voice">台湾腔语音（改成台湾腔音色，默认为普通话）</string>
     <string name="label_taiwan_prompt">小智式机车台湾腔（可追加自定义人设）</string>
     <string name="label_wake">语音唤醒词</string>
-    <string name="label_stream">流式输出（打字机效果）</string>
+    <string name="label_stream">流式输出（先开口，边想边说）</string>
     <string name="label_free_chat_privacy">允许公共免费接口（会向第三方发送对话，仅在未配置大模型时使用，默认关闭）</string>
     <string name="error_https_base_url">为保护 API Key，Base URL 必须是无账号、查询参数和片段的 HTTPS 地址</string>
     <string name="btn_save">保存</string>
@@ -44,6 +44,8 @@
     <string name="menu_clear">清空对话</string>
     <string name="label_emotion">情感化人格（会开心会难过，语调随情绪变化）</string>
     <string name="label_mind">独立思考（有自己的想法与判断）</string>
+    <string name="label_proactive">主动思考（自己想着想着就来找你）</string>
+    <string name="label_proactive_interval">主动找你的最短间隔</string>
     <string name="label_grow">学习成长（等级·经验·越来越懂你）</string>
     <string name="label_memory">本地记忆库（对话数据只存本机）</string>
     <string name="btn_memory_summary">管理本地记忆</string>
@@ -353,7 +355,7 @@
     <string name="toast_keep_one_session">至少保留一条对话</string>
     <string name="toast_session_renamed">对话已重命名</string>
     <string name="label_keep_listen">退到后台继续聆听</string>
-    <string name="label_web_search">提问时先查网再作答</string>
+    <string name="label_web_search">允许大模型按需查网（闲聊直接开口，认真提问再搜）</string>
     <string name="remind_notif_title">小沫提醒</string>
     <string name="remind_channel">提醒闹钟</string>
     <string name="toast_remind_set">好，%1$s 提醒你：%2$s</string>
@@ -394,6 +396,12 @@
     <string name="ask_image_gallery">相册</string>
     <string name="remind_advance_title">提前提醒</string>
     <string name="menu_voice_call">语音通话</string>
+    <string name="menu_todo">✅ 待办备忘</string>
+    <string name="menu_remind">⏰ 提醒闹钟</string>
+    <string name="menu_calendar">📅 系统日程</string>
+    <string name="menu_memory">🧠 本地记忆</string>
+    <string name="menu_emotion">💗 情感记忆</string>
+    <string name="menu_mind">💭 独立思考</string>
     <string name="voice_call_title">语音通话</string>
     <string name="voice_call_name">小沫</string>
     <string name="voice_call_dialing">正在接通…</string>

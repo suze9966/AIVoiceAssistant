@@ -16,7 +16,7 @@
                 android:contentDescription="@string/label_chat_background"/>
             <View android:id="@+id/chatBgScrim"
                 android:layout_width="match_parent" android:layout_height="match_parent"
-                android:background="#9908080C" android:visibility="gone"/>
+                android:background="990E0E11" android:visibility="gone"/>
             <androidx.recyclerview.widget.RecyclerView android:id="@+id/recyclerChat"
                 android:layout_width="match_parent" android:layout_height="match_parent"
                 android:clipToPadding="false" android:paddingStart="12dp" android:paddingEnd="12dp"
@@ -46,7 +46,7 @@
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/app_name"
                         android:textColor="@color/text_primary" android:textSize="20sp" android:textStyle="bold" android:letterSpacing="0.02"/>
                     <TextView android:id="@+id/tvStatus" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp" android:background="@drawable/status_chip_bg" android:text="@string/status_idle"
+                        android:layout_marginTop="5dp" android:background="@drawable/status_chip_bg" android:text="@string/status_idle"
                         android:textColor="@color/text_secondary" android:textSize="12sp" android:maxLines="1" android:ellipsize="end"/>
                 </LinearLayout>
                 <ImageButton android:id="@+id/btnMenu" android:layout_width="48dp" android:layout_height="48dp"

@@ -195,6 +195,17 @@ class MemoryEngine(context: Context) {
 
     fun listItems(): List<Mem> = items.toList()
 
+    /** 按关键词找回本机记忆，不把整段聊天当记忆。 */
+    fun search(query: String, limit: Int = 8): List<Mem> {
+        val q = query.trim()
+        if (q.isEmpty()) return items.takeLast(limit).reversed()
+        val keys = q.split(Regex("[\\s,，、]+")).map { it.trim() }.filter { it.length >= 1 }
+        return items.asReversed().filter { m ->
+            m.content.contains(q, ignoreCase = true) ||
+                keys.any { key -> m.content.contains(key, ignoreCase = true) }
+        }.take(limit)
+    }
+
     fun addManual(type: String, content: String): Boolean {
         val c = content.trim()
         if (c.isBlank()) return false

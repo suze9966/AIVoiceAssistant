@@ -2,15 +2,15 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
-            <gradient android:angle="270" android:startColor="#CC1C1C22" android:endColor="#9914141C"/>
-            <corners android:bottomLeftRadius="18dp" android:bottomRightRadius="18dp"/>
+            <solid android:color="#B31C1C22"/>
+            <corners android:radius="16dp"/>
             <stroke android:width="1dp" android:color="#26FFFFFF"/>
         </shape>
     </item>
-    <item>
+    <item android:width="3dp" android:gravity="left">
         <shape android:shape="rectangle">
-            <solid android:color="#331A1A26"/>
-            <corners android:bottomLeftRadius="18dp" android:bottomRightRadius="18dp"/>
+            <solid android:color="#8B7CFF"/>
+            <corners android:topLeftRadius="16dp" android:bottomLeftRadius="16dp"/>
         </shape>
     </item>
 </layer-list>

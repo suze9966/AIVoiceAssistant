@@ -47,6 +47,16 @@ class RoleChatActivity : AppCompatActivity() {
         prefs = Prefs(this)
         llm = LlmClient(prefs)
         llm.allowLocalFallback = false
+        llm.toolHost = DefaultLlmToolHost(
+            this,
+            prefs,
+            searcher,
+            WeatherClient(this, prefs),
+            MemoryEngine(this),
+            UtilityClient(),
+            TodoStore(this),
+            ReminderStore(this)
+        )
         tts = TtsHelper(this, prefs)
         store = RoleStore(this)
         plugins = TavernPluginStore(this)
@@ -63,6 +73,11 @@ class RoleChatActivity : AppCompatActivity() {
         recycler = findViewById(R.id.recyclerRoleChat)
         editInput = findViewById(R.id.editRoleInput)
         tvStatus = findViewById(R.id.tvRoleChatStatus)
+        llm.onToolStatus = { label ->
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed) tvStatus.text = label
+            }
+        }
         adapter = ChatAdapter(history)
         adapter.bindAiAvatar = { view -> bindBubbleAvatar(view) }
         recycler.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
@@ -505,27 +520,12 @@ class RoleChatActivity : AppCompatActivity() {
         }
         llm.applyCloudThink = true
         llm.allowLocalFallback = false
+        llm.toolsEnabled = true
         llm.systemPromptOverride = plugins.applyPrompt(RolePrompt.build(c, history.dropLast(1)), user, c.name)
         llm.extraSystemPrompt = null
         sendJob?.cancel()
         sendJob = lifecycleScope.launch {
             try {
-                if (prefs.webSearchEnabled && KnowledgeAssist.needsWeb(processed)) {
-                    tvStatus.text = getString(R.string.status_searching)
-                    val notes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        searcher.gatherNotes(KnowledgeAssist.queryOf(processed))
-                    }
-                    if (session != speechSession || isFinishing || isDestroyed) {
-                        persistChat()
-                        return@launch
-                    }
-                    llm.extraSystemPrompt = KnowledgeAssist.notesPrompt(notes, "role").takeIf { it.isNotBlank() }
-                    tvStatus.text = if (prefs.cloudThinkEnabled) {
-                        getString(R.string.role_status_thinking)
-                    } else {
-                        getString(R.string.status_speaking)
-                    }
-                }
                 val requestHistory = history.dropLast(1).filter { it.content.isNotBlank() }
                 val rawBuffer = StringBuilder()
                 val rawText = try {

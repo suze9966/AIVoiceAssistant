@@ -95,6 +95,16 @@ class Prefs(context: Context) {
             "clone" to "硅基流动克隆音色（需 Key 和已上传音色）",
             "system" to "系统 TTS（离线兜底，不走网络）"
         )
+        /** 主动思考的间隔档位（分钟）。 */
+        val PROACTIVE_INTERVAL_OPTIONS = listOf(
+            15 to "每 15 分钟",
+            30 to "每 30 分钟",
+            45 to "每 45 分钟（默认）",
+            60 to "每 1 小时",
+            120 to "每 2 小时",
+            240 to "每 4 小时",
+            720 to "每 12 小时"
+        )
         val VOLC_RESOURCE_OPTIONS = listOf(
             "seed-tts-2.0" to "豆包语音 2.0",
             "seed-tts-1.0" to "豆包语音 1.0",
@@ -163,6 +173,21 @@ class Prefs(context: Context) {
     var welcomeEnabled: Boolean
         get() = sp.getBoolean("welcomeEnabled", true)
         set(v) = sp.edit().putBoolean("welcomeEnabled", v).apply()
+
+    /** 主动思考开关：让小沫自己定时想事，并主动来找主人聊天。 */
+    var proactiveEnabled: Boolean
+        get() = sp.getBoolean("proactiveEnabled", true)
+        set(v) = sp.edit().putBoolean("proactiveEnabled", v).apply()
+
+    /** 主动找主人的最短间隔（分钟），默认 45 分钟。 */
+    var proactiveIntervalMin: Int
+        get() = sp.getInt("proactiveIntervalMin", 45).coerceIn(10, 720)
+        set(v) = sp.edit().putInt("proactiveIntervalMin", v.coerceIn(10, 720)).apply()
+
+    /** 上次主动开口的时间戳 */
+    var lastProactiveAt: Long
+        get() = sp.getLong("lastProactiveAt", 0L)
+        set(v) = sp.edit().putLong("lastProactiveAt", v).apply()
 
     /** 免费在线闲聊开关：会把对话发给公共第三方服务，出于隐私保护默认关闭。 */
     var freeChatEnabled: Boolean

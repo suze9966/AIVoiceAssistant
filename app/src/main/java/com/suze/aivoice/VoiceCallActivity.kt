@@ -65,11 +65,26 @@ class VoiceCallActivity : AppCompatActivity() {
         store = HistoryStore(this)
         emotion = EmotionEngine(this)
         llm.bindEmotion(emotion)
+        llm.toolHost = DefaultLlmToolHost(
+            this,
+            prefs,
+            searcher,
+            WeatherClient(this, prefs),
+            MemoryEngine(this),
+            UtilityClient(),
+            TodoStore(this),
+            ReminderStore(this)
+        )
 
         tvDuration = findViewById(R.id.tvCallDuration)
         tvStatus = findViewById(R.id.tvCallStatus)
         tvCaption = findViewById(R.id.tvCallCaption)
         callHalo = findViewById(R.id.callHalo)
+        llm.onToolStatus = { label ->
+            runOnUiThread {
+                if (!hungUp && !isFinishing && !isDestroyed) setStatus(label, Halo.IDLE)
+            }
+        }
         ivAvatar = findViewById(R.id.ivCallAvatar)
         ChatStyleStore.applyAvatar(ivAvatar)
 
@@ -234,28 +249,34 @@ class VoiceCallActivity : AppCompatActivity() {
             emotion.reactToUser(userText, isNight = hour >= 22 || hour < 6)
         }
 
-        llm.applyCloudThink = false
+        llm.applyCloudThink = KnowledgeAssist.needsWeb(userText)
         llm.allowLocalFallback = true
+        llm.toolsEnabled = true
         llm.systemPromptOverride = prefs.chattingPersona()
         val extra = StringBuilder(CALL_PROMPT)
         if (prefs.emotionEnabled) extra.append('\n').append(emotion.emotionPrompt())
+        llm.extraSystemPrompt = extra.toString()
 
         lifecycleScope.launch {
             var reply = ""
             try {
-                if (prefs.webSearchEnabled && KnowledgeAssist.needsWeb(userText)) {
-                    setStatus(getString(R.string.status_searching), Halo.IDLE)
-                    val notes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        searcher.gatherNotes(KnowledgeAssist.queryOf(userText))
+                val requestHistory = history.takeLast(16)
+                reply = if (prefs.streamEnabled) {
+                    val rawBuffer = StringBuilder()
+                    llm.chatStream(requestHistory) { delta ->
+                        if (delta.isEmpty()) return@chatStream
+                        val snapshot = synchronized(rawBuffer) {
+                            rawBuffer.append(delta)
+                            rawBuffer.toString()
+                        }
+                        runOnUiThread {
+                            if (hungUp || isFinishing || isDestroyed) return@runOnUiThread
+                            tvCaption.text = llm.stripReasoning(snapshot)
+                        }
                     }
-                    if (hungUp || isFinishing || isDestroyed) return@launch
-                    KnowledgeAssist.notesPrompt(notes, "call").takeIf { it.isNotBlank() }?.let {
-                        extra.append('\n').append(it)
-                    }
-                    setStatus(getString(R.string.voice_call_thinking), Halo.IDLE)
-                }
-                llm.extraSystemPrompt = extra.toString()
-                reply = llm.chat(history.takeLast(16)).ifBlank { callFailText() }
+                } else {
+                    llm.chat(requestHistory)
+                }.ifBlank { callFailText() }
                 reply = llm.stripReasoning(reply)
                 reply = shortenCallReply(reply)
             } catch (e: Exception) {

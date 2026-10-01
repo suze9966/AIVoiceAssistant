@@ -48,6 +48,8 @@ class SettingsBinder(
         val switchGrow = activity.findViewById<SwitchCompat>(R.id.switchGrow)
         val switchMemory = activity.findViewById<SwitchCompat>(R.id.switchMemory)
         val switchFreeChat = activity.findViewById<SwitchCompat>(R.id.switchFreeChat)
+        val switchProactive = activity.findViewById<SwitchCompat>(R.id.switchProactive)
+        val spinnerProactiveInterval = activity.findViewById<Spinner>(R.id.spinnerProactiveInterval)
         val switchKeepListen = activity.findViewById<SwitchCompat>(R.id.switchKeepListen)
         val switchWebSearch = activity.findViewById<SwitchCompat>(R.id.switchWebSearch)
         val switchNotifySpeak = activity.findViewById<SwitchCompat>(R.id.switchNotifySpeak)
@@ -96,6 +98,11 @@ class SettingsBinder(
         switchGrow.isChecked = prefs.growEnabled
         switchMemory.isChecked = prefs.memoryEnabled
         switchFreeChat.isChecked = prefs.freeChatEnabled
+        switchProactive.isChecked = prefs.proactiveEnabled
+        val proactiveLabels = Prefs.PROACTIVE_INTERVAL_OPTIONS.map { it.second }
+        spinnerProactiveInterval.adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item, proactiveLabels)
+        val proactiveIdx = Prefs.PROACTIVE_INTERVAL_OPTIONS.indexOfFirst { it.first == prefs.proactiveIntervalMin }
+        if (proactiveIdx >= 0) spinnerProactiveInterval.setSelection(proactiveIdx)
         switchKeepListen.isChecked = prefs.keepListenInBackground
         switchWebSearch.isChecked = prefs.webSearchEnabled
         switchNotifySpeak.isChecked = prefs.notifySpeakEnabled
@@ -233,6 +240,8 @@ class SettingsBinder(
             prefs.growEnabled = switchGrow.isChecked
             prefs.memoryEnabled = switchMemory.isChecked
             prefs.freeChatEnabled = switchFreeChat.isChecked
+            prefs.proactiveEnabled = switchProactive.isChecked
+            Prefs.PROACTIVE_INTERVAL_OPTIONS.getOrNull(spinnerProactiveInterval.selectedItemPosition)?.first?.let { prefs.proactiveIntervalMin = it }
             prefs.keepListenInBackground = switchKeepListen.isChecked
             prefs.webSearchEnabled = switchWebSearch.isChecked
             val turnOnNotify = switchNotifySpeak.isChecked && !prefs.notifySpeakEnabled

@@ -52,6 +52,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mind: MindEngine
     private lateinit var memory: MemoryEngine
     private lateinit var weather: WeatherClient
+    private lateinit var proactive: ProactiveEngine
     private lateinit var adapter: ChatAdapter
     private lateinit var recycler: RecyclerView
     private lateinit var editInput: EditText
@@ -147,8 +148,17 @@ class MainActivity : AppCompatActivity() {
         mind = MindEngine(this)
         memory = MemoryEngine(this)
         weather = WeatherClient(this, prefs)
+        proactive = ProactiveEngine(this, prefs, emotion, memory, mind)
+        llm.toolHost = DefaultLlmToolHost(
+            this, prefs, searcher, weather, memory, utilities, todos, reminders
+        )
 
         tvStatus = findViewById(R.id.tvStatus)
+        llm.onToolStatus = { label ->
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed) tvStatus.text = label
+            }
+        }
         micHalo = findViewById(R.id.micHalo)
         ivChatBackground = findViewById(R.id.ivChatBackground)
         chatBgScrim = findViewById(R.id.chatBgScrim)
@@ -168,9 +178,15 @@ class MainActivity : AppCompatActivity() {
             pop.menu.add(0, 6, 7, getString(R.string.menu_role_lounge))
             pop.menu.add(0, 7, 8, getString(R.string.menu_connect_llm))
             pop.menu.add(0, 13, 9, getString(R.string.menu_voice_call))
-            pop.menu.add(0, 2, 10, getString(R.string.menu_clear))
-            pop.menu.add(0, 4, 11, getString(R.string.menu_stop_speak))
-            pop.menu.add(0, 3, 12, getString(R.string.menu_wake))
+            pop.menu.add(0, 20, 10, getString(R.string.menu_todo))
+            pop.menu.add(0, 21, 11, getString(R.string.menu_remind))
+            pop.menu.add(0, 22, 12, getString(R.string.menu_calendar))
+            pop.menu.add(0, 23, 13, getString(R.string.menu_memory))
+            pop.menu.add(0, 24, 14, getString(R.string.menu_emotion))
+            pop.menu.add(0, 25, 15, getString(R.string.menu_mind))
+            pop.menu.add(0, 2, 16, getString(R.string.menu_clear))
+            pop.menu.add(0, 4, 17, getString(R.string.menu_stop_speak))
+            pop.menu.add(0, 3, 18, getString(R.string.menu_wake))
             pop.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     1 -> { openSettingsDrawer(); true }
@@ -183,6 +199,12 @@ class MainActivity : AppCompatActivity() {
                     6 -> { startActivity(Intent(this, RoleLoungeActivity::class.java)); true }
                     7 -> { startActivity(Intent(this, LlmConnectActivity::class.java)); true }
                     13 -> { openVoiceCall(); true }
+                    20 -> { startActivity(Intent(this, TodoActivity::class.java)); true }
+                    21 -> { startActivity(Intent(this, ReminderActivity::class.java)); true }
+                    22 -> { startActivity(Intent(this, CalendarActivity::class.java)); true }
+                    23 -> { startActivity(Intent(this, MemoryActivity::class.java)); true }
+                    24 -> { startActivity(Intent(this, EmotionActivity::class.java)); true }
+                    25 -> { startActivity(Intent(this, MindActivity::class.java)); true }
                     2 -> {
                         history.clear()
                         adapter.notifyDataSetChanged()
@@ -403,6 +425,44 @@ class MainActivity : AppCompatActivity() {
         if (::memory.isInitialized) memory.reload()
         reloadHistoryIfIdle()
         maybeGreetOnResume()
+        maybeReachOutProactively()
+    }
+
+    /**
+     * 主动思考：让 AI 自己想着想着，主动来找主人说话。
+     * 三明治结构 = 底层情感 + 中层记忆 + 顶层思考，共同决定「说什么、怎么说」。
+     * 与发送/朗读/问候互斥，避免打扰或重复开口。
+     */
+    private fun maybeReachOutProactively() {
+        if (!::proactive.isInitialized || !::llm.isInitialized || !::adapter.isInitialized) return
+        if (!::history.isInitialized) return
+        if (isSending || greetingBusy || tts.isSpeaking || tts.hasQueuedSpeech()) return
+        if (!proactive.shouldReachOut()) return
+        greetingBusy = true
+        lifecycleScope.launch {
+            try {
+                val msg = proactive.compose(llm, history)
+                if (msg.isBlank()) { greetingBusy = false; return@launch }
+                if (isFinishing || isDestroyed) { greetingBusy = false; return@launch }
+                if (isSending || tts.isSpeaking) { greetingBusy = false; return@launch }
+                adapter.add(ChatMessage("assistant", msg, isMe = false))
+                persistHistory()
+                scrollToBottom()
+                proactive.markReachedOut()
+                if (::tts.isInitialized && !streamSpeechCancelled) {
+                    tts.setEmotion(emotion.ttsRate(), emotion.ttsPitch())
+                    tts.setRate(prefs.ttsRate)
+                    tts.setPitch(prefs.ttsPitch)
+                    suspendRecognitionForSpeech()
+                    bindListenAfterSpeak()
+                    tts.speak(msg, prefs.taiwanVoice)
+                }
+            } catch (e: Exception) {
+                // 主动开口失败不打扰主人，静默跳过本轮
+            } finally {
+                greetingBusy = false
+            }
+        }
     }
 
     /** 应用可更换的小沫头像和聊天背景 */
@@ -722,8 +782,9 @@ class MainActivity : AppCompatActivity() {
         // ② 思考引擎：记录经历（供反思使用）
         if (prefs.mindEnabled) mind.record("主人说：" + userText.take(50))
 
-        // ③ 人设：接上茬闲聊；台湾腔叠在同一套聊天风格上
-        llm.applyCloudThink = false
+        // ③ 人设：接上茬闲聊；认真提问才开云端推理，闲聊仍直接开口
+        llm.applyCloudThink = KnowledgeAssist.needsWeb(userText)
+        llm.toolsEnabled = true
         llm.systemPromptOverride = prefs.chattingPersona()
 
         // ④ 拼接“动态提示”：独立思考 + 情绪状态（注入 system prompt，是关键）
@@ -755,20 +816,12 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
           try {
-            var notes = ""
-            if (prefs.webSearchEnabled && KnowledgeAssist.needsWeb(userText)) {
-                tvStatus.text = getString(R.string.status_searching)
-                notes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    searcher.gatherNotes(KnowledgeAssist.queryOf(userText))
-                }
-                if (session != speechSession || isFinishing || isDestroyed) return@launch
+            llm.extraSystemPrompt = baseExtra.takeIf { it.isNotBlank() }
+            tvStatus.text = if (llm.applyCloudThink && prefs.cloudThinkEnabled) {
+                getString(R.string.role_status_thinking)
+            } else {
+                getString(R.string.status_speaking)
             }
-            val extraNow = StringBuilder(baseExtra)
-            KnowledgeAssist.notesPrompt(notes).takeIf { it.isNotBlank() }?.let {
-                extraNow.append('\n').append(it)
-            }
-            llm.extraSystemPrompt = extraNow.toString().takeIf { it.isNotBlank() }
-            if (notes.isNotBlank()) tvStatus.text = getString(R.string.status_speaking)
 
             val requestHistory = history.dropLast(1).filter { it.content.isNotBlank() }
             val rawText: String

@@ -9,5 +9,6 @@
         <item name="android:navigationBarColor" tools:targetApi="l">@color/surface_soft</item>
         <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
         <item name="android:windowBackground">@drawable/glass_page_bg</item>
+        <item name="android:windowDrawsSystemBarBackgrounds" tools:targetApi="l">true</item>
     </style>
 </resources>

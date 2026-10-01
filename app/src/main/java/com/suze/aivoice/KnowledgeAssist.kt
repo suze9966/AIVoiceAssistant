@@ -1,8 +1,8 @@
 package com.suze.aivoice
 
 /**
- * 判断这句话要不要先查网，再把资料交给大模型作答。
- * 闲聊、情绪陪伴不搜；认真提问、时事、百科、明确的「搜/查」才搜。
+ * 判断这句话像不像认真提问。
+ * 闲聊、情绪陪伴不搜也不开推理；认真提问、时事、百科才让模型按需调工具。
  */
 object KnowledgeAssist {
     private val chitchat = listOf(

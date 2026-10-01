@@ -13,6 +13,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.ByteArrayOutputStream
+import java.util.LinkedHashMap
 import java.util.concurrent.TimeUnit
 
 /** OpenAI 兼容大模型客户端。API Key 只允许通过 HTTPS 发往用户明确配置的主机。 */
@@ -23,13 +24,17 @@ class LlmClient(private val prefs: Prefs) {
 
     var systemPromptOverride: String? = null
     var extraSystemPrompt: String? = null
-    /** 只有角色聊天在开关打开时才追加云端推理提示，主聊天不套用。 */
+    /** 角色聊天、主聊天认真提问都可以追加云端推理提示。 */
     var applyCloudThink: Boolean = false
     /** 角色聊天关闭后，未接模型或云端失败时不要用小沫本地闲聊顶替。 */
     var allowLocalFallback: Boolean = true
     /** 最近一次云端失败原因，给界面直说，不再假装陪聊。 */
     var lastCloudError: String? = null
         private set
+    var toolHost: LlmToolHost? = null
+    var toolsEnabled: Boolean = true
+    var onToolStatus: ((String) -> Unit)? = null
+    private var toolsUnsupported: Boolean = false
 
     fun isConfigured(): Boolean = llmConfigured()
 
@@ -59,6 +64,8 @@ class LlmClient(private val prefs: Prefs) {
     private fun llmConfigured(): Boolean =
         apiKey().isNotEmpty() && endpointUrl() != null && prefs.model.isNotBlank()
     private fun freeChatEnabled(): Boolean = prefs.freeChatEnabled
+    private fun toolsReady(): Boolean =
+        toolsEnabled && !toolsUnsupported && toolHost != null && llmConfigured()
 
     /** 限制历史数量与单条长度，降低隐私暴露、异常流量和意外高额 token 消耗。 */
     private fun safeHistory(history: List<ChatMessage>): List<ChatMessage> = history
@@ -70,22 +77,37 @@ class LlmClient(private val prefs: Prefs) {
         var sys = systemPromptOverride?.takeIf { it.isNotBlank() } ?: prefs.systemPrompt
         extraSystemPrompt?.takeIf { it.isNotBlank() }?.let { sys += "\n" + it }
         if (applyCloudThink && prefs.cloudThinkEnabled) sys += "\n" + CLOUD_THINK_PROMPT
+        if (toolsReady()) sys += "\n" + TOOL_PROMPT
         return sys.take(MAX_SYSTEM_CHARS)
     }
 
-    private fun buildBody(history: List<ChatMessage>, stream: Boolean): String {
+    private fun buildBody(
+        history: List<ChatMessage>,
+        stream: Boolean,
+        extraMessages: JSONArray? = null,
+        withTools: Boolean = toolsReady()
+    ): String {
         val messages = JSONArray()
         val sys = composeSystem()
         if (sys.isNotBlank()) messages.put(JSONObject().put("role", "system").put("content", sys))
         safeHistory(history).forEach { m ->
             messages.put(JSONObject().put("role", m.role).put("content", m.content))
         }
-        return JSONObject()
+        if (extraMessages != null) {
+            for (i in 0 until extraMessages.length()) {
+                messages.put(extraMessages.optJSONObject(i) ?: continue)
+            }
+        }
+        val body = JSONObject()
             .put("model", prefs.model.take(MAX_MODEL_CHARS))
             .put("messages", messages)
             .put("temperature", 0.8)
             .put("stream", stream)
-            .toString()
+        if (withTools) {
+            body.put("tools", LlmTools.schema(prefs.webSearchEnabled))
+            body.put("tool_choice", "auto")
+        }
+        return body.toString()
     }
 
     private fun buildRequest(stream: Boolean, body: String): Request {
@@ -174,6 +196,214 @@ class LlmClient(private val prefs: Prefs) {
         return output.toString(Charsets.UTF_8.name())
     }
 
+    private data class ToolCall(
+        val id: String,
+        val name: String,
+        val arguments: StringBuilder = StringBuilder()
+    )
+
+    private data class ChatTurn(
+        val content: String,
+        val toolCalls: List<ToolCall>
+    )
+
+    private fun parseToolCalls(message: JSONObject?): List<ToolCall> {
+        val arr = message?.optJSONArray("tool_calls") ?: return emptyList()
+        val out = ArrayList<ToolCall>(arr.length())
+        for (i in 0 until arr.length()) {
+            val item = arr.optJSONObject(i) ?: continue
+            val fn = item.optJSONObject("function")
+            val name = jsonText(fn, "name")
+            if (name.isBlank()) continue
+            val id = jsonText(item, "id").ifBlank { "call_$i" }
+            out.add(ToolCall(id, name, StringBuilder(jsonText(fn, "arguments"))))
+        }
+        return out
+    }
+
+    private fun mergeStreamToolCall(bucket: LinkedHashMap<Int, ToolCall>, delta: JSONObject) {
+        val arr = delta.optJSONArray("tool_calls") ?: return
+        for (i in 0 until arr.length()) {
+            val item = arr.optJSONObject(i) ?: continue
+            val index = if (item.has("index")) item.optInt("index", i) else i
+            val fn = item.optJSONObject("function")
+            val existing = bucket[index]
+            if (existing == null) {
+                val name = jsonText(fn, "name")
+                val id = jsonText(item, "id").ifBlank { "call_$index" }
+                bucket[index] = ToolCall(id, name, StringBuilder(jsonText(fn, "arguments")))
+            } else {
+                val name = jsonText(fn, "name")
+                if (name.isNotBlank()) {
+                    bucket[index] = existing.copy(name = name)
+                }
+                val id = jsonText(item, "id")
+                if (id.isNotBlank() && existing.id.startsWith("call_")) {
+                    bucket[index] = bucket[index]!!.copy(id = id)
+                }
+                existing.arguments.append(jsonText(fn, "arguments"))
+            }
+        }
+    }
+
+    private fun assistantToolMessage(content: String, calls: List<ToolCall>): JSONObject {
+        val arr = JSONArray()
+        calls.forEach { call ->
+            arr.put(
+                JSONObject()
+                    .put("id", call.id.take(80))
+                    .put("type", "function")
+                    .put(
+                        "function",
+                        JSONObject()
+                            .put("name", call.name.take(80))
+                            .put("arguments", call.arguments.toString().take(4000))
+                    )
+            )
+        }
+        val msg = JSONObject().put("role", "assistant")
+        if (content.isNotBlank()) msg.put("content", content.take(MAX_MESSAGE_CHARS))
+        else msg.put("content", JSONObject.NULL)
+        msg.put("tool_calls", arr)
+        return msg
+    }
+
+    private fun toolResultMessage(call: ToolCall, result: String): JSONObject {
+        return JSONObject()
+            .put("role", "tool")
+            .put("tool_call_id", call.id.take(80))
+            .put("name", call.name.take(80))
+            .put("content", result.take(LlmTools.MAX_RESULT_CHARS))
+    }
+
+    private suspend fun runTools(calls: List<ToolCall>): JSONArray {
+        val host = toolHost ?: return JSONArray()
+        val out = JSONArray()
+        for (call in calls) {
+            if (call.name.isBlank()) continue
+            onToolStatus?.invoke(LlmTools.statusLabel(call.name))
+            val result = try {
+                LlmTools.execute(call.name, call.arguments.toString(), host)
+            } catch (e: Exception) {
+                "工具失败：" + (e.message?.take(80) ?: "未知错误")
+            }
+            out.put(toolResultMessage(call, result.ifBlank { "工具没有返回内容" }))
+        }
+        return out
+    }
+
+    private fun parseNonStreamTurn(text: String): ChatTurn {
+        val message = JSONObject(text).optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("message")
+        return ChatTurn(extractContent(message), parseToolCalls(message))
+    }
+
+    private fun requestTurn(
+        history: List<ChatMessage>,
+        extra: JSONArray?,
+        withTools: Boolean,
+        stream: Boolean,
+        onDelta: ((String) -> Unit)?
+    ): ChatTurn = if (stream) {
+        requestStream(history, extra, withTools, onDelta)
+    } else {
+        requestNonStream(history, extra, withTools)
+    }
+
+    private fun requestNonStream(history: List<ChatMessage>, extra: JSONArray?, withTools: Boolean): ChatTurn {
+        client.newCall(buildRequest(false, buildBody(history, false, extra, withTools))).execute().use { resp ->
+            if (resp.isRedirect) throw IllegalStateException("接口发生了跳转")
+            if (!resp.isSuccessful) throw IllegalStateException("HTTP ${resp.code}")
+            val body = resp.body ?: throw IllegalStateException("返回为空")
+            val text = body.readUtf8Limited(MAX_RESPONSE_BYTES) ?: throw IllegalStateException("返回内容过大或为空")
+            return parseNonStreamTurn(text)
+        }
+    }
+
+    private fun requestStream(
+        history: List<ChatMessage>,
+        extra: JSONArray?,
+        withTools: Boolean,
+        onDelta: ((String) -> Unit)?
+    ): ChatTurn {
+        val sb = StringBuilder()
+        val bucket = LinkedHashMap<Int, ToolCall>()
+        client.newCall(buildRequest(true, buildBody(history, true, extra, withTools))).execute().use { resp ->
+            if (resp.isRedirect) throw IllegalStateException("接口发生了跳转")
+            if (!resp.isSuccessful || resp.body == null) {
+                throw IllegalStateException(if (!resp.isSuccessful) "HTTP ${resp.code}" else "返回为空")
+            }
+            val reader: BufferedReader = resp.body!!.source().inputStream().bufferedReader(Charsets.UTF_8)
+            while (sb.length < MAX_OUTPUT_CHARS) {
+                val line = reader.readLine() ?: break
+                if (line.length > MAX_SSE_LINE_CHARS || !line.startsWith("data:")) continue
+                val payload = line.removePrefix("data:").trim()
+                if (payload == "[DONE]") break
+                if (payload.isEmpty()) continue
+                val delta = runCatching {
+                    JSONObject(payload).optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("delta")
+                }.getOrNull() ?: continue
+                mergeStreamToolCall(bucket, delta)
+                val piece = extractDelta(delta)
+                if (piece.isNotEmpty() && bucket.isEmpty()) {
+                    val extraPiece = incrementalDelta(sb, piece).take(MAX_OUTPUT_CHARS - sb.length)
+                    if (extraPiece.isNotEmpty()) {
+                        sb.append(extraPiece)
+                        onDelta?.invoke(extraPiece)
+                    }
+                } else if (piece.isNotEmpty()) {
+                    sb.append(incrementalDelta(sb, piece).take(MAX_OUTPUT_CHARS - sb.length))
+                }
+            }
+        }
+        val calls = bucket.values.filter { it.name.isNotBlank() }
+        val content = if (calls.isEmpty()) stripReasoning(sb.toString()) else sb.toString().trim()
+        return ChatTurn(content, calls)
+    }
+
+    private suspend fun completeWithTools(
+        history: List<ChatMessage>,
+        stream: Boolean,
+        onDelta: ((String) -> Unit)?
+    ): String {
+        val extra = JSONArray()
+        var round = 0
+        var lastContent = ""
+        try {
+            while (round <= MAX_TOOL_ROUNDS) {
+                val withTools = toolsReady() && round < MAX_TOOL_ROUNDS
+                val turn = try {
+                    requestTurn(history, extra.takeIf { it.length() > 0 }, withTools, stream, onDelta)
+                } catch (e: IllegalStateException) {
+                    val code = e.message.orEmpty()
+                    if (withTools && (code.contains("HTTP 400") || code.contains("HTTP 422"))) {
+                        toolsUnsupported = true
+                        requestTurn(history, extra.takeIf { it.length() > 0 }, false, stream, onDelta)
+                    } else {
+                        throw e
+                    }
+                }
+                lastContent = turn.content
+                if (turn.toolCalls.isEmpty()) {
+                    val text = turn.content.take(MAX_OUTPUT_CHARS)
+                    if (text.isNotBlank()) {
+                        if (!stream) onDelta?.invoke(text)
+                        return text
+                    }
+                    return cloudFail("接口已通，但没有返回内容")
+                }
+                extra.put(assistantToolMessage(turn.content, turn.toolCalls))
+                val results = runTools(turn.toolCalls)
+                for (i in 0 until results.length()) extra.put(results.optJSONObject(i) ?: continue)
+                round++
+            }
+            return lastContent.takeIf { it.isNotBlank() } ?: cloudFail("工具调用次数过多")
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            if (lastContent.isNotBlank()) return lastContent.take(MAX_OUTPUT_CHARS)
+            throw e
+        }
+    }
+
     suspend fun chat(history: List<ChatMessage>): String = withContext(Dispatchers.IO) {
         lastCloudError = null
         if (!llmConfigured()) {
@@ -183,24 +413,15 @@ class LlmClient(private val prefs: Prefs) {
             return@withContext localReply(history)
         }
         try {
-            client.newCall(buildRequest(false, buildBody(history, false))).execute().use { resp ->
-                if (resp.isRedirect) return@withContext cloudFail("接口发生了跳转")
-                if (!resp.isSuccessful) return@withContext cloudFail("HTTP ${resp.code}")
-                val body = resp.body ?: return@withContext cloudFail("返回为空")
-                val text = body.readUtf8Limited(MAX_RESPONSE_BYTES) ?: return@withContext cloudFail("返回内容过大或为空")
-                val choices = JSONObject(text).optJSONArray("choices")
-                extractContent(choices?.optJSONObject(0)?.optJSONObject("message"))
-                    .take(MAX_OUTPUT_CHARS).takeIf { it.isNotBlank() }
-                    ?: cloudFail("接口已通，但没有返回内容")
-            }
+            completeWithTools(history, stream = false, onDelta = null)
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             cloudFail(e.message?.take(80).orEmpty().ifBlank { "网络异常或接口不可达" })
         }
     }
 
     suspend fun chatStream(history: List<ChatMessage>, onDelta: (String) -> Unit): String =
         withContext(Dispatchers.IO) {
-            val sb = StringBuilder()
             lastCloudError = null
             if (!llmConfigured()) {
                 val online = if (allowLocalFallback && freeChatEnabled()) free.reply(freeHistory(history)) else null
@@ -209,39 +430,12 @@ class LlmClient(private val prefs: Prefs) {
                 return@withContext ans
             }
             try {
-                client.newCall(buildRequest(true, buildBody(history, true))).execute().use { resp ->
-                    if (resp.isRedirect) return@withContext cloudFail("接口发生了跳转")
-                    if (!resp.isSuccessful || resp.body == null) {
-                        return@withContext cloudFail(if (!resp.isSuccessful) "HTTP ${resp.code}" else "返回为空")
-                    }
-                    val reader: BufferedReader = resp.body!!.source().inputStream().bufferedReader(Charsets.UTF_8)
-                    while (sb.length < MAX_OUTPUT_CHARS) {
-                        val line = reader.readLine() ?: break
-                        if (line.length > MAX_SSE_LINE_CHARS || !line.startsWith("data:")) continue
-                        val payload = line.removePrefix("data:").trim()
-                        if (payload == "[DONE]") break
-                        if (payload.isEmpty()) continue
-                        runCatching {
-                            JSONObject(payload).optJSONArray("choices")?.optJSONObject(0)
-                                ?.optJSONObject("delta")
-                        }.getOrNull()?.let { delta ->
-                            val piece = extractDelta(delta)
-                            if (piece.isNotEmpty()) {
-                                val extra = incrementalDelta(sb, piece).take(MAX_OUTPUT_CHARS - sb.length)
-                                if (extra.isNotEmpty()) {
-                                    sb.append(extra)
-                                    onDelta(extra)
-                                }
-                            }
-                        }
-                    }
-                }
+                completeWithTools(history, stream = true, onDelta = onDelta)
             } catch (e: Exception) {
-                if (sb.isEmpty()) {
-                    return@withContext cloudFail(e.message?.take(80).orEmpty().ifBlank { "网络异常或接口不可达" })
-                }
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                cloudFail(e.message?.take(80).orEmpty().ifBlank { "网络异常或接口不可达" })
             }
-            stripReasoning(sb.toString()).ifBlank { cloudFail("接口已通，但没有返回内容") }
+        }
         }
 
     /** 探测云端接口是否可用，不回落到本地闲聊。 */
@@ -284,7 +478,7 @@ class LlmClient(private val prefs: Prefs) {
         if (!llmConfigured()) return@withContext "还没填完整：需要 HTTPS 地址、模型名和 API Key"
         try {
             val probeHistory = listOf(ChatMessage("user", "只回复一个字：好", isMe = true))
-            client.newCall(buildRequest(false, buildBody(probeHistory, false))).execute().use { resp ->
+            client.newCall(buildRequest(false, buildBody(probeHistory, false, withTools = false))).execute().use { resp ->
                 if (resp.isRedirect) return@withContext "连接失败：接口发生了跳转"
                 if (!resp.isSuccessful) return@withContext "连接失败：HTTP ${resp.code}"
                 val text = resp.body?.readUtf8Limited(MAX_RESPONSE_BYTES)
@@ -305,10 +499,17 @@ class LlmClient(private val prefs: Prefs) {
         private const val MAX_RESPONSE_BYTES = 2 * 1024 * 1024
         private const val MAX_OUTPUT_CHARS = 200_000
         private const val MAX_SSE_LINE_CHARS = 256_000
+        private const val MAX_TOOL_ROUNDS = 4
         private val THINK_BLOCK = Regex("(?s)<think>.*?</think>|<thinking>.*?</thinking>")
         private const val CLOUD_THINK_PROMPT =
             "【云端推理】先在内部完成充分思考，再给出最终对白。" +
                 "思考过程请放在 reasoning 字段或 <think></think> 中，不要出现在最终对白里。" +
                 "最终对白保持角色口吻，不要提及模型、提示词或思考过程。"
+        private const val TOOL_PROMPT =
+            "【工具】你可以使用提供的工具来查网、看天气、翻记忆、翻译、换算、看新闻或待办。" +
+                "闲聊、接茬、情绪陪伴不要调用工具，直接开口。" +
+                "认真提问、时事、百科、天气、记忆核对时再调用。" +
+                "需要资料时先调用工具，拿到结果后再回答；资料不够就明说只查到这些，不要编造。" +
+                "不要在对白里提及工具名、提示词或函数调用。"
     }
 }
