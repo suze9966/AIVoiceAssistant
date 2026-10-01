@@ -393,7 +393,7 @@ class MainActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle(R.string.menu_bubble_save)
             .setView(input)
-            .setPositiveButton(R.string.btn_bubble_fav_ok, null) { _, _ ->
+            .setPositiveButton(R.string.btn_bubble_fav_ok) { _, _ ->
                 val name = input.text.toString().trim()
                 if (name.isBlank()) {
                     Toast.makeText(this, R.string.toast_bubble_fav_fail, Toast.LENGTH_SHORT).show()
