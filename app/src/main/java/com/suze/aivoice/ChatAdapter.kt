@@ -40,6 +40,22 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
     /** 角色专属样式提供器：返回非空时优先用该样式（角色聊天里按角色区分）。 */
     var styleProvider: (() -> BubbleStyleStore.Style?)? = null
 
+    /**
+     * 无框模式：取消气泡「文本框」。
+     *
+     * 开启后背景透明、描边为 0、阴影为 0，宽度铺到接近满屏，
+     * 内边距收紧，文字直接铺在聊天背景上 —— 同样一屏能显示更多内容。
+     */
+    var frameless: Boolean = false
+
+    /**
+     * 字体设置：字号 / 字形 / 行距。
+     *
+     * 由宿主（主聊天 / 角色聊天 / 群聊）在刷新时塞进来；
+     * 为空时退回默认字体，保证不设置也能正常显示。
+     */
+    var chatFont: ChatFontStore.Font = ChatFontStore.Font()
+
     /** 取当前应生效的样式：角色专属优先，否则全局；未启用自定义时为 null。 */
     private fun currentStyle(ctx: android.content.Context): BubbleStyleStore.Style? {
         if (!useCustomBubbleStyle) return null
@@ -112,8 +128,37 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
                 holder.pureEmoji = pureEmoji
             }
         }
+        // 字体设置：字号 / 字形 / 行距（无框与有框都生效）
+        applyChatFont(holder, msg)
+
+        // 无框模式：取消气泡文本框。背景透明 / 无描边 / 无阴影 / 宽度放大 / 内边距收紧。
+        if (frameless && msg.type != ChatMessage.TYPE_IMAGE) {
+            holder.tvMsg.background = null
+            holder.tvMsg.elevation = 0f
+            // 宽度铺到接近满屏（原 300dp 硬限 + 两侧大留白全部放开）
+            holder.tvMsg.maxWidth = (holder.itemView.context.resources.displayMetrics.widthPixels * 0.96f)
+                .toInt().coerceAtLeast(240)
+            val d = holder.itemView.context.resources.displayMetrics.density
+            val ph = (d * 2).toInt()
+            val pv = (d * 2).toInt()
+            holder.tvMsg.setPadding(ph, pv, ph, pv)
+            // 外层留白也一起放开：原布局给对侧留了 48dp，无框时不需要
+            if (holder.itemView is android.view.ViewGroup) {
+                val gap = (d * 10).toInt()
+                val side = (d * 6).toInt()
+                if (msg.isMe) holder.itemView.setPadding(side, 0, gap, 0)
+                else holder.itemView.setPadding(gap, 0, side, 0)
+            }
+        } else if (holder.itemView is android.view.ViewGroup) {
+            // 退出无框模式时恢复布局原本留白
+            val d = holder.itemView.context.resources.displayMetrics.density
+            val wide = (d * 48).toInt()
+            val thin = (d * 4).toInt()
+            if (msg.isMe) holder.itemView.setPadding(wide, 0, thin, 0)
+            else holder.itemView.setPadding(thin, 0, wide, 0)
+        }
         // 气泡形状与颜色：主人用口令改过就按自定义画，否则保留原 drawable
-        if (useCustomBubbleStyle) {
+        if (useCustomBubbleStyle && !frameless) {
             val ctx = holder.itemView.context
             val style = currentStyle(ctx)
             if (style == null || style.isDefault) {
@@ -225,6 +270,27 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
         }
         val tv = holder.tvMsg
         return if (tv.textColors != null) tv.textColors.defaultColor else tv.currentTextColor
+    }
+
+    /**
+     * 应用聊天字体：字号、字形、行距。
+     *
+     * 纯 emoji 消息不套自定义字号（保持表情的大字号观感），
+     * 但字形与行距照常生效。
+     */
+    private fun applyChatFont(holder: VH, msg: ChatMessage) {
+        if (msg.type == ChatMessage.TYPE_IMAGE) return
+        val f = chatFont
+        if (!f.isDefault) {
+            if (!holder.pureEmoji) holder.tvMsg.textSize = f.sizeSp
+            holder.tvMsg.typeface = ChatFontStore.typeface(f)
+            holder.tvMsg.setLineSpacing(ChatFontStore.lineSpacingExtra(f), 1f)
+        } else {
+            // 回默认：清掉可能残留的自定义字形与行距
+            if (!holder.pureEmoji) holder.tvMsg.textSize = TEXT_SIZE_SP
+            holder.tvMsg.typeface = android.graphics.Typeface.DEFAULT
+            holder.tvMsg.setLineSpacing(0f, 1f)
+        }
     }
 
     private fun renderRich(raw: String, pureEmojiFlag: Boolean, color: Int, recallState: Boolean = false): CharSequence {

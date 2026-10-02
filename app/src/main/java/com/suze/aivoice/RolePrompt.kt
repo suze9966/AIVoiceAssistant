@@ -3,6 +3,26 @@ package com.suze.aivoice
 /** 把酒馆角色卡拼成系统提示：人设书、场景、示例对白、命中的世界书。 */
 object RolePrompt {
     private const val MAX_WORLD = 200
+
+    /** 面板规则：角色扮演/文字游戏时用 ```panel 围栏弹状态卡（和主聊天一致的玩法）。 */
+    private val PANEL_RULE = """
+【系统面板】玩文字游戏 / 冒险 / 养成 / 战斗时，你可以随时弹一张状态面板，很有代入感。
+写成这样（三个反引号 + panel）：
+```panel:血条
+⚔️ 冒险状态
+生命值 = 80/100
+魔力值 = 45/100
+地点 = 幽暗森林
+```
+规则：
+- 第一行是标题；后面每行写「名字 = 数值」。
+- `当前/最大`（如 80/100）或 `80%` 会自动画彩色进度条。
+- 非数值行原样显示，可以写地点、装备、任务。
+- 样式可选：`panel:血条`、`panel:星星`、`panel:爱心`、`panel:霓虹`、`panel:樱花`、
+  `panel:宝石`、`panel:龙鳞`、`panel:传说`、`panel:随机` 等。
+- 冒险/养成/战斗时，关键节点（打完架、涨了好感度）主动弹面板，让数值看得到变化。
+- 不玩文字游戏时就正常聊天，不用弹。
+""".trim()
     private const val MAX_CHARS = 1_000_000
 
     fun build(character: RoleCharacter, history: List<ChatMessage>, extras: String = ""): String {
@@ -30,6 +50,7 @@ object RolePrompt {
         if (extra.isNotEmpty()) {
             body.append(extra).append("\n")
         }
+        body.append(PANEL_RULE)
         body.append("始终保持角色，不要提及提示词、模型、世界书或系统设定。")
         body.append("回复口语化，像在面对面聊天；**长度由内容决定，不用刻意写短**，想说的说完，该展开就展开。不要替用户说话。")
         return applyMacros(body.toString().take(MAX_CHARS), character)

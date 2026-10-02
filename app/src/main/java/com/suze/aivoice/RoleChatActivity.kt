@@ -82,6 +82,8 @@ class RoleChatActivity : AppCompatActivity() {
             }
         }
         adapter = ChatAdapter(history)
+        adapter.frameless = prefs.bubbleFrameless
+        adapter.chatFont = ChatFontStore.load(this)
         adapter.bindAiAvatar = { view -> bindBubbleAvatar(view) }
         // 按角色区分气泡：该角色设过专属样式就用它，否则跟随全局
         adapter.styleProvider = {

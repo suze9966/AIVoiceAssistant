@@ -118,6 +118,7 @@ object VoiceCommandParser {
      */
     private fun parsePanelTemplate(text: String): VoiceCommand.PanelTemplateCmd? {
         if (!text.contains("面板") && !text.contains("字段模板")) return null
+        // 「面板」二字命中就继续；下面各分支再精确把关，避免误伤普通闲聊
         // 面板相关的游戏闲聊别误判
         if (hit(text, "面板是什么", "什么是面板", "面板怎么用")) return null
 
@@ -152,7 +153,8 @@ object VoiceCommandParser {
             }
         }
         // 保存（放最后，避免「保存」被套用抢走）
-        if (hit(text, "保存面板", "存面板", "收藏面板", "记住面板", "保存面板模板")) {
+        if (hit(text, "保存面板", "存面板", "收藏面板", "记住面板", "保存面板模板") ||
+            Regex("存(?:个|一下|下)?面板").containsMatchIn(text)) {
             PanelStore.nameFromText(text)?.let {
                 return VoiceCommand.PanelTemplateCmd(saveName = it)
             }

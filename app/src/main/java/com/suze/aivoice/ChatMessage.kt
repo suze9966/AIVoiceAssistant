@@ -64,34 +64,12 @@ data class ChatMessage(
         }
 
         /**
-         * 判断一段文本是否「纯 emoji」（去掉空白后，全部由 emoji / 常见符号构成）。
+         * 判断一段文本是否「纯 emoji」（去掉空白后，全部由真正的 emoji 构成）。
          * 是的话，气泡里用超大字号渲染，形成表情包效果。
+         *
+         * 注意：`→ ← ✓ ★ ⚡` 这类**常用符号不算 emoji**，不会被放大成表情，
+         * 也不会在朗读时被剥掉（详见 [EmojiDetector]）。
          */
-        fun isPureEmoji(text: String): Boolean {
-            val t = text.trim()
-            if (t.isEmpty()) return false
-            var hasEmoji = false
-            var i = 0
-            while (i < t.length) {
-                val cp = t.codePointAt(i)
-                val cc = Character.charCount(cp)
-                if (cp == 0x20 || cp == 0x09 || cp == 0x0A) {
-                    i += cc; continue
-                }
-                if (cp == 0xFE0F || cp == 0x200D || cp == 0xFE0E) {
-                    i += cc; continue
-                }
-                val isEmoji = (cp in 0x1F300..0x1FAFF) ||
-                        (cp in 0x2600..0x27BF) ||
-                        (cp in 0x1F000..0x1F2FF) ||
-                        (cp in 0x2190..0x21FF) ||
-                        (cp in 0x2B00..0x2BFF) ||
-                        (cp in 0x1F1E6..0x1F1FF)
-                if (!isEmoji) return false
-                hasEmoji = true
-                i += cc
-            }
-            return hasEmoji
-        }
+        fun isPureEmoji(text: String): Boolean = EmojiDetector.isPureEmoji(text)
     }
 }

@@ -208,12 +208,8 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
         while (i < text.length) {
             val cp = text.codePointAt(i)
             val cc = Character.charCount(cp)
-            val skip = cp == 0xFE0F || cp == 0xFE0E || cp == 0x200D ||
-                    (cp in 0x1F000..0x1FAFF) ||
-                    (cp in 0x2600..0x27BF) ||
-                    (cp in 0x2B00..0x2BFF) ||
-                    (cp in 0x2190..0x21FF) ||
-                    (cp in 0x1F1E6..0x1F1FF)
+            // 精确判定 emoji：`→ ← ✓ ★ ⚡` 等常用符号会被保留，朗读时不会消失
+            val skip = EmojiDetector.isEmoji(cp)
             if (!skip) out.appendCodePoint(cp)
             i += cc
         }
@@ -324,11 +320,17 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
             if (s.isNotEmpty()) out.add(s)
             buf.setLength(0)
         }
-        for (ch in t) {
-            buf.append(ch)
-            val hitBreak = ch.code == 10
-            val hitEnd = ch == '。' || ch == '！' || ch == '？' || ch == '!' || ch == '?' || ch == '；'
-            val hitComma = ch == '，' || ch == ',' || ch == '、'
+        // 按码点遍历：emoji / 生僻字（代理对）必须整体进入 buf，
+        // 否则分段点落在代理对中间会把半个字符交给 TTS，读出来就是乱码音。
+        var ci = 0
+        while (ci < t.length) {
+            val cp = t.codePointAt(ci)
+            ci += Character.charCount(cp)
+            buf.appendCodePoint(cp)
+            val hitBreak = cp == 10
+            val hitEnd = cp == '。'.code || cp == '！'.code || cp == '？'.code ||
+                cp == '!'.code || cp == '?'.code || cp == '；'.code
+            val hitComma = cp == '，'.code || cp == ','.code || cp == '、'.code
             when {
                 hitBreak && buf.toString().trim().length >= 400 -> flush()
                 hitEnd && buf.length >= 500 -> flush()

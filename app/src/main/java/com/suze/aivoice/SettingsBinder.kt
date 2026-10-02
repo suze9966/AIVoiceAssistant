@@ -338,6 +338,8 @@ class SettingsBinder(
             refreshAppearancePreview()
             Toast.makeText(activity, R.string.toast_background_reset, Toast.LENGTH_SHORT).show()
         }
+        // ---- 无框模式 + 字体设置 ----------------
+        bindFramelessAndFont()
         // 气泡样式：预设 Spinner + 重置
         val spinnerBubble = activity.findViewById<Spinner>(R.id.spinnerBubblePreset)
         val bubbleIds = listOf("", BubbleStyleStore.PRESET_GIRL, BubbleStyleStore.PRESET_WECHAT,
@@ -388,6 +390,91 @@ class SettingsBinder(
         }
         bindBubbleExtras()
         refreshAppearancePreview()
+    }
+
+    /** 无框模式开关 + 字体（字号 / 字形 / 行距）绑定。 */
+    private fun bindFramelessAndFont() {
+        val switchFrameless = activity.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.switchBubbleFrameless)
+        switchFrameless.isChecked = prefs.bubbleFrameless
+        switchFrameless.setOnCheckedChangeListener { _, on ->
+            prefs.bubbleFrameless = on
+        }
+
+        val seekSize = activity.findViewById<SeekBar>(R.id.seekFontSize)
+        val seekLine = activity.findViewById<SeekBar>(R.id.seekFontLine)
+        val tvSizeLabel = activity.findViewById<TextView>(R.id.tvFontSizeLabel)
+        val tvLineLabel = activity.findViewById<TextView>(R.id.tvFontLineLabel)
+        val tvPreview = activity.findViewById<TextView>(R.id.tvFontPreview)
+        val spinnerFamily = activity.findViewById<Spinner>(R.id.spinnerFontFamily)
+        val checkBold = activity.findViewById<CheckBox>(R.id.checkFontBold)
+        val checkItalic = activity.findViewById<CheckBox>(R.id.checkFontItalic)
+
+        // 字形选择器
+        val familyIds = listOf(
+            ChatFontStore.FONT_DEFAULT, ChatFontStore.FONT_SERIF,
+            ChatFontStore.FONT_SANS, ChatFontStore.FONT_MONO, ChatFontStore.FONT_CURSIVE
+        )
+        val familyLabels = familyIds.map { ChatFontStore.familyLabel(it) }
+        spinnerFamily.adapter = ArrayAdapter(
+            activity, android.R.layout.simple_spinner_dropdown_item, familyLabels
+        )
+
+        fun applyPreview() {
+            val f = ChatFontStore.load(activity)
+            val size = ChatFontStore.SIZE_MIN + seekSize.progress
+            val line = ChatFontStore.LINE_MIN + seekLine.progress * 0.1f
+            tvPreview.textSize = size
+            tvPreview.typeface = ChatFontStore.typeface(f.copy(sizeSp = size, lineMul = line))
+            tvPreview.setLineSpacing(ChatFontStore.lineSpacingExtra(f.copy(sizeSp = size, lineMul = line)), 1f)
+            tvSizeLabel.text = "字号 ${size}sp"
+            tvLineLabel.text = "行距 " + String.format(java.util.Locale.CHINA, "%.1f", line) + " 倍"
+        }
+
+        fun saveFromControls() {
+            val size = ChatFontStore.SIZE_MIN + seekSize.progress
+            val line = ChatFontStore.LINE_MIN + seekLine.progress * 0.1f
+            val family = familyIds.getOrNull(spinnerFamily.selectedItemPosition)
+                ?: ChatFontStore.FONT_DEFAULT
+            ChatFontStore.save(
+                activity,
+                ChatFontStore.Font(
+                    sizeSp = size,
+                    lineMul = line,
+                    family = family,
+                    bold = checkBold.isChecked,
+                    italic = checkItalic.isChecked
+                )
+            )
+            applyPreview()
+        }
+
+        // 初始值
+        val cur = ChatFontStore.load(activity)
+        seekSize.progress = (cur.sizeSp - ChatFontStore.SIZE_MIN).toInt().coerceIn(0, 29)
+        seekLine.progress = ((cur.lineMul - ChatFontStore.LINE_MIN) / 0.1f).toInt().coerceIn(0, 13)
+        spinnerFamily.setSelection(familyIds.indexOf(cur.family).coerceAtLeast(0), false)
+        checkBold.isChecked = cur.bold
+        checkItalic.isChecked = cur.italic
+        applyPreview()
+
+        seekSize.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: SeekBar?, p: Int, fromUser: Boolean) { applyPreview() }
+            override fun onStartTrackingTouch(sb: SeekBar?) {}
+            override fun onStopTrackingTouch(sb: SeekBar?) { saveFromControls() }
+        })
+        seekLine.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: SeekBar?, p: Int, fromUser: Boolean) { applyPreview() }
+            override fun onStartTrackingTouch(sb: SeekBar?) {}
+            override fun onStopTrackingTouch(sb: SeekBar?) { saveFromControls() }
+        })
+        spinnerFamily.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(p: AdapterView<*>?, v: android.view.View?, pos: Int, id: Long) {
+                saveFromControls()
+            }
+            override fun onNothingSelected(p: AdapterView<*>?) {}
+        }
+        checkBold.setOnCheckedChangeListener { _, _ -> saveFromControls() }
+        checkItalic.setOnCheckedChangeListener { _, _ -> saveFromControls() }
     }
 
     /** 尾巴方向 / 出现动效 / 去引号 三个维度的绑定。 */

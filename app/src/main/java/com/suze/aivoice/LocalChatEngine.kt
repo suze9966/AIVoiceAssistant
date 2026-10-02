@@ -134,9 +134,7 @@ class LocalChatEngine(private val prefs: Prefs) {
         var end = s.length
         while (end > 0) {
             val cp = s.codePointBefore(end)
-            val isEmoji = (cp in 0x1F300..0x1FAFF) || (cp in 0x2600..0x27BF) ||
-                    (cp in 0x1F000..0x1F2FF) || (cp in 0x2B00..0x2BFF) ||
-                    cp == 0xFE0F || cp == 0x200D || cp == 0x20
+            val isEmoji = EmojiDetector.isEmoji(cp) || cp == 0x20
             if (!isEmoji) break
             end -= Character.charCount(cp)
         }
@@ -290,7 +288,7 @@ class LocalChatEngine(private val prefs: Prefs) {
     private fun topicSnippet(text: String): String {
         val cleaned = text.replace(Regex("[\\s　。！？!?～~，,、；;：:「」『』\"']+"), "")
         if (cleaned.length < 2) return ""
-        return cleaned.take(200)
+        return cleaned
     }
 
     private fun isShortAck(text: String): Boolean {

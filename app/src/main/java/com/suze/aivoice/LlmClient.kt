@@ -71,14 +71,14 @@ class LlmClient(private val prefs: Prefs) {
     private fun safeHistory(history: List<ChatMessage>): List<ChatMessage> = history
         .filter { it.type != ChatMessage.TYPE_IMAGE && it.content.isNotBlank() }
         .takeLast(MAX_HISTORY_MESSAGES)
-        .map { it.copy(content = it.content.take(MAX_MESSAGE_CHARS)) }
+        .map { it.copy(content = SafeCut.takeUnitsSafe(it.content, MAX_MESSAGE_CHARS)) }
 
     private fun composeSystem(): String {
         var sys = systemPromptOverride?.takeIf { it.isNotBlank() } ?: prefs.systemPrompt
         extraSystemPrompt?.takeIf { it.isNotBlank() }?.let { sys += "\n" + it }
         if (applyCloudThink && prefs.cloudThinkEnabled) sys += "\n" + CLOUD_THINK_PROMPT
         if (toolsReady()) sys += "\n" + TOOL_PROMPT
-        return sys.take(MAX_SYSTEM_CHARS)
+        return SafeCut.takeUnitsSafe(sys, MAX_SYSTEM_CHARS)
     }
 
     private fun buildBody(
@@ -148,7 +148,15 @@ class LlmClient(private val prefs: Prefs) {
         if (sb.isEmpty()) return incoming
         val current = sb.toString()
         if (incoming == current) return ""
-        if (incoming.startsWith(current)) return incoming.substring(current.length)
+        if (incoming.startsWith(current))
+            return SafeCut.takeUnitsSafe(incoming.substring(current.length), current.length + incoming.length)
+        // 兜底：某些接口返回的是「带重叠的片段」而不是纯增量。
+        // 若把 incoming 整段追加，就会和 current 尾部粘连、屏幕上出现重复乱句。
+        // 这里求 current 后缀与 incoming 前缀的最长公共重叠，只追加真正新增的部分。
+        val maxOverlap = minOf(current.length, incoming.length)
+        val overlap = SafeCut.commonOverlap(current, incoming, maxOverlap)
+        if (overlap > 0)
+            return SafeCut.takeUnitsSafe(incoming.substring(overlap), current.length + incoming.length)
         return incoming
     }
 
@@ -268,7 +276,7 @@ class LlmClient(private val prefs: Prefs) {
             )
         }
         val msg = JSONObject().put("role", "assistant")
-        if (content.isNotBlank()) msg.put("content", content.take(MAX_MESSAGE_CHARS))
+        if (content.isNotBlank()) msg.put("content", SafeCut.takeUnitsSafe(content, MAX_MESSAGE_CHARS))
         else msg.put("content", JSONObject.NULL)
         msg.put("tool_calls", arr)
         return msg
@@ -279,7 +287,7 @@ class LlmClient(private val prefs: Prefs) {
             .put("role", "tool")
             .put("tool_call_id", call.id.take(500))
             .put("name", call.name.take(500))
-            .put("content", result.take(LlmTools.MAX_RESULT_CHARS))
+            .put("content", SafeCut.takeUnitsSafe(result, LlmTools.MAX_RESULT_CHARS))
     }
 
     private suspend fun runTools(calls: List<ToolCall>): JSONArray {
@@ -351,13 +359,13 @@ class LlmClient(private val prefs: Prefs) {
                 mergeStreamToolCall(bucket, delta)
                 val piece = extractDelta(delta)
                 if (piece.isNotEmpty() && bucket.isEmpty()) {
-                    val extraPiece = incrementalDelta(sb, piece).take(MAX_OUTPUT_CHARS - sb.length)
+                    val extraPiece = SafeCut.takeUnitsSafe(incrementalDelta(sb, piece), MAX_OUTPUT_CHARS - sb.length)
                     if (extraPiece.isNotEmpty()) {
                         sb.append(extraPiece)
                         onDelta?.invoke(extraPiece)
                     }
                 } else if (piece.isNotEmpty()) {
-                    sb.append(incrementalDelta(sb, piece).take(MAX_OUTPUT_CHARS - sb.length))
+                    sb.append(SafeCut.takeUnitsSafe(incrementalDelta(sb, piece), MAX_OUTPUT_CHARS - sb.length))
                 }
             }
         }
@@ -390,7 +398,7 @@ class LlmClient(private val prefs: Prefs) {
                 }
                 lastContent = turn.content
                 if (turn.toolCalls.isEmpty()) {
-                    val text = turn.content.take(MAX_OUTPUT_CHARS)
+                    val text = SafeCut.takeUnitsSafe(turn.content, MAX_OUTPUT_CHARS)
                     if (text.isNotBlank()) {
                         if (!stream) onDelta?.invoke(text)
                         return text
@@ -405,7 +413,7 @@ class LlmClient(private val prefs: Prefs) {
             return lastContent.takeIf { it.isNotBlank() } ?: cloudFail("工具调用次数过多")
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
-            if (lastContent.isNotBlank()) return lastContent.take(MAX_OUTPUT_CHARS)
+            if (lastContent.isNotBlank()) return SafeCut.takeUnitsSafe(lastContent, MAX_OUTPUT_CHARS)
             throw e
         }
     }
@@ -474,7 +482,7 @@ class LlmClient(private val prefs: Prefs) {
                     val text = resp.body?.readUtf8Limited(MAX_RESPONSE_BYTES) ?: return@withContext ""
                     extractContent(
                         JSONObject(text).optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("message")
-                    ).take(MAX_OUTPUT_CHARS)
+                    ).let { SafeCut.takeUnitsSafe(it, MAX_OUTPUT_CHARS) }
                 }
             } catch (_: Exception) {
                 ""

@@ -34,7 +34,7 @@ class HistoryStore(context: Context) {
             val legacy = loadMessages(legacyFile)
             val preview = legacy.lastOrNull { it.content.isNotBlank() }?.content.orEmpty()
             val title = if (legacy.isEmpty()) "日常聊天" else titleFrom(legacy)
-            saveSessions(listOf(ChatSession(id, title, System.currentTimeMillis(), preview.take(2000))))
+            saveSessions(listOf(ChatSession(id, title, System.currentTimeMillis(), SafeCut.takeUnitsSafe(preview, 2000))))
             if (legacy.isNotEmpty()) {
                 writeMessages(chatFile(id), legacy)
                 runCatching { legacyFile.delete() }
@@ -192,7 +192,7 @@ class HistoryStore(context: Context) {
 
     private fun titleFrom(messages: List<ChatMessage>): String {
         val first = messages.firstOrNull { it.role == "user" && it.content.isNotBlank() }?.content.orEmpty()
-        if (first.isNotBlank()) return first.take(200)
+        if (first.isNotBlank()) return SafeCut.takeUnitsSafe(first, 200)
         return SimpleDateFormat("M月d日 HH:mm", Locale.CHINA).format(Date())
     }
 

@@ -364,6 +364,11 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("panelRecallEnabled", true)
         set(v) = sp.edit().putBoolean("panelRecallEnabled", v).apply()
 
+    /** 无框模式：去掉气泡背景/描边，文字直接铺在聊天区，显示区域更大。 */
+    var bubbleFrameless: Boolean
+        get() = sp.getBoolean("bubbleFrameless", false)
+        set(v) = sp.edit().putBoolean("bubbleFrameless", v).apply()
+
     /** 主聊天精选立绘 id，对应 PortraitLibrary。 */
     var portraitId: String
         get() {

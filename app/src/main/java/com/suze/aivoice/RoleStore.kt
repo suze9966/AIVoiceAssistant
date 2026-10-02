@@ -149,7 +149,7 @@ class RoleStore(context: Context) {
                         .put("characterId", m.characterId)
                         .put("title", m.title)
                         .put("updatedAt", m.updatedAt)
-                        .put("preview", m.preview.take(2000))
+                        .put("preview", SafeCut.takeUnitsSafe(m.preview, 2000))
                 )
             }
             chatIndexFile.writeText(arr.toString())
@@ -183,7 +183,7 @@ class RoleStore(context: Context) {
         val all = loadChatMetas()
         val idx = all.indexOfFirst { it.id == chatId }
         if (idx < 0) return
-        all[idx] = all[idx].copy(title = title.take(200), updatedAt = System.currentTimeMillis())
+        all[idx] = all[idx].copy(title = SafeCut.takeUnitsSafe(title, 200), updatedAt = System.currentTimeMillis())
         saveChatMetas(all)
     }
 
@@ -247,7 +247,7 @@ class RoleStore(context: Context) {
                 all[idx] = all[idx].copy(
                     updatedAt = System.currentTimeMillis(),
                     preview = preview,
-                    title = all[idx].title.ifBlank { preview.take(200).ifBlank { "新对话" } }
+                    title = all[idx].title.ifBlank { SafeCut.takeUnitsSafe(preview, 200).ifBlank { "新对话" } }
                 )
                 saveChatMetas(all)
             } else if (!characterId.isNullOrBlank()) {
@@ -256,7 +256,7 @@ class RoleStore(context: Context) {
                     RoleChatMeta(
                         id = chatId,
                         characterId = characterId,
-                        title = preview.take(200).ifBlank { "新对话" },
+                        title = SafeCut.takeUnitsSafe(preview, 200).ifBlank { "新对话" },
                         updatedAt = System.currentTimeMillis(),
                         preview = preview
                     )

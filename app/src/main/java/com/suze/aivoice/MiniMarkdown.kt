@@ -757,10 +757,34 @@ object MiniMarkdown {
     /** 粗略显示宽度：CJK 算 2，其余算 1（表格对齐足够用）。 */
     private fun displayWidth(s: String): Int {
         var w = 0
-        for (ch in s) {
-            w += if (ch.code in 0x1100..0xFFE6) 2 else 1
+        var i = 0
+        while (i < s.length) {
+            val cp = s.codePointAt(i)
+            i += Character.charCount(cp)
+            w += if (isWideCodePoint(cp)) 2 else 1
         }
         return w
+    }
+
+    /** 是否为「双宽」码点：CJK 汉字/全角标点/假名/emoji 等。按码点判定，代理对不会被重复计数。 */
+    private fun isWideCodePoint(cp: Int): Boolean {
+        return when {
+            cp in 0x1100..0x115F -> true            // 谚文字母
+            cp in 0x2E80..0x303E -> true            // CJK 部首/符号
+            cp in 0x3041..0x33FF -> true            // 假名/注音/CJK 兼容
+            cp in 0x3400..0x4DBF -> true            // CJK 扩展 A
+            cp in 0x4E00..0x9FFF -> true            // CJK 基本区
+            cp in 0xA000..0xA4CF -> true            // 彝文
+            cp in 0xAC00..0xD7A3 -> true            // 谚文音节
+            cp in 0xF900..0xFAFF -> true            // CJK 兼容汉字
+            cp in 0xFE30..0xFE6F -> true            // CJK 兼容形式
+            cp in 0xFF00..0xFF60 -> true            // 全角形式
+            cp in 0xFFE0..0xFFE6 -> true            // 全角符号变体
+            cp in 0x1F300..0x1FAFF -> true          // emoji（单个码点，算 2 格）
+            cp in 0x1F000..0x1F2FF -> true
+            cp in 0x20000..0x3FFFD -> true          // CJK 扩展 B 及以上
+            else -> false
+        }
     }
 
     /** 处理行内语法：**加粗**、*斜体*、`代码`、~~删除线~~。 */
@@ -820,8 +844,11 @@ object MiniMarkdown {
                     continue
                 }
             }
-            sb.append(line[i])
-            i++
+            // 按码点追加：代理对（emoji/生僻字）必须一次写完整，
+            // 否则逐 code unit 追加会在中途留下半个字符 → 显示成乱码。
+            val cp = line.codePointAt(i)
+            sb.appendCodePoint(cp)
+            i += Character.charCount(cp)
         }
     }
 

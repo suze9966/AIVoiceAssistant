@@ -253,6 +253,9 @@ class MainActivity : AppCompatActivity() {
         adapter = ChatAdapter(history)
         // 面板状态续接开关（主人可在设置里关）
         adapter.panelRecall = prefs.panelRecallEnabled
+        // 无框模式 + 字体设置：从偏好读一次，之后每次 onResume 再刷新
+        adapter.frameless = prefs.bubbleFrameless
+        adapter.chatFont = ChatFontStore.load(this)
         recycler.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
         recycler.adapter = adapter
         GlassKit.attach(
@@ -619,6 +622,11 @@ class MainActivity : AppCompatActivity() {
         applyChatStyle()
         // 从设置页返回后，重读面板续接开关，保证改完立即生效（不用杀进程）
         if (::adapter.isInitialized) adapter.panelRecall = prefs.panelRecallEnabled
+        // 无框模式 / 字体设置也可能在设置页里改过，同样即时刷新
+        if (::adapter.isInitialized) {
+            adapter.frameless = prefs.bubbleFrameless
+            adapter.chatFont = ChatFontStore.load(this)
+        }
         if (::memory.isInitialized) memory.reload()
         reloadHistoryIfIdle()
         maybeGreetOnResume()
@@ -980,7 +988,7 @@ class MainActivity : AppCompatActivity() {
             refreshMoodSubtitle()
         }
         // ② 思考引擎：记录经历（供反思使用）
-        if (prefs.mindEnabled) mind.record("主人说：" + userText.take(200))
+        if (prefs.mindEnabled) mind.record("主人说：" + SafeCut.takeUnitsSafe(userText, 200))
 
         // ③ 人设：接上茬闲聊；认真提问才开云端推理，闲聊仍直接开口
         llm.applyCloudThink = KnowledgeAssist.needsWeb(userText)
@@ -1195,7 +1203,7 @@ class MainActivity : AppCompatActivity() {
                 return@launch
             }
             val text = info.toSpeakText()
-            prefs.lastWeatherBrief = text.take(500)
+            prefs.lastWeatherBrief = SafeCut.takeUnitsSafe(text, 500)
             XiaomoWidgetProvider.refresh(this@MainActivity)
             WeatherActivity.pendingInfo = info
             startActivity(Intent(this@MainActivity, WeatherActivity::class.java).putExtra(WeatherActivity.EXTRA_CITY, c))
@@ -1360,12 +1368,20 @@ class MainActivity : AppCompatActivity() {
         val speakable = visibleSpeakable(full)
         if (streamSpokenUntil >= speakable.length) return null
         val rest = speakable.substring(streamSpokenUntil)
-        val cut = rest.indexOfFirst { ch -> ch.code == 10 }
+        var cut = rest.indexOfFirst { ch -> ch.code == 10 }
         if (cut < 0) return null
-        val chunk = rest.substring(0, cut + 1).trim()
+        // 切点必须落在完整字符边界上：若正好切在代理对中间，就往前退一格，
+        // 否则半个 emoji/生僻字交给 TTS，会被读成乱码噪音。
+        cut += 1
+        if (cut in 1 until rest.length && Character.isLowSurrogate(rest[cut]) &&
+            Character.isHighSurrogate(rest[cut - 1])) {
+            cut -= 1
+        }
+        if (cut <= 0) return null
+        val chunk = rest.substring(0, cut).trim()
         // 门槛从 24 字提到 200 字：积累够一段再开口，不要一句一停。
         if (chunk.length < 200) return null
-        streamSpokenUntil += cut + 1
+        streamSpokenUntil += cut
         return chunk
     }
     private fun scrollToBottom() {
@@ -1639,7 +1655,66 @@ class MainActivity : AppCompatActivity() {
         replyLocal(userText, "面板模板用法：存面板 名字 / 套用面板 名字 / 删除面板模板 名字 / 面板模板列表")
     }
 
+    /**
+     * 处理「无框模式」与「字体设置」两类口令。
+     *
+     * @return true 表示本句已被处理（已回复），调用方应直接 return
+     */
+    private fun handleFramelessAndFont(userText: String): Boolean {
+        var handled = false
+        val parts = mutableListOf<String>()
+
+        // 1) 无框模式：取消 / 恢复气泡文本框
+        ChatFontStore.framelessFromText(userText)?.let { on ->
+            prefs.bubbleFrameless = on
+            adapter.frameless = on
+            handled = true
+            parts.add(if (on) "已取消气泡文本框（无框模式）" else "已恢复气泡文本框")
+        }
+
+        // 2) 字体：字号 / 字形 / 行距，可一句里同时改多项
+        val old = ChatFontStore.load(this)
+        var next = old
+        ChatFontStore.sizeFromText(userText)?.let {
+            next = next.copy(sizeSp = it); handled = true; parts.add("字号 → ${it}sp")
+        }
+        ChatFontStore.familyFromText(userText)?.let {
+            next = next.copy(family = it); handled = true
+            parts.add("字形 → ${ChatFontStore.familyLabel(it)}")
+        }
+        ChatFontStore.boldFromText(userText)?.let {
+            next = next.copy(bold = it); handled = true; parts.add(if (it) "已加粗" else "已取消加粗")
+        }
+        ChatFontStore.italicFromText(userText)?.let {
+            next = next.copy(italic = it); handled = true; parts.add(if (it) "已斜体" else "已取消斜体")
+        }
+        ChatFontStore.lineFromText(userText)?.let {
+            next = next.copy(lineMul = it); handled = true; parts.add("行距 → ${it} 倍")
+        }
+        // 显式恢复默认字体
+        if (userText.contains("恢复默认字体") || userText.contains("字体恢复默认")) {
+            ChatFontStore.reset(this)
+            next = ChatFontStore.load(this)
+            handled = true
+            parts.clear()
+            parts.add("字体已恢复默认")
+        }
+
+        if (!handled) return false
+
+        if (next != old) {
+            ChatFontStore.save(this, next)
+            adapter.chatFont = next
+        }
+        adapter.notifyDataSetChanged()
+        replyLocal(userText, parts.joinToString("；") + "
+（当前：" + ChatFontStore.describe(next) + "）")
+        return true
+    }
+
     private fun handleBubbleStyle(userText: String, command: VoiceCommand.BubbleStyle) {
+        // ---- 无框模式 / 字体设置：先于气泡样式处理，命中了就直接返回 ----
+        if (handleFramelessAndFont(userText)) return
         // 收藏夹：列表
         if (command.listFavorites) {
             val list = BubbleStyleStore.favorites(this)
@@ -1979,7 +2054,7 @@ class MainActivity : AppCompatActivity() {
         if (hits.isEmpty()) return "对话里没找到「$q」。"
         return hits.joinToString("\n") { m ->
             val who = if (m.isMe) "主人" else "小沫"
-            who + "：" + m.content.take(300)
+            who + "：" + SafeCut.takeUnitsSafe(m.content, 300)
         }
     }
 
@@ -2150,7 +2225,7 @@ class MainActivity : AppCompatActivity() {
                 if (city.isNotBlank()) prefs.lastCity = city
                 val weatherText = runCatching { weather.query(city)?.toSpeakText().orEmpty() }.getOrDefault("")
                 if (weatherText.isNotBlank()) {
-                    prefs.lastWeatherBrief = weatherText.take(500)
+                    prefs.lastWeatherBrief = SafeCut.takeUnitsSafe(weatherText, 500)
                     XiaomoWidgetProvider.refresh(this@MainActivity)
                 }
                 val next = reminders.upcoming().firstOrNull()?.let { reminders.formatItem(it) } ?: "暂无提醒"

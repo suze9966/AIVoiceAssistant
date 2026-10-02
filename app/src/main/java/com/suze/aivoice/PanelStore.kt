@@ -187,9 +187,18 @@ class PanelStore(context: Context) {
                 "删除面板", "套用面板", "应用面板", "载入面板"
             ).sortedByDescending { it.length }
             for (k in keys) {
-                val idx = text.indexOf(k)
-                if (idx < 0) continue
-                val rest = text.substring(idx + k.length)
+                var idx = text.indexOf(k)
+                var skip = k.length
+                if (idx < 0) {
+                    // 口语化容错：「存个面板 战斗」「帮我存下面板 战斗」
+                    // 在关键词中间插「个 / 一下 / 下」也认
+                    val loose = k.replace("面板", "(?:个|一下|下)?面板")
+                    val m = Regex(loose).find(text)
+                    if (m == null) continue
+                    idx = m.range.first
+                    skip = m.range.last - m.range.first + 1
+                }
+                val rest = text.substring(idx + skip)
                     .trim()
                     .trimStart('：', ':', ' ', '，', ',')
                     .trim()

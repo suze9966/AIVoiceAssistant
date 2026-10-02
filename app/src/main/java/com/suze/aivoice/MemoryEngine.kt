@@ -139,15 +139,15 @@ class MemoryEngine(context: Context) {
 
         // 3) 明确要求记住的：记住 / 别忘了
         if (t.contains("记住") || t.contains("别忘")) {
-            remember(TYPE_FACT, "主人要求记住：" + t.take(500))
+            remember(TYPE_FACT, "主人要求记住：" + SafeCut.takeUnitsSafe(t, 500))
         }
 
         // 4) 情绪事件：下次还能自然接上，不靠挂机涨好感
         when {
             listOf("好累", "累死", "加班", "失眠", "睡不着", "太累", "熬夜").any { t.contains(it) } ->
-                remember(TYPE_FACT, "主人最近很累：" + t.take(300))
+                remember(TYPE_FACT, "主人最近很累：" + SafeCut.takeUnitsSafe(t, 300))
             listOf("难过", "伤心", "想哭", "不开心", "委屈", "心情不好").any { t.contains(it) } ->
-                remember(TYPE_FACT, "主人心情低落过：" + t.take(300))
+                remember(TYPE_FACT, "主人心情低落过：" + SafeCut.takeUnitsSafe(t, 300))
             listOf("想你了", "有点想你", "想小沫").any { t.contains(it) } ->
                 remember(TYPE_PREF, "主人会想念小沫")
             listOf("好孤独", "好寂寞", "没人陪", "好孤单").any { t.contains(it) } ->
@@ -159,7 +159,7 @@ class MemoryEngine(context: Context) {
     fun learnKnowledge(content: String) {
         if (content.isBlank()) return
         exp = exp + 5
-        remember(TYPE_LEARN, content.take(1000))
+        remember(TYPE_LEARN, SafeCut.takeUnitsSafe(content, 1000))
     }
 
     /** 成长提示：等级 + 熟悉度 + 记忆中提取的关键信息 */
@@ -209,7 +209,7 @@ class MemoryEngine(context: Context) {
     fun addManual(type: String, content: String): Boolean {
         val c = content.trim()
         if (c.isBlank()) return false
-        remember(normalizeType(type), c.take(2000))
+        remember(normalizeType(type), SafeCut.takeUnitsSafe(c, 2000))
         return true
     }
 
@@ -220,7 +220,7 @@ class MemoryEngine(context: Context) {
         val old = items[index]
         items[index] = old.copy(
             type = normalizeType(type),
-            content = c.take(2000),
+            content = SafeCut.takeUnitsSafe(c, 2000),
             time = System.currentTimeMillis()
         )
         persist()
@@ -282,7 +282,7 @@ class MemoryEngine(context: Context) {
                     items.add(
                         m.copy(
                             type = normalizeType(m.type),
-                            content = c.take(2000)
+                            content = SafeCut.takeUnitsSafe(c, 2000)
                         )
                     )
                 }
@@ -295,7 +295,7 @@ class MemoryEngine(context: Context) {
         incoming.forEach { m ->
             val c = m.content.trim()
             if (c.isNotBlank()) {
-                remember(normalizeType(m.type), c.take(2000))
+                remember(normalizeType(m.type), SafeCut.takeUnitsSafe(c, 2000))
                 n++
             }
         }

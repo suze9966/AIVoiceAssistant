@@ -639,4 +639,11 @@
     <string name="toast_role_lint_ok">角色卡很健康，没有发现问题</string>
     <string name="toast_role_lint_fixed">已修复 %1$d 处问题</string>
     <string name="label_panel_recall">面板状态续接（自动附上上次数值）</string>
+    <string name="label_bubble_frameless">取消气泡文本框（无框模式）</string>
+    <string name="hint_bubble_frameless">开启后气泡背景与描边都去掉，文字直接铺在聊天区，宽度接近满屏，一屏能看更多。</string>
+    <string name="label_font_size">字号</string>
+    <string name="label_font_line">行距</string>
+    <string name="label_font_bold">加粗</string>
+    <string name="label_font_italic">斜体</string>
+    <string name="font_preview_sample">小沫在这里，今天也陪着你呀～ Hello 123</string>
 </resources>

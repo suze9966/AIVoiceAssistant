@@ -72,17 +72,32 @@ class MindEngine(context: Context) {
     fun parse(reply: String): Pair<String, String> {
         var thought = ""
         var say = ""
-        reply.split("\n").forEach { line ->
+        val lines = reply.split("\n")
+        // SAY: 之后的所有内容（含多行）都必须原样保留，
+        // 否则面板 ```panel 围栏 / 代码块 / 多段排版会被整段吞掉。
+        var sayStart = -1
+        for ((idx, line) in lines.withIndex()) {
             val l = line.trim()
             when {
                 l.startsWith("THOUGHT:") -> thought = l.removePrefix("THOUGHT:").trim()
-                l.startsWith("想法：") || l.startsWith("想法:") -> thought = l.substringAfter("：").substringAfter(":").trim()
-                l.startsWith("SAY:") -> say += l.removePrefix("SAY:").trim() + " "
+                l.startsWith("想法：") || l.startsWith("想法:") ->
+                    thought = l.substringAfter("：").substringAfter(":").trim()
+                l.startsWith("SAY:") -> { sayStart = idx }
             }
+            if (sayStart >= 0) break
+        }
+        if (sayStart >= 0) {
+            // 第一行去掉 SAY: 前缀，其余行（包括面板围栏）整段保留换行
+            say = lines.subList(sayStart, lines.size)
+                .mapIndexed { i, line ->
+                    if (i == 0) line.trim().removePrefix("SAY:").trim() else line
+                }
+                .joinToString("\n")
+                .trim()
         }
         if (say.isBlank()) {
             // 没按格式：剥离可能的 THOUGHT 行，余下当发言
-            say = reply.lines()
+            say = lines
                 .filterNot { it.trim().startsWith("THOUGHT:") || it.trim().startsWith("想法") }
                 .joinToString("\n").trim()
         }

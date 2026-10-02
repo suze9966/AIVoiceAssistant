@@ -89,9 +89,7 @@ object StickerLibrary {
             val cc = Character.charCount(cp)
             i += cc
             if (cp == 0x20 || cp == 0xFE0F || cp == 0x200D) continue
-            val ok = (cp in 0x1F300..0x1FAFF) || (cp in 0x2600..0x27BF) ||
-                    (cp in 0x1F000..0x1F2FF) || (cp in 0x2190..0x21FF) ||
-                    (cp in 0x2B00..0x2BFF) || (cp in 0x1F1E6..0x1F1FF)
+            if (!EmojiDetector.isEmoji(cp)) return false
             if (!ok) return false
             has = true
         }
