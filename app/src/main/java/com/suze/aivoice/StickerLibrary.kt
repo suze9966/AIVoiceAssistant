@@ -90,7 +90,6 @@ object StickerLibrary {
             i += cc
             if (cp == 0x20 || cp == 0xFE0F || cp == 0x200D) continue
             if (!EmojiDetector.isEmoji(cp)) return false
-            if (!ok) return false
             has = true
         }
         return has

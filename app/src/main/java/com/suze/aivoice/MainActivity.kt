@@ -1707,8 +1707,7 @@ class MainActivity : AppCompatActivity() {
             adapter.chatFont = next
         }
         adapter.notifyDataSetChanged()
-        replyLocal(userText, parts.joinToString("；") + "
-（当前：" + ChatFontStore.describe(next) + "）")
+        replyLocal(userText, parts.joinToString("；") + "（当前：" + ChatFontStore.describe(next) + "）")
         return true
     }
 
