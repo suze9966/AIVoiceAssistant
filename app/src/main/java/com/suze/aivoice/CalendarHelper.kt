@@ -96,7 +96,7 @@ class CalendarHelper(private val context: Context) {
         val values = ContentValues().apply {
             put(CalendarContract.Events.DTSTART, atMillis)
             put(CalendarContract.Events.DTEND, atMillis + 60 * 60_000L)
-            put(CalendarContract.Events.TITLE, title.take(80).ifBlank { "小沫日程" })
+            put(CalendarContract.Events.TITLE, title.take(500).ifBlank { "小沫日程" })
             put(CalendarContract.Events.CALENDAR_ID, calId)
             put(CalendarContract.Events.EVENT_TIMEZONE, TimeZone.getDefault().id)
             put(CalendarContract.Events.DESCRIPTION, "由小沫添加")

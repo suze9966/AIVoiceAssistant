@@ -59,7 +59,7 @@ class GroupStore(context: Context) {
     fun saveChat(room: GroupRoom, messages: List<ChatMessage>) {
         roles.saveChat(room.id, messages, "group:" + room.id)
         val preview = messages.lastOrNull { it.content.isNotBlank() }?.content.orEmpty()
-            .replace("\n", " ").take(80)
+            .replace("\n", " ").take(2000)
         upsert(room.copy(preview = preview, updatedAt = System.currentTimeMillis()))
     }
 
@@ -109,8 +109,8 @@ class GroupStore(context: Context) {
     }
 
     companion object {
-        const val MAX_ROOMS = 80
-        const val MAX_MEMBERS = 12
+        const val MAX_ROOMS = 3000
+        const val MAX_MEMBERS = 200
         fun newId(): String = UUID.randomUUID().toString()
     }
 }

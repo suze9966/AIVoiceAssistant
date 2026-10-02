@@ -178,9 +178,9 @@ object TavernCardIO {
         val name = data.optString("name").ifBlank { "导入角色" }
         return RoleCharacter(
             id = RoleStore.newId(),
-            name = name.take(48),
+            name = name.take(300),
             emoji = "\uD83C\uDFAD",
-            intro = data.optString("creator_notes").ifBlank { data.optString("description").replace("\n", " ").take(80) },
+            intro = data.optString("creator_notes").ifBlank { data.optString("description").replace("\n", " ").take(2000) },
             greeting = data.optString("first_mes"),
             persona = data.optString("system_prompt").ifBlank { data.optString("personality") },
             description = data.optString("description"),
@@ -266,7 +266,7 @@ object TavernCardIO {
             if (user.isNotEmpty() || assistant.isNotEmpty()) list.add(RoleExample(user, assistant))
         }
         if (blocks.size > 1) blocks.drop(1).forEach { consume(it) } else consume(raw)
-        return list.filter { it.user.isNotBlank() || it.assistant.isNotBlank() }.take(16)
+        return list.filter { it.user.isNotBlank() || it.assistant.isNotBlank() }.take(200)
     }
 
     private fun examplesAsMes(character: RoleCharacter): String {

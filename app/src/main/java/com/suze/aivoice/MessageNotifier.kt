@@ -73,12 +73,12 @@ object MessageNotifier {
         )
 
         val title = if (fromProactive) "小沫 · 想你了" else "小沫"
-        val big = NotificationCompat.BigTextStyle().bigText(body.take(140))
+        val big = NotificationCompat.BigTextStyle().bigText(body.take(4000))
 
         val b = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
-            .setContentText(body.take(60))
+            .setContentText(body.take(2000))
             .setStyle(big)
             .setContentIntent(pi)
             .setAutoCancel(true)

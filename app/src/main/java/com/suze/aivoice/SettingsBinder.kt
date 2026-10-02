@@ -47,6 +47,7 @@ class SettingsBinder(
         val switchMind = activity.findViewById<SwitchCompat>(R.id.switchMind)
         val switchGrow = activity.findViewById<SwitchCompat>(R.id.switchGrow)
         val switchMemory = activity.findViewById<SwitchCompat>(R.id.switchMemory)
+        val switchPanelRecall = activity.findViewById<SwitchCompat>(R.id.switchPanelRecall)
         val switchFreeChat = activity.findViewById<SwitchCompat>(R.id.switchFreeChat)
         val switchProactive = activity.findViewById<SwitchCompat>(R.id.switchProactive)
         val spinnerProactiveInterval = activity.findViewById<Spinner>(R.id.spinnerProactiveInterval)
@@ -96,6 +97,7 @@ class SettingsBinder(
         switchMind.isChecked = prefs.mindEnabled
         switchGrow.isChecked = prefs.growEnabled
         switchMemory.isChecked = prefs.memoryEnabled
+        switchPanelRecall.isChecked = prefs.panelRecallEnabled
         switchFreeChat.isChecked = prefs.freeChatEnabled
         switchProactive.isChecked = prefs.proactiveEnabled
         val proactiveLabels = Prefs.PROACTIVE_INTERVAL_OPTIONS.map { it.second }
@@ -221,6 +223,7 @@ class SettingsBinder(
             prefs.mindEnabled = switchMind.isChecked
             prefs.growEnabled = switchGrow.isChecked
             prefs.memoryEnabled = switchMemory.isChecked
+            prefs.panelRecallEnabled = switchPanelRecall.isChecked
             prefs.freeChatEnabled = switchFreeChat.isChecked
             prefs.proactiveEnabled = switchProactive.isChecked
             Prefs.PROACTIVE_INTERVAL_OPTIONS.getOrNull(spinnerProactiveInterval.selectedItemPosition)?.first?.let { prefs.proactiveIntervalMin = it }

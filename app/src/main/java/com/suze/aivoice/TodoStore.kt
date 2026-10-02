@@ -15,7 +15,7 @@ data class TodoItem(
 
 class TodoStore(context: Context) {
     private val file = File(context.filesDir, "todos.json")
-    private val maxKeep = 200
+    private val maxKeep = 10000
 
     fun load(): MutableList<TodoItem> {
         val list = mutableListOf<TodoItem>()
@@ -56,7 +56,7 @@ class TodoStore(context: Context) {
     fun add(text: String): TodoItem {
         val item = TodoItem(
             id = UUID.randomUUID().toString(),
-            text = text.trim().ifBlank { "待办" }.take(80)
+            text = text.trim().ifBlank { "待办" }.take(2000)
         )
         val list = load()
         list.add(item)
@@ -67,7 +67,7 @@ class TodoStore(context: Context) {
     fun pending(): List<TodoItem> = load().filter { !it.done }
 
     fun update(id: String, text: String): Boolean {
-        val next = text.trim().take(80)
+        val next = text.trim().take(2000)
         if (next.isEmpty()) return false
         val list = load()
         val idx = list.indexOfFirst { it.id == id }

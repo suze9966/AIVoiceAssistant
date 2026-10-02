@@ -343,7 +343,7 @@ class VoiceCallActivity : AppCompatActivity() {
         lifecycleScope.launch {
             var reply = ""
             try {
-                val requestHistory = history.takeLast(16)
+                val requestHistory = history.takeLast(200)
                 reply = if (prefs.streamEnabled) {
                     val rawBuffer = StringBuilder()
                     llm.chatStream(requestHistory) { delta ->
@@ -471,7 +471,7 @@ class VoiceCallActivity : AppCompatActivity() {
         if (t.length <= 80) return t
         val cut = t.indexOfFirst { it == '。' || it == '！' || it == '？' || it == '!' || it == '?' }
         if (cut in 8..80) return t.substring(0, cut + 1)
-        return t.take(80)
+        return t.take(1000)
     }
 
     @Deprecated("Deprecated in Java")

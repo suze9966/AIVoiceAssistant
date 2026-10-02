@@ -12,12 +12,12 @@ import java.util.concurrent.TimeUnit
 class SearchClient {
     /** 给大模型看的资料包：维基 + DuckDuckGo 摘要拼在一起。 */
     fun gatherNotes(query: String): String {
-        val q = query.trim().take(80)
+        val q = query.trim().take(500)
         if (q.isEmpty()) return ""
         val parts = ArrayList<String>(2)
         wiki(q)?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
         ddg(q)?.takeIf { it.isNotBlank() && !parts.contains(it) }?.let { parts.add(it) }
-        return parts.joinToString("\n").take(2400)
+        return parts.joinToString("\n").take(30000)
     }
     private val client = OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
@@ -28,7 +28,7 @@ class SearchClient {
         .build()
 
     fun search(query: String): String {
-        val q = query.trim().take(80)
+        val q = query.trim().take(500)
         if (q.isEmpty()) return ""
         wiki(q)?.takeIf { it.isNotBlank() }?.let { return it }
         ddg(q)?.takeIf { it.isNotBlank() }?.let { return it }
@@ -46,7 +46,7 @@ class SearchClient {
             if (extract.isBlank()) null
             else buildString {
                 if (title.isNotBlank()) append(title).append("：")
-                append(extract.take(800))
+                append(extract.take(4000))
             }
         } catch (_: Exception) { null }
     }
@@ -67,7 +67,7 @@ class SearchClient {
             val abstract = o.optString("AbstractText")
             if (abstract.isNotBlank()) {
                 val src = o.optString("Heading").ifBlank { q }
-                return "$src：$abstract".take(800)
+                return "$src：$abstract".take(6000)
             }
             val related = o.optJSONArray("RelatedTopics")
             val bits = mutableListOf<String>()
@@ -76,18 +76,18 @@ class SearchClient {
                     if (bits.size >= 6) break
                     val item = related.optJSONObject(i) ?: continue
                     val t = item.optString("Text")
-                    if (t.isNotBlank()) bits.add(t.take(160))
+                    if (t.isNotBlank()) bits.add(t.take(2000))
                     val topics = item.optJSONArray("Topics")
                     if (topics != null) {
                         for (j in 0 until topics.length()) {
                             if (bits.size >= 6) break
                             val nested = topics.optJSONObject(j)?.optString("Text").orEmpty()
-                            if (nested.isNotBlank()) bits.add(nested.take(160))
+                            if (nested.isNotBlank()) bits.add(nested.take(2000))
                         }
                     }
                 }
             }
-            if (bits.isEmpty()) null else bits.joinToString("；").take(800)
+            if (bits.isEmpty()) null else bits.joinToString("；").take(8000)
         } catch (_: Exception) { null }
     }
 

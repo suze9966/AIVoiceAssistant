@@ -354,7 +354,7 @@ object BubbleStyleStore {
 
     /** 把当前样式存成命名收藏（同名覆盖）。 */
     fun saveFavorite(context: Context, name: String): Boolean {
-        val key = name.trim().take(12)
+        val key = name.trim().take(60)
         if (key.isBlank()) return false
         val names = sp(context).getString(KEY_FAVORITES, "")?.split("|")?.filter { it.isNotBlank() }
             ?.toMutableList() ?: mutableListOf()
@@ -368,7 +368,7 @@ object BubbleStyleStore {
 
     /** 套用命名收藏。 */
     fun applyFavorite(context: Context, name: String): Boolean {
-        val key = name.trim().take(12)
+        val key = name.trim().take(60)
         val json = sp(context).getString(KEY_FAV_PREFIX + key, null) ?: return false
         val style = parseStyle(json) ?: return false
         save(context, style)
@@ -377,7 +377,7 @@ object BubbleStyleStore {
 
     /** 删除命名收藏。 */
     fun deleteFavorite(context: Context, name: String): Boolean {
-        val key = name.trim().take(12)
+        val key = name.trim().take(60)
         val names = sp(context).getString(KEY_FAVORITES, "")?.split("|")?.filter { it.isNotBlank() }
             ?.toMutableList() ?: return false
         if (!names.remove(key)) return false
@@ -563,7 +563,7 @@ object BubbleStyleStore {
             if (favArr != null) {
                 for (i in 0 until favArr.length()) {
                     val o = favArr.optJSONObject(i) ?: continue
-                    val name = o.optString("name").take(12)
+                    val name = o.optString("name").take(60)
                     val raw = o.optString("style")
                     if (name.isNotBlank() && raw.isNotBlank()) {
                         runCatching {
@@ -575,7 +575,7 @@ object BubbleStyleStore {
                 // 重建收藏名索引
                 val names = mutableListOf<String>()
                 for (i in 0 until favArr.length()) {
-                    favArr.optJSONObject(i)?.optString("name")?.take(12)?.takeIf { it.isNotBlank() }?.let { names.add(it) }
+                    favArr.optJSONObject(i)?.optString("name")?.take(60)?.takeIf { it.isNotBlank() }?.let { names.add(it) }
                 }
                 if (names.isNotEmpty()) {
                     val old = sp(context).getString(KEY_FAVORITES, "")?.split("|")?.filter { it.isNotBlank() } ?: emptyList()

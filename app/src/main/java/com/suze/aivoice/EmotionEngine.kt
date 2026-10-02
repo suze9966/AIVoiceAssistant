@@ -87,10 +87,10 @@ class EmotionEngine(context: Context) {
         const val SOURCE_MANUAL = "manual"
         const val SOURCE_IMPORT = "import"
         const val SOURCE_JOURNAL = "journal"
-        private const val MAX_LEAVES = 2000
-        private const val MAX_INSIGHTS = 400
-        private const val MAX_TWIGS = 240
-        private const val MAX_JOURNALS = 730
+        private const val MAX_LEAVES = 200000
+        private const val MAX_INSIGHTS = 40000
+        private const val MAX_TWIGS = 20000
+        private const val MAX_JOURNALS = 50000
         private const val INSIGHT_EVERY = 3
         private const val LEAF_HALF_DAYS = 21
         private const val INSIGHT_HALF_DAYS = 90
@@ -100,15 +100,15 @@ class EmotionEngine(context: Context) {
 
     var mood: Int
         get() = sp.getInt("mood", 30)
-        private set(v) = sp.edit().putInt("mood", v.coerceIn(-100, 100)).apply()
+        private set(v) = sp.edit().putInt("mood", v.coerceIn(-10000, 10000)).apply()
 
     var affinity: Int
         get() = sp.getInt("affinity", 10)
-        private set(v) = sp.edit().putInt("affinity", v.coerceIn(0, 100)).apply()
+        private set(v) = sp.edit().putInt("affinity", v.coerceIn(0, 10000)).apply()
 
     var energy: Int
         get() = sp.getInt("energy", 100)
-        private set(v) = sp.edit().putInt("energy", v.coerceIn(0, 100)).apply()
+        private set(v) = sp.edit().putInt("energy", v.coerceIn(0, 10000)).apply()
 
     private var lastTick: Long
         get() = sp.getLong("lastTick", System.currentTimeMillis())
@@ -159,13 +159,13 @@ class EmotionEngine(context: Context) {
         if (minutes > 0) {
             lastTick = now
             val m = mood
-            val step = (minutes / 8).coerceAtLeast(if (minutes >= 5) 1 else 0)
+            val step = (minutes / 8 * 100).coerceAtLeast(if (minutes >= 5) 100 else 0)
             mood = when {
-                m > 30 -> m - step
-                m < 30 -> m + step
+                m > 3000 -> m - step
+                m < 3000 -> m + step
                 else -> m
             }
-            energy = (energy + minutes * 4 / 60).coerceAtMost(100)
+            energy = (energy + minutes * 400 / 60).coerceAtMost(10000)
         }
         decayTree(persistAfter = true)
         reflectJournal(force = false)
@@ -178,31 +178,31 @@ class EmotionEngine(context: Context) {
         if (t.isEmpty()) return
 
         var delta = 0
-        var aff = 1
+        var aff = 50
         var cue = UserCue.NONE
         var reason = "在跟主人说话"
         var event = ""
 
         when {
             hit(t, "滚", "闭嘴", "讨厌你", "讨厌小沫", "你真烦", "你没用", "你是废物", "给我滚") -> {
-                delta = -22; aff = -3; cue = UserCue.HURT; reason = "被凶了，有点委屈"
+                delta = -2200; aff = -150; cue = UserCue.HURT; reason = "被凶了，有点委屈"
                 event = "主人刚才对我生气了"
             }
             hit(t, "好累", "累死", "疲惫", "好困", "想睡", "没精神", "加班", "熬夜", "睡不着", "失眠", "撑不住", "太累了") -> {
-                delta = -6; aff = 1; cue = UserCue.TIRED; reason = "主人累了，想被接住"
-                event = "主人说自己很累：" + t.take(24)
-                energy = (energy - 6).coerceAtLeast(0)
+                delta = -600; aff = 50; cue = UserCue.TIRED; reason = "主人累了，想被接住"
+                event = "主人说自己很累：" + t.take(300)
+                energy = (energy - 600).coerceAtLeast(0)
             }
             hit(t, "难过", "伤心", "不开心", "郁闷", "心情不好", "想哭", "委屈", "心塞", "难受") -> {
-                delta = -14; aff = 1; cue = UserCue.SAD; reason = "主人难过了，要轻声陪"
-                event = "主人不太开心：" + t.take(24)
+                delta = -1400; aff = 50; cue = UserCue.SAD; reason = "主人难过了，要轻声陪"
+                event = "主人不太开心：" + t.take(300)
             }
             hit(t, "好孤独", "好寂寞", "没人陪", "好孤单", "有点孤单") -> {
-                delta = -8; aff = 1; cue = UserCue.LONELY; reason = "主人有点孤单"
+                delta = -800; aff = 50; cue = UserCue.LONELY; reason = "主人有点孤单"
                 event = "主人觉得孤单"
             }
             hit(t, "想你了", "有点想你", "想小沫", "想我了吗", "想死你") -> {
-                delta = 12; aff = 2; cue = UserCue.MISS; reason = "主人想我了"
+                delta = 1200; aff = 100; cue = UserCue.MISS; reason = "主人想我了"
                 event = "主人说想我"
             }
             hit(t, "喜欢你", "爱你", "好喜欢你", "你真好", "你最棒", "你真可爱", "你辛苦了") ||
@@ -210,58 +210,58 @@ class EmotionEngine(context: Context) {
                     !hit(t, "不谢谢", "不喜欢")) -> {
                 val praiseYou = hit(t, "喜欢你", "爱你", "你真好", "你可爱", "你棒", "谢谢", "辛苦", "抱抱", "么么")
                 if (praiseYou) {
-                    delta = 16; aff = 2; cue = UserCue.PRAISE; reason = "被主人鼓励了"
+                    delta = 1600; aff = 100; cue = UserCue.PRAISE; reason = "被主人鼓励了"
                     event = "主人夸了我"
                 } else {
-                    delta = 10; aff = 1; cue = UserCue.HAPPY; reason = "主人开心，我也想跟着高兴"
-                    event = "主人开心：" + t.take(20)
+                    delta = 1000; aff = 50; cue = UserCue.HAPPY; reason = "主人开心，我也想跟着高兴"
+                    event = "主人开心：" + t.take(300)
                 }
             }
             hit(t, "生气", "好气", "烦死", "讨厌", "气死", "好烦", "心烦") -> {
-                delta = -4; aff = 1; cue = UserCue.ANGRY; reason = "主人在生气，先接住别贪嘴"
-                event = "主人在生气：" + t.take(24)
+                delta = -400; aff = 50; cue = UserCue.ANGRY; reason = "主人在生气，先接住别贪嘴"
+                event = "主人在生气：" + t.take(300)
             }
             hit(t, "开心", "高兴", "好爽", "太棒", "哈哈", "嘿嘿", "耶", "太好了") -> {
-                delta = 10; aff = 1; cue = UserCue.HAPPY; reason = "主人开心"
-                event = "主人开心地说：" + t.take(20)
+                delta = 1000; aff = 50; cue = UserCue.HAPPY; reason = "主人开心"
+                event = "主人开心地说：" + t.take(300)
             }
             hit(t, "随便", "算了", "都行", "无所谓", "你看着办", "爱谁谁", "怎么都行") -> {
-                delta = -3; aff = 0; cue = UserCue.DISMISS; reason = "主人有点敷衍，不要贴太近"
+                delta = -300; aff = 0; cue = UserCue.DISMISS; reason = "主人有点敷衍，不要贴太近"
             }
             hit(t, "为什么", "怎么", "是什么", "能不能", "可以吗", "吗？", "吗?", "？", "?") -> {
-                delta = 4; aff = 1; cue = UserCue.CURIOUS; reason = "被问到问题，兴致来了"
+                delta = 400; aff = 50; cue = UserCue.CURIOUS; reason = "被问到问题，兴致来了"
             }
         }
 
         affinity = affinity + aff
         mood = mood + delta
-        if (isNight) energy = (energy - 8).coerceAtLeast(0) else energy = (energy + 2).coerceAtMost(100)
+        if (isNight) energy = (energy - 800).coerceAtLeast(0) else energy = (energy + 200).coerceAtMost(10000)
         lastUserCue = cue
         lastReason = reason
         if (event.isNotBlank()) rememberEvent(cue, event)
     }
 
     fun praise() {
-        affinity = affinity + 3
-        mood = mood + 20
+        affinity = affinity + 300
+        mood = mood + 2000
         lastUserCue = UserCue.PRAISE
         lastReason = "被表扬了，很开心"
         rememberEvent(UserCue.PRAISE, "主人表扬了我")
     }
 
     fun currentMood(): Mood = when {
-        energy < 25 -> Mood.TIRED
-        mood >= 55 -> Mood.HAPPY
-        mood >= 20 -> if (affinity < 30) Mood.CURIOUS else Mood.CALM
+        energy < 2500 -> Mood.TIRED
+        mood >= 5500 -> Mood.HAPPY
+        mood >= 2000 -> if (affinity < 3000) Mood.CURIOUS else Mood.CALM
         mood >= 0 -> Mood.SHY
-        mood >= -30 -> Mood.SAD
+        mood >= -3000 -> Mood.SAD
         else -> Mood.ANNOYED
     }
 
     fun statusLine(): String {
         val m = currentMood()
         val feeling = when (m) {
-            Mood.HAPPY -> if (affinity >= 50) "想跟你多说两句" else "今天心情不错"
+            Mood.HAPPY -> if (affinity >= 5000) "想跟你多说两句" else "今天心情不错"
             Mood.CALM -> "在呢，不着急"
             Mood.CURIOUS -> "对你说的话有点好奇"
             Mood.SHY -> "有点害羞，但想靠近"
@@ -275,9 +275,9 @@ class EmotionEngine(context: Context) {
     fun emotionPrompt(): String {
         val m = currentMood()
         val close = when {
-            affinity >= 80 -> "你们已经很亲，可以轻轻撒娇、主动关心，但别黏、别水。"
-            affinity >= 50 -> "你们已经很熟，说话可以温柔亲近。"
-            affinity >= 25 -> "正在慢慢熟悉，亲切但不要过分贴身。"
+            affinity >= 8000 -> "你们已经很亲，可以轻轻撒娇、主动关心，但别黏、别水。"
+            affinity >= 5000 -> "你们已经很熟，说话可以温柔亲近。"
+            affinity >= 2500 -> "正在慢慢熟悉，亲切但不要过分贴身。"
             else -> "还在刚认识，先友善、短句、多听。"
         }
         val catchUser = when (lastUserCue) {
@@ -344,7 +344,7 @@ class EmotionEngine(context: Context) {
             else -> when {
                 awayMin >= 12 * 60 -> "主人，我有点想你了。今天过得怎么样？"
                 awayMin >= 3 * 60 -> "你去忙了好一会儿呀，我在这儿等你。"
-                energy < 30 -> "这么晚了还来找我…要不要早点休息？我陪你到睡前。"
+                energy < 3000 -> "这么晚了还来找我…要不要早点休息？我陪你到睡前。"
                 else -> "回来啦，我想你了。"
             }
         }
@@ -517,7 +517,7 @@ class EmotionEngine(context: Context) {
                 val cue = resolveCueName(cueOrTwig)
                 if (cue == CUE_JOURNAL) return false
                 val branchId = if (cue == CUE_JOURNAL) ensureJournalBranch() else ensureBranch(cueOf(cue))
-                val name = c.take(40)
+                val name = c.take(500)
                 if (nodes.any { it.kind == KIND_TWIG && it.parentId == branchId && it.text == name }) return true
                 nodes.add(
                     EmotionNode(
@@ -530,14 +530,14 @@ class EmotionEngine(context: Context) {
                         time = now,
                         lastRecalled = 0L,
                         times = 1,
-                        note = note.trim().take(200),
+                        note = note.trim().take(2000),
                         source = SOURCE_MANUAL
                     )
                 )
                 trimTwigs()
             }
             KIND_JOURNAL -> {
-                writeJournal(c.take(400), force = true)
+                writeJournal(c.take(8000), force = true)
             }
             KIND_INSIGHT -> {
                 val parent = resolveParent(cueOrTwig)
@@ -547,12 +547,12 @@ class EmotionEngine(context: Context) {
                         parentId = parent.first,
                         kind = KIND_INSIGHT,
                         cue = parent.second,
-                        text = c.take(240),
+                        text = c.take(3000),
                         weight = 4,
                         time = now,
                         lastRecalled = 0L,
                         times = 1,
-                        note = note.trim().take(200),
+                        note = note.trim().take(2000),
                         source = SOURCE_MANUAL
                     )
                 )
@@ -566,11 +566,11 @@ class EmotionEngine(context: Context) {
                 if (idx >= 0) {
                     val old = nodes[idx]
                     nodes[idx] = old.copy(
-                        text = c.take(160),
-                        weight = (old.weight + 1).coerceAtMost(99),
+                        text = c.take(3000),
+                        weight = (old.weight + 1).coerceAtMost(9999),
                         time = now,
                         times = old.times + 1,
-                        note = note.trim().take(200).ifBlank { old.note },
+                        note = note.trim().take(2000).ifBlank { old.note },
                         source = SOURCE_MANUAL
                     )
                 } else {
@@ -580,12 +580,12 @@ class EmotionEngine(context: Context) {
                             parentId = parent.first,
                             kind = KIND_LEAF,
                             cue = parent.second,
-                            text = c.take(160),
+                            text = c.take(3000),
                             weight = 2,
                             time = now,
                             lastRecalled = 0L,
                             times = 1,
-                            note = note.trim().take(200),
+                            note = note.trim().take(2000),
                             source = SOURCE_MANUAL
                         )
                     )
@@ -606,8 +606,8 @@ class EmotionEngine(context: Context) {
         if (c.isBlank()) return false
         nodes[idx] = old.copy(
             text = c.take(if (old.kind == KIND_JOURNAL) 400 else 240),
-            note = note.trim().take(200),
-            weight = weight.coerceIn(1, 99),
+            note = note.trim().take(2000),
+            weight = weight.coerceIn(1, 9999),
             pinned = pinned,
             time = System.currentTimeMillis()
         )
@@ -722,8 +722,8 @@ class EmotionEngine(context: Context) {
         if (idx >= 0) {
             val old = nodes[idx]
             nodes[idx] = old.copy(
-                text = c.take(160),
-                weight = (old.weight + 1).coerceAtMost(99),
+                text = c.take(3000),
+                weight = (old.weight + 1).coerceAtMost(9999),
                 time = now,
                 times = old.times + 1,
                 parentId = parentId
@@ -735,7 +735,7 @@ class EmotionEngine(context: Context) {
                     parentId = parentId,
                     kind = KIND_LEAF,
                     cue = cue.name,
-                    text = c.take(160),
+                    text = c.take(3000),
                     weight = 1,
                     time = now,
                     lastRecalled = 0L,
@@ -766,7 +766,7 @@ class EmotionEngine(context: Context) {
         if (same >= 0) {
             val old = nodes[same]
             nodes[same] = old.copy(
-                weight = (old.weight + 2).coerceAtMost(99),
+                weight = (old.weight + 2).coerceAtMost(9999),
                 time = now,
                 times = old.times + 1
             )
@@ -796,7 +796,7 @@ class EmotionEngine(context: Context) {
         val lastInsightAt = childrenOf(twigId, KIND_INSIGHT).maxOfOrNull { it.time } ?: 0L
         val fresh = leaves.filter { it.time > lastInsightAt }
         if (fresh.size < INSIGHT_EVERY) return
-        val sample = fresh.takeLast(3).map { stem(it.text) }.filter { it.isNotBlank() }.distinct().take(2).joinToString("、")
+        val sample = fresh.takeLast(30).map { stem(it.text) }.filter { it.isNotBlank() }.distinct().take(20).joinToString("、")
         val text = if (sample.isBlank()) {
             "「${twig.text}」这件事反复出现，我会记着。"
         } else {
@@ -806,7 +806,7 @@ class EmotionEngine(context: Context) {
         val same = nodes.indexOfFirst { it.kind == KIND_INSIGHT && it.parentId == twigId && it.text == text }
         if (same >= 0) {
             val old = nodes[same]
-            nodes[same] = old.copy(weight = (old.weight + 2).coerceAtMost(99), time = now, times = old.times + 1)
+            nodes[same] = old.copy(weight = (old.weight + 2).coerceAtMost(9999), time = now, times = old.times + 1)
         } else {
             nodes.add(
                 EmotionNode(
@@ -883,9 +883,9 @@ class EmotionEngine(context: Context) {
         if (todayLeaves.isEmpty() && force && nodes.none { it.kind == KIND_LEAF }) return
         val counts = linkedMapOf<String, Int>()
         todayLeaves.forEach { n -> counts[n.cue] = (counts[n.cue] ?: 0) + 1 }
-        val top = counts.entries.sortedByDescending { it.value }.take(3)
+        val top = counts.entries.sortedByDescending { it.value }.take(30)
             .joinToString("、") { cueLabel(it.key) + "×" + it.value }
-        val sample = todayLeaves.sortedByDescending { it.time }.take(3).joinToString("；") { it.text.take(24) }
+        val sample = todayLeaves.sortedByDescending { it.time }.take(200).joinToString("；") { it.text.take(500) }
         val text = buildString {
             append(dateText(System.currentTimeMillis()))
             append(" 心情日记：")
@@ -893,7 +893,7 @@ class EmotionEngine(context: Context) {
             if (sample.isNotBlank()) append("记下：").append(sample)
             if (isBlank()) append("今天和主人一起过了一天。")
         }
-        writeJournal(text.take(400), force)
+        writeJournal(text.take(8000), force)
         lastJournalDay = day
     }
 
@@ -907,8 +907,8 @@ class EmotionEngine(context: Context) {
         if (idx >= 0) {
             val old = nodes[idx]
             nodes[idx] = old.copy(
-                text = if (force) c.take(400) else (old.text + " " + c).take(400),
-                weight = (old.weight + 1).coerceAtMost(99),
+                text = if (force) c.take(8000) else (old.text + " " + c).take(8000),
+                weight = (old.weight + 1).coerceAtMost(9999),
                 time = now,
                 times = old.times + 1
             )
@@ -919,7 +919,7 @@ class EmotionEngine(context: Context) {
                     parentId = branchId,
                     kind = KIND_JOURNAL,
                     cue = CUE_JOURNAL,
-                    text = c.take(400),
+                    text = c.take(8000),
                     weight = 3,
                     time = now,
                     lastRecalled = 0L,
@@ -934,7 +934,7 @@ class EmotionEngine(context: Context) {
 
     private fun insightText(cue: UserCue, leaves: List<EmotionNode>): String {
         val n = leaves.size
-        val sample = leaves.takeLast(3).map { stem(it.text) }.filter { it.isNotBlank() }.distinct().take(2).joinToString("、")
+        val sample = leaves.takeLast(30).map { stem(it.text) }.filter { it.isNotBlank() }.distinct().take(20).joinToString("、")
         val base = when (cue) {
             UserCue.TIRED -> "最近这段日子主人经常撑着，累了会来找我。"
             UserCue.SAD -> "主人心情低落的时候会跟我说，我要记得轻声陪着。"
@@ -980,7 +980,7 @@ class EmotionEngine(context: Context) {
             .maxByOrNull { it.time }
             ?.let { markAndTake(it, picked, used) }
         if (used.isNotEmpty()) persist()
-        return picked.distinct().take(5)
+        return picked.distinct().take(50)
     }
 
     private fun markAndTake(node: EmotionNode, picked: MutableList<String>, used: MutableSet<String>) {
@@ -1260,7 +1260,7 @@ class EmotionEngine(context: Context) {
         val x = stem(a)
         val y = stem(b)
         if (x == y) return true
-        if (x.length >= 8 && y.length >= 8 && (x.startsWith(y.take(8)) || y.startsWith(x.take(8)))) return true
+        if (x.length >= 20 && y.length >= 20 && (x.startsWith(y.take(20)) || y.startsWith(x.take(20)))) return true
         return false
     }
 
@@ -1301,7 +1301,7 @@ class EmotionEngine(context: Context) {
         }
         events.forEach { line ->
             val cue = guessCue(line)
-            val c = line.trim().take(80)
+            val c = line.trim().take(2000)
             if (c.isBlank()) return@forEach
             ensureBranch(cue)
             val exists = nodes.any { it.kind == KIND_LEAF && it.cue == cue.name && similar(it.text, c) }
@@ -1329,7 +1329,7 @@ class EmotionEngine(context: Context) {
     private fun shadowLegacyEvents() {
         val recent = nodes.filter { it.kind == KIND_LEAF }
             .sortedBy { it.time }
-            .takeLast(8)
+            .takeLast(200)
             .map { it.text }
         sp.edit().putString("events", recent.joinToString("\n")).apply()
     }

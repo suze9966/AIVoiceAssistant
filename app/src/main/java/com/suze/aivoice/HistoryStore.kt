@@ -24,8 +24,8 @@ class HistoryStore(context: Context) {
     private val dir = File(context.filesDir, "chats").apply { mkdirs() }
     private val indexFile = File(dir, "index.json")
     private val legacyFile = File(context.filesDir, "chat_history.json")
-    private val maxKeep = 200
-    private val maxSessions = 40
+    private val maxKeep = 20000
+    private val maxSessions = 2000
 
     fun migrateAndActive(prefs: Prefs): String {
         val list = loadSessions()
@@ -34,7 +34,7 @@ class HistoryStore(context: Context) {
             val legacy = loadMessages(legacyFile)
             val preview = legacy.lastOrNull { it.content.isNotBlank() }?.content.orEmpty()
             val title = if (legacy.isEmpty()) "日常聊天" else titleFrom(legacy)
-            saveSessions(listOf(ChatSession(id, title, System.currentTimeMillis(), preview.take(40))))
+            saveSessions(listOf(ChatSession(id, title, System.currentTimeMillis(), preview.take(2000))))
             if (legacy.isNotEmpty()) {
                 writeMessages(chatFile(id), legacy)
                 runCatching { legacyFile.delete() }
@@ -90,7 +90,7 @@ class HistoryStore(context: Context) {
 
     fun save(id: String, messages: List<ChatMessage>) {
         writeMessages(chatFile(id), messages.takeLast(maxKeep))
-        val preview = messages.lastOrNull { it.content.isNotBlank() }?.content.orEmpty().take(40)
+        val preview = messages.lastOrNull { it.content.isNotBlank() }?.content.orEmpty().take(2000)
         val list = loadSessions()
         val idx = list.indexOfFirst { it.id == id }
         val prev = list.getOrNull(idx)
@@ -125,7 +125,7 @@ class HistoryStore(context: Context) {
     }
 
     fun rename(id: String, title: String) {
-        val t = title.trim().take(24)
+        val t = title.trim().take(200)
         if (t.isEmpty()) return
         val list = loadSessions()
         val idx = list.indexOfFirst { it.id == id }
@@ -161,7 +161,8 @@ class HistoryStore(context: Context) {
                         type = o.optInt("type", ChatMessage.TYPE_TEXT),
                         speakerId = o.optString("speakerId"),
                         speakerName = o.optString("speakerName"),
-                        speakerEmoji = o.optString("speakerEmoji")
+                        speakerEmoji = o.optString("speakerEmoji"),
+                        at = o.optLong("at", 0L)
                     )
                 )
             }
@@ -182,6 +183,7 @@ class HistoryStore(context: Context) {
                         .put("speakerId", m.speakerId)
                         .put("speakerName", m.speakerName)
                         .put("speakerEmoji", m.speakerEmoji)
+                        .put("at", m.at)
                 )
             }
             file.writeText(arr.toString())
@@ -190,7 +192,7 @@ class HistoryStore(context: Context) {
 
     private fun titleFrom(messages: List<ChatMessage>): String {
         val first = messages.firstOrNull { it.role == "user" && it.content.isNotBlank() }?.content.orEmpty()
-        if (first.isNotBlank()) return first.take(16)
+        if (first.isNotBlank()) return first.take(200)
         return SimpleDateFormat("M月d日 HH:mm", Locale.CHINA).format(Date())
     }
 

@@ -24,7 +24,7 @@ data class ReminderItem(
 
 class ReminderStore(private val context: Context) {
     private val file = File(context.filesDir, "reminders.json")
-    private val maxKeep = 80
+    private val maxKeep = 5000
 
     fun load(): MutableList<ReminderItem> {
         val list = mutableListOf<ReminderItem>()
@@ -82,10 +82,10 @@ class ReminderStore(private val context: Context) {
     fun add(text: String, atMillis: Long, repeatDaily: Boolean = false, advanceMin: Int = 0): ReminderItem {
         val item = ReminderItem(
             id = UUID.randomUUID().toString(),
-            text = text.trim().ifBlank { "到时间啦" }.take(80),
+            text = text.trim().ifBlank { "到时间啦" }.take(2000),
             atMillis = atMillis,
             repeatDaily = repeatDaily,
-            advanceMin = advanceMin.coerceIn(0, 60)
+            advanceMin = advanceMin.coerceIn(0, 10080)
         )
         val now = System.currentTimeMillis() - 15_000L
         val list = load().filter { it.atMillis >= now || it.repeatDaily }.toMutableList()
@@ -102,10 +102,10 @@ class ReminderStore(private val context: Context) {
         if (idx < 0) return null
         unschedule(list[idx])
         val item = list[idx].copy(
-            text = text.trim().ifBlank { list[idx].text }.take(80),
+            text = text.trim().ifBlank { list[idx].text }.take(2000),
             atMillis = atMillis,
             repeatDaily = repeatDaily,
-            advanceMin = advanceMin.coerceIn(0, 60)
+            advanceMin = advanceMin.coerceIn(0, 10080)
         )
         list[idx] = item
         save(list)

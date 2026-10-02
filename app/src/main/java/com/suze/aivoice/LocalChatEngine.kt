@@ -290,7 +290,7 @@ class LocalChatEngine(private val prefs: Prefs) {
     private fun topicSnippet(text: String): String {
         val cleaned = text.replace(Regex("[\\s　。！？!?～~，,、；;：:「」『』\"']+"), "")
         if (cleaned.length < 2) return ""
-        return cleaned.take(8)
+        return cleaned.take(200)
     }
 
     private fun isShortAck(text: String): Boolean {

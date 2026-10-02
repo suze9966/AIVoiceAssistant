@@ -257,13 +257,13 @@ class LlmClient(private val prefs: Prefs) {
         calls.forEach { call ->
             arr.put(
                 JSONObject()
-                    .put("id", call.id.take(80))
+                    .put("id", call.id.take(500))
                     .put("type", "function")
                     .put(
                         "function",
                         JSONObject()
-                            .put("name", call.name.take(80))
-                            .put("arguments", call.arguments.toString().take(4000))
+                            .put("name", call.name.take(500))
+                            .put("arguments", call.arguments.toString().take(200_000))
                     )
             )
         }
@@ -277,8 +277,8 @@ class LlmClient(private val prefs: Prefs) {
     private fun toolResultMessage(call: ToolCall, result: String): JSONObject {
         return JSONObject()
             .put("role", "tool")
-            .put("tool_call_id", call.id.take(80))
-            .put("name", call.name.take(80))
+            .put("tool_call_id", call.id.take(500))
+            .put("name", call.name.take(500))
             .put("content", result.take(LlmTools.MAX_RESULT_CHARS))
     }
 
@@ -291,7 +291,7 @@ class LlmClient(private val prefs: Prefs) {
             val result = try {
                 LlmTools.execute(call.name, call.arguments.toString(), host)
             } catch (e: Exception) {
-                "工具失败：" + (e.message?.take(80) ?: "未知错误")
+                "工具失败：" + (e.message?.take(2000) ?: "未知错误")
             }
             out.put(toolResultMessage(call, result.ifBlank { "工具没有返回内容" }))
         }
@@ -423,7 +423,7 @@ class LlmClient(private val prefs: Prefs) {
             completeWithTools(history, stream = false, onDelta = null)
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
-            cloudFail(e.message?.take(80).orEmpty().ifBlank { "网络异常或接口不可达" })
+            cloudFail(e.message?.take(2000).orEmpty().ifBlank { "网络异常或接口不可达" })
         }
     }
 
@@ -441,7 +441,7 @@ class LlmClient(private val prefs: Prefs) {
                 completeWithTools(history, stream = true, onDelta = onDelta)
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                cloudFail(e.message?.take(80).orEmpty().ifBlank { "网络异常或接口不可达" })
+                cloudFail(e.message?.take(2000).orEmpty().ifBlank { "网络异常或接口不可达" })
             }
         }
 
@@ -452,7 +452,7 @@ class LlmClient(private val prefs: Prefs) {
             val b64 = android.util.Base64.encodeToString(imageBytes, android.util.Base64.NO_WRAP)
             val dataUrl = "data:" + mime + ";base64," + b64
             val content = JSONArray()
-                .put(JSONObject().put("type", "text").put("text", prompt.take(300).ifBlank { "请用中文简短说明这张图。" }))
+                .put(JSONObject().put("type", "text").put("text", prompt.take(20_000).ifBlank { "请用中文简短说明这张图。" }))
                 .put(
                     JSONObject().put("type", "image_url")
                         .put("image_url", JSONObject().put("url", dataUrl))
@@ -501,21 +501,21 @@ class LlmClient(private val prefs: Prefs) {
 
     companion object {
         // 主人明确说「不限制小沫说话的字数」，所以这些都放宽到几乎不会触发。
-        private const val MAX_HISTORY_MESSAGES = 120
-        private const val MAX_MESSAGE_CHARS = 60_000
-        private const val MAX_SYSTEM_CHARS = 64_000
-        private const val MAX_MODEL_CHARS = 200
-        private const val MAX_RESPONSE_BYTES = 8 * 1024 * 1024
-        private const val MAX_OUTPUT_CHARS = 1_000_000
-        private const val MAX_SSE_LINE_CHARS = 512_000
+        private const val MAX_HISTORY_MESSAGES = 2000
+        private const val MAX_MESSAGE_CHARS = 1_000_000
+        private const val MAX_SYSTEM_CHARS = 1_000_000
+        private const val MAX_MODEL_CHARS = 500
+        private const val MAX_RESPONSE_BYTES = 128 * 1024 * 1024
+        private const val MAX_OUTPUT_CHARS = 20_000_000
+        private const val MAX_SSE_LINE_CHARS = 4_000_000
 
         /**
          * 单次回复允许的最大 token 数。
          * 不设置时接口会用自己很小的默认值，回复会被截断。
          * 这里给足额度，尽量让模型把话说完；个别接口有上限也会自己收敛。
          */
-        private const val MAX_REPLY_TOKENS = 8_192
-        private const val MAX_TOOL_ROUNDS = 4
+        private const val MAX_REPLY_TOKENS = 131_072
+        private const val MAX_TOOL_ROUNDS = 12
         private val THINK_BLOCK = Regex("(?s)<think>.*?</think>|<thinking>.*?</thinking>")
         private const val CLOUD_THINK_PROMPT =
             "【云端推理】先在内部完成充分思考，再给出最终对白。" +

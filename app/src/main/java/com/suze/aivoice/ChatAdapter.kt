@@ -64,6 +64,8 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
         val tvSpeaker: TextView? = view.findViewById(R.id.tvSpeaker)
         val ivSticker: ImageView = view.findViewById(R.id.ivSticker)
         val ivAvatar: ImageView? = view.findViewById(R.id.ivAvatar)
+        /** 气泡下方的小字日期时间。 */
+        val tvTime: TextView? = view.findViewById(R.id.tvTime)
     }
 
     override fun getItemViewType(position: Int): Int =
@@ -156,6 +158,16 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
             val isLast = position == items.size - 1
             val recall = !msg.isMe && panelRecall && isLast
             holder.tvMsg.text = renderRich(holder.pendingRaw, holder.pureEmoji, col, recall)
+        }
+        // 气泡下方的小字日期时间（旧数据 at<=0 时自动隐藏）
+        holder.tvTime?.let { label ->
+            val stamp = ChatMessage.stamp(msg.at)
+            if (stamp.isEmpty()) {
+                label.visibility = View.GONE
+            } else {
+                label.visibility = View.VISIBLE
+                label.text = stamp
+            }
         }
         holder.itemView.setOnLongClickListener {
             val pos = holder.bindingAdapterPosition

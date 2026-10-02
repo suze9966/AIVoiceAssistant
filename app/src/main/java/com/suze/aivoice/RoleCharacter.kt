@@ -47,7 +47,7 @@ data class RoleCharacter(
     val creator: String = "",
     val updatedAt: Long = 0L
 ) {
-    fun displayIntro(): String = intro.ifBlank { description.replace("\n", " ").take(80) }
+    fun displayIntro(): String = intro.ifBlank { description.replace("\n", " ").take(2000) }
 
     fun tagList(): List<String> = tags.split(',', '，', ';', '；')
         .map { it.trim() }

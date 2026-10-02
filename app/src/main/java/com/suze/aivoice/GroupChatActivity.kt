@@ -27,6 +27,7 @@ class GroupChatActivity : AppCompatActivity() {
     private lateinit var store: GroupStore
     private lateinit var plugins: TavernPluginStore
     private lateinit var tts: TtsHelper
+    private val relationGraph by lazy { RoleRelationGraph(this) }
     private val searcher = SearchClient()
     private lateinit var adapter: ChatAdapter
     private lateinit var recycler: RecyclerView
@@ -351,7 +352,10 @@ class GroupChatActivity : AppCompatActivity() {
                     )
                     scrollToBottom()
                     val prompt = plugins.applyPrompt(
-                        RolePrompt.buildGroup(speaker, members, r.scene, history.dropLast(1)),
+                        RolePrompt.buildGroup(
+                            speaker, members, r.scene, history.dropLast(1),
+                            relationGraph.promptBlock(speaker.name, members.map { it.name })
+                        ),
                         user,
                         speaker.name
                     )
@@ -419,6 +423,14 @@ class GroupChatActivity : AppCompatActivity() {
         if (history.isNotEmpty()) {
             history[history.size - 1] = history.last().copy(content = text)
             adapter.updateLast(text)
+        }
+        // 关系图谱：记录说话者对在场其他人的态度变化
+        runCatching {
+            relationGraph.observeGroup(
+                speaker.name, text,
+                members.map { it.name },
+                members.map { it.name }
+            )
         }
         persistChat()
         scrollToBottom()

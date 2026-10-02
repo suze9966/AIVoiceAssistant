@@ -147,30 +147,30 @@ class RoleEditActivity : AppCompatActivity() {
             val examples = collectExamples()
             val world = collectWorld()
             val avatarName = store.avatarFile(roleId).takeIf { it.isFile }?.name.orEmpty()
-            val persona = editPersona.text.toString().trim().take(8000)
+            val persona = editPersona.text.toString().trim().take(200_000)
             val pickedVoice = spinnerVoice.selectedItem?.toString().orEmpty()
             val voiceName = if (pickedVoice == getString(R.string.role_voice_default)) "" else pickedVoice
             val saved = RoleCharacter(
                 id = roleId,
-                name = name.take(48),
+                name = name.take(300),
                 emoji = editEmoji.text.toString().trim().ifBlank { "\uD83C\uDFAD" }.take(8),
-                intro = editIntro.text.toString().trim().take(80),
-                greeting = editGreeting.text.toString().trim().take(800),
+                intro = editIntro.text.toString().trim().take(20_000),
+                greeting = editGreeting.text.toString().trim().take(100_000),
                 persona = persona,
-                description = editDescription.text.toString().trim().take(8000),
-                personality = editPersonality.text.toString().trim().take(4000),
-                scenario = editScenario.text.toString().trim().take(4000),
-                mesExample = editMesExample.text.toString().trim().take(8000),
+                description = editDescription.text.toString().trim().take(200_000),
+                personality = editPersonality.text.toString().trim().take(200_000),
+                scenario = editScenario.text.toString().trim().take(200_000),
+                mesExample = editMesExample.text.toString().trim().take(200_000),
                 systemPrompt = persona,
-                postHistory = editPostHistory.text.toString().trim().take(2000),
-                userName = editUserName.text.toString().trim().ifBlank { "主人" }.take(24),
-                tags = editTags.text.toString().trim().take(120),
+                postHistory = editPostHistory.text.toString().trim().take(200_000),
+                userName = editUserName.text.toString().trim().ifBlank { "主人" }.take(300),
+                tags = editTags.text.toString().trim().take(5000),
                 alternateGreetings = alts,
                 examples = examples,
                 worldEntries = world,
                 avatarFile = avatarName,
                 voiceName = voiceName,
-                creator = editCreator.text.toString().trim().ifBlank { previous?.creator.orEmpty() }.take(40),
+                creator = editCreator.text.toString().trim().ifBlank { previous?.creator.orEmpty() }.take(500),
                 updatedAt = System.currentTimeMillis()
             )
             store.upsert(saved)
@@ -249,7 +249,7 @@ class RoleEditActivity : AppCompatActivity() {
             val user = view.findViewById<EditText>(R.id.editExampleUser).text.toString().trim()
             val assistant = view.findViewById<EditText>(R.id.editExampleChar).text.toString().trim()
             if (user.isEmpty() && assistant.isEmpty()) null else RoleExample(user, assistant)
-        }.take(16)
+        }.take(500)
     }
 
     private fun collectWorld(): List<WorldEntry> {
@@ -267,7 +267,7 @@ class RoleEditActivity : AppCompatActivity() {
                 constant = constant,
                 order = (index + 1) * 100
             )
-        }.take(32)
+        }.take(1000)
     }
 
     private fun ensureRoleId() {
@@ -354,7 +354,7 @@ class RoleEditActivity : AppCompatActivity() {
         val previous = store.get(roleId)
         val persona = findViewById<EditText>(R.id.editRolePersona).text.toString().trim()
         return (previous ?: RoleCharacter(id = roleId, name = name)).copy(
-            name = name.take(48),
+            name = name.take(300),
             emoji = findViewById<EditText>(R.id.editRoleEmoji).text.toString().trim().ifBlank { "\uD83C\uDFAD" },
             intro = findViewById<EditText>(R.id.editRoleIntro).text.toString().trim(),
             greeting = findViewById<EditText>(R.id.editRoleGreeting).text.toString().trim(),

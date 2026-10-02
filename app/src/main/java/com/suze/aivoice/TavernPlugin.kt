@@ -134,7 +134,7 @@ class TavernPluginStore(context: Context) {
     }
 
     companion object {
-        const val MAX_PLUGINS = 64
+        const val MAX_PLUGINS = 500
         fun newId(): String = UUID.randomUUID().toString()
     }
 }

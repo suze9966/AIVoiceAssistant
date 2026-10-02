@@ -22,7 +22,7 @@ class RoleStore(context: Context) {
     private val avatarDir = File(dir, "avatars").apply { mkdirs() }
     private val charFile = File(dir, "characters.json")
     private val chatIndexFile = File(dir, "chats.json")
-    private val maxKeep = 200
+    private val maxKeep = 20000
     private val appContext = context.applicationContext
 
     fun loadCharacters(): MutableList<RoleCharacter> {
@@ -149,7 +149,7 @@ class RoleStore(context: Context) {
                         .put("characterId", m.characterId)
                         .put("title", m.title)
                         .put("updatedAt", m.updatedAt)
-                        .put("preview", m.preview.take(80))
+                        .put("preview", m.preview.take(2000))
                 )
             }
             chatIndexFile.writeText(arr.toString())
@@ -183,7 +183,7 @@ class RoleStore(context: Context) {
         val all = loadChatMetas()
         val idx = all.indexOfFirst { it.id == chatId }
         if (idx < 0) return
-        all[idx] = all[idx].copy(title = title.take(40), updatedAt = System.currentTimeMillis())
+        all[idx] = all[idx].copy(title = title.take(200), updatedAt = System.currentTimeMillis())
         saveChatMetas(all)
     }
 
@@ -213,7 +213,8 @@ class RoleStore(context: Context) {
                         type = o.optInt("type", ChatMessage.TYPE_TEXT),
                         speakerId = o.optString("speakerId"),
                         speakerName = o.optString("speakerName"),
-                        speakerEmoji = o.optString("speakerEmoji")
+                        speakerEmoji = o.optString("speakerEmoji"),
+                        at = o.optLong("at", 0L)
                     )
                 )
             }
@@ -234,18 +235,19 @@ class RoleStore(context: Context) {
                         .put("speakerId", m.speakerId)
                         .put("speakerName", m.speakerName)
                         .put("speakerEmoji", m.speakerEmoji)
+                        .put("at", m.at)
                 )
             }
             chatFile(chatId).writeText(arr.toString())
             val preview = messages.lastOrNull { it.content.isNotBlank() }?.content.orEmpty()
-                .replace("\n", " ").take(80)
+                .replace("\n", " ").take(2000)
             val all = loadChatMetas()
             val idx = all.indexOfFirst { it.id == chatId }
             if (idx >= 0) {
                 all[idx] = all[idx].copy(
                     updatedAt = System.currentTimeMillis(),
                     preview = preview,
-                    title = all[idx].title.ifBlank { preview.take(16).ifBlank { "新对话" } }
+                    title = all[idx].title.ifBlank { preview.take(200).ifBlank { "新对话" } }
                 )
                 saveChatMetas(all)
             } else if (!characterId.isNullOrBlank()) {
@@ -254,7 +256,7 @@ class RoleStore(context: Context) {
                     RoleChatMeta(
                         id = chatId,
                         characterId = characterId,
-                        title = preview.take(16).ifBlank { "新对话" },
+                        title = preview.take(200).ifBlank { "新对话" },
                         updatedAt = System.currentTimeMillis(),
                         preview = preview
                     )
@@ -273,7 +275,7 @@ class RoleStore(context: Context) {
         if (meta != null) return meta.preview to meta.updatedAt
         val legacy = loadChat(characterId)
         val preview = legacy.lastOrNull { it.content.isNotBlank() }?.content.orEmpty()
-            .replace("\n", " ").take(80)
+            .replace("\n", " ").take(2000)
         return preview to 0L
     }
 
@@ -363,7 +365,7 @@ class RoleStore(context: Context) {
             if (!legacy.exists()) return@forEach
             val messages = loadChat(c.id)
             val preview = messages.lastOrNull { it.content.isNotBlank() }?.content.orEmpty()
-                .replace("\n", " ").take(80)
+                .replace("\n", " ").take(2000)
             list.add(
                 RoleChatMeta(
                     id = c.id,

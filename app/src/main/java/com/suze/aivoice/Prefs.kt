@@ -203,8 +203,8 @@ class Prefs(context: Context) {
 
     /** 主动找主人的最短间隔（分钟），默认 45 分钟。 */
     var proactiveIntervalMin: Int
-        get() = sp.getInt("proactiveIntervalMin", 45).coerceIn(10, 720)
-        set(v) = sp.edit().putInt("proactiveIntervalMin", v.coerceIn(10, 720)).apply()
+        get() = sp.getInt("proactiveIntervalMin", 45).coerceIn(1, 100000)
+        set(v) = sp.edit().putInt("proactiveIntervalMin", v.coerceIn(1, 100000)).apply()
 
     /** 上次主动开口的时间戳 */
     var lastProactiveAt: Long

@@ -23,7 +23,7 @@ class UtilityClient {
         .build()
 
     fun translate(text: String, target: String): String {
-        val q = text.trim().take(300)
+        val q = text.trim().take(5000)
         if (q.isEmpty()) return ""
         val lang = langCode(target)
         val url = "https://translate.googleapis.com/translate_a/single".toHttpUrlOrNull()
@@ -44,7 +44,7 @@ class UtilityClient {
                 sb.append(lines.optJSONArray(i)?.optString(0).orEmpty())
             }
             val out = sb.toString().trim()
-            if (out.isBlank()) "" else "译成" + langName(lang) + "：\n" + out.take(400)
+            if (out.isBlank()) "" else "译成" + langName(lang) + "：\n" + out.take(20000)
         } catch (_: Exception) { "" }
     }
 
@@ -81,7 +81,7 @@ class UtilityClient {
             val xml = get(url) ?: continue
             val items = parseRss(xml)
             if (items.isNotEmpty()) {
-                return items.take(3).mapIndexed { i, t -> (i + 1).toString() + ". " + t }.joinToString("\n")
+                return items.take(100).mapIndexed { i, t -> (i + 1).toString() + ". " + t }.joinToString("\n")
             }
         }
         return ""
@@ -111,7 +111,7 @@ class UtilityClient {
                     XmlPullParser.END_TAG -> {
                         val name = parser.name?.lowercase(Locale.ROOT).orEmpty()
                         if (name == "item" || name == "entry") {
-                            if (title.isNotBlank()) out.add(title.take(80))
+                            if (title.isNotBlank()) out.add(title.take(500))
                             inItem = false
                         }
                     }

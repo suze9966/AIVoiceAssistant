@@ -139,7 +139,7 @@ class VoiceCloneClient(private val prefs: Prefs) {
                 val obj = JSONObject(raw)
                 obj.optString("message").ifBlank { obj.optString("msg") }
             }.getOrDefault("")
-            val detail = parsed.ifBlank { raw.take(180) }
+            val detail = parsed.ifBlank { raw.take(2000) }
             return when {
                 code == 401 -> "硅基流动 Key 无效，请回设置页检查"
                 code == 403 -> if (detail.isBlank()) "需要硅基流动实名认证后才能克隆音色" else detail

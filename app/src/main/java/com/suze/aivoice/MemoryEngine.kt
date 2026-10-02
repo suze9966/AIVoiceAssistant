@@ -25,7 +25,7 @@ class MemoryEngine(context: Context) {
         const val TYPE_PREF = "pref"     // 偏好：喜欢 / 讨厌
         const val TYPE_FACT = "fact"     // 事实：关于主人的信息
         const val TYPE_LEARN = "learn"   // 知识：学到的内容 / 技能
-        private const val MAX_ITEMS = 120
+        private const val MAX_ITEMS = 10000
         private const val EXP_PER_LEVEL = 100
     }
 
@@ -122,7 +122,7 @@ class MemoryEngine(context: Context) {
         for (k in prefPatterns) {
             val i = t.indexOf(k)
             if (i >= 0) {
-                val v = t.substring(i + k.length).trim().take(30)
+                val v = t.substring(i + k.length).trim().take(400)
                 if (v.isNotBlank()) remember(TYPE_PREF, "主人${k}${v}")
             }
         }
@@ -132,22 +132,22 @@ class MemoryEngine(context: Context) {
         for (k in factPatterns) {
             val i = t.indexOf(k)
             if (i >= 0) {
-                val v = t.substring(i).trim().take(40)
+                val v = t.substring(i).trim().take(500)
                 if (v.length > k.length) remember(TYPE_FACT, v)
             }
         }
 
         // 3) 明确要求记住的：记住 / 别忘了
         if (t.contains("记住") || t.contains("别忘")) {
-            remember(TYPE_FACT, "主人要求记住：" + t.take(50))
+            remember(TYPE_FACT, "主人要求记住：" + t.take(500))
         }
 
         // 4) 情绪事件：下次还能自然接上，不靠挂机涨好感
         when {
             listOf("好累", "累死", "加班", "失眠", "睡不着", "太累", "熬夜").any { t.contains(it) } ->
-                remember(TYPE_FACT, "主人最近很累：" + t.take(24))
+                remember(TYPE_FACT, "主人最近很累：" + t.take(300))
             listOf("难过", "伤心", "想哭", "不开心", "委屈", "心情不好").any { t.contains(it) } ->
-                remember(TYPE_FACT, "主人心情低落过：" + t.take(24))
+                remember(TYPE_FACT, "主人心情低落过：" + t.take(300))
             listOf("想你了", "有点想你", "想小沫").any { t.contains(it) } ->
                 remember(TYPE_PREF, "主人会想念小沫")
             listOf("好孤独", "好寂寞", "没人陪", "好孤单").any { t.contains(it) } ->
@@ -159,7 +159,7 @@ class MemoryEngine(context: Context) {
     fun learnKnowledge(content: String) {
         if (content.isBlank()) return
         exp = exp + 5
-        remember(TYPE_LEARN, content.take(60))
+        remember(TYPE_LEARN, content.take(1000))
     }
 
     /** 成长提示：等级 + 熟悉度 + 记忆中提取的关键信息 */
@@ -172,8 +172,8 @@ class MemoryEngine(context: Context) {
             lv <= 10 -> "和主人是很有默契的老朋友"
             else -> "像家人一样了解主人"
         }
-        val prefs = items.filter { it.type == TYPE_PREF }.takeLast(6).joinToString("；") { it.content }
-        val facts = items.filter { it.type == TYPE_FACT }.takeLast(6).joinToString("；") { it.content }
+        val prefs = items.filter { it.type == TYPE_PREF }.takeLast(1000).joinToString("；") { it.content }
+        val facts = items.filter { it.type == TYPE_FACT }.takeLast(1000).joinToString("；") { it.content }
         val sb = StringBuilder()
         sb.append("【学习成长】你和主人已经聊了${turns}轮，当前成长等级 Lv.$lv（$levelDesc）。")
         sb.append("请在合适的时候自然体现出你记得主人，不要说“根据我的记忆”之类的机械话。")
@@ -209,7 +209,7 @@ class MemoryEngine(context: Context) {
     fun addManual(type: String, content: String): Boolean {
         val c = content.trim()
         if (c.isBlank()) return false
-        remember(normalizeType(type), c.take(200))
+        remember(normalizeType(type), c.take(2000))
         return true
     }
 
@@ -220,7 +220,7 @@ class MemoryEngine(context: Context) {
         val old = items[index]
         items[index] = old.copy(
             type = normalizeType(type),
-            content = c.take(200),
+            content = c.take(2000),
             time = System.currentTimeMillis()
         )
         persist()
@@ -282,7 +282,7 @@ class MemoryEngine(context: Context) {
                     items.add(
                         m.copy(
                             type = normalizeType(m.type),
-                            content = c.take(200)
+                            content = c.take(2000)
                         )
                     )
                 }
@@ -295,7 +295,7 @@ class MemoryEngine(context: Context) {
         incoming.forEach { m ->
             val c = m.content.trim()
             if (c.isNotBlank()) {
-                remember(normalizeType(m.type), c.take(200))
+                remember(normalizeType(m.type), c.take(2000))
                 n++
             }
         }

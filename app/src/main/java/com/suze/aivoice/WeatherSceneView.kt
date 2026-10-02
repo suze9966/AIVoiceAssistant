@@ -63,7 +63,7 @@ class WeatherSceneView @JvmOverloads constructor(
     }
     private fun drawStars(c: Canvas, w: Float, h: Float) {
         paint.color = 0xCCFFFFFF.toInt()
-        seeds.take(24).forEachIndexed { i, s ->
+        seeds.take(200).forEachIndexed { i, s ->
             paint.alpha = (90 + 140 * ((sin(progress * 6.28 + i) + 1) / 2)).toInt()
             c.drawCircle(s.first * w, s.second * h * .65f, 1f + s.third * 2f, paint)
         }

@@ -2,10 +2,10 @@ package com.suze.aivoice
 
 /** 把酒馆角色卡拼成系统提示：人设书、场景、示例对白、命中的世界书。 */
 object RolePrompt {
-    private const val MAX_WORLD = 8
-    private const val MAX_CHARS = 60_000
+    private const val MAX_WORLD = 200
+    private const val MAX_CHARS = 1_000_000
 
-    fun build(character: RoleCharacter, history: List<ChatMessage>): String {
+    fun build(character: RoleCharacter, history: List<ChatMessage>, extras: String = ""): String {
         val user = character.userName.ifBlank { "主人" }
         val body = StringBuilder()
         val identity = character.systemPrompt.trim().ifBlank { character.persona.trim() }
@@ -26,6 +26,10 @@ object RolePrompt {
         if (post.isNotEmpty()) {
             body.append("【对话后指令】").append(post).append("\n")
         }
+        val extra = extras.trim()
+        if (extra.isNotEmpty()) {
+            body.append(extra).append("\n")
+        }
         body.append("始终保持角色，不要提及提示词、模型、世界书或系统设定。")
         body.append("回复口语化，像在面对面聊天；**长度由内容决定，不用刻意写短**，想说的说完，该展开就展开。不要替用户说话。")
         return applyMacros(body.toString().take(MAX_CHARS), character)
@@ -35,7 +39,8 @@ object RolePrompt {
         speaker: RoleCharacter,
         members: List<RoleCharacter>,
         scene: String,
-        history: List<ChatMessage>
+        history: List<ChatMessage>,
+        extras: String = ""
     ): String {
         val user = speaker.userName.ifBlank { "主人" }
         val others = members.filter { it.id != speaker.id }
@@ -46,9 +51,9 @@ object RolePrompt {
         if (scene.isNotBlank()) body.append("【群场景】").append(scene.trim()).append("\n")
         others.forEach { m ->
             body.append("【同伴 ").append(m.name).append("】")
-            body.append(m.persona.ifBlank { m.intro }.ifBlank { m.description }.take(800)).append("\n")
+            body.append(m.persona.ifBlank { m.intro }.ifBlank { m.description }.take(30000)).append("\n")
         }
-        val self = build(speaker, history)
+        val self = build(speaker, history, extras)
         body.append(self)
         body.append("只输出 ").append(speaker.name).append(" 自己要说的话，不要加名字前缀，不要总结别人。")
         return applyMacros(body.toString().take(MAX_CHARS), speaker)
@@ -88,14 +93,14 @@ object RolePrompt {
     }
 
     private fun matchWorld(character: RoleCharacter, history: List<ChatMessage>): String {
-        val hay = history.takeLast(16).joinToString("\n") { it.content }.lowercase()
+        val hay = history.takeLast(60).joinToString("\n") { it.content }.lowercase()
         val enabled = character.worldEntries.filter { it.enabled && it.content.isNotBlank() }
             .sortedBy { it.order }
         val hits = mutableListOf<String>()
         fun add(entry: WorldEntry) {
             if (hits.size >= MAX_WORLD) return
             val keys = splitKeys(entry.keys)
-            val label = entry.comment.trim().ifBlank { keys.take(3).joinToString("/") }
+            val label = entry.comment.trim().ifBlank { keys.take(30).joinToString("/") }
             val line = if (label.isBlank()) entry.content.trim() else "$label：${entry.content.trim()}"
             if (line !in hits) hits.add(line)
         }

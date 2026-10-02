@@ -49,11 +49,11 @@ object KnowledgeAssist {
                 t = t.removePrefix(prefix).trim().trimStart('，', ',', ' ', '：', ':')
             }
         }
-        return t.take(80).ifBlank { raw.trim().take(80) }
+        return t.take(1000).ifBlank { raw.trim().take(1000) }
     }
 
     fun notesPrompt(notes: String, speakingAs: String = "xiaomo"): String {
-        val body = notes.trim().take(2400)
+        val body = notes.trim().take(60000)
         if (body.isBlank()) return ""
         val tail = when (speakingAs) {
             "call" -> "用一两句口语把关键信息说完，资料不够就短说只查到这些。不要列表、不要长文、不要表情包标记，也不要提及搜索引擎。"

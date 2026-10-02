@@ -339,7 +339,7 @@ object VoiceCommandParser {
         if (m1 != null) {
             val src = m1.groupValues[1].trim()
             val dst = m1.groupValues[2].trim()
-            if (src.isNotEmpty() && dst.isNotEmpty()) return VoiceCommand.Translate(src.take(300), dst)
+            if (src.isNotEmpty() && dst.isNotEmpty()) return VoiceCommand.Translate(src.take(5000), dst)
         }
         val prefixes = listOf("翻译成英语", "翻译成英文", "翻译成日语", "翻译成韩语", "翻译一下", "翻译")
         for (p in prefixes) {
@@ -352,7 +352,7 @@ object VoiceCommandParser {
                         p.contains("韩") -> "韩语"
                         else -> "英语"
                     }
-                    return VoiceCommand.Translate(rest.take(300), target)
+                    return VoiceCommand.Translate(rest.take(5000), target)
                 }
             }
         }
@@ -378,7 +378,7 @@ object VoiceCommandParser {
         for (p in prefixes) {
             if (text.contains(p)) {
                 val q = text.replace(p, " ").replace(Regex("[：:,，]"), " ").trim()
-                if (q.isNotEmpty()) return VoiceCommand.FindChat(q.take(40))
+                if (q.isNotEmpty()) return VoiceCommand.FindChat(q.take(1000))
             }
         }
         return null
@@ -393,7 +393,7 @@ object VoiceCommandParser {
         for (p in donePrefixes) {
             if (text.startsWith(p)) {
                 val q = text.removePrefix(p).trim().trimStart('：', ':', ' ')
-                if (q.isNotEmpty()) return VoiceCommand.DoneTodo(q.take(40))
+                if (q.isNotEmpty()) return VoiceCommand.DoneTodo(q.take(1000))
             }
         }
         val addPrefixes = listOf("记住", "记一下", "记着", "待办", "备忘")
@@ -431,7 +431,7 @@ object VoiceCommandParser {
             if (text.startsWith(p)) {
                 val q = text.removePrefix(p).trim().trimStart('：', ':', '，', ',', ' ')
                 if (q.isNotEmpty() && !q.contains("天气") && !q.contains("待办") && !q.contains("日程")) {
-                    return VoiceCommand.Search(q.take(80))
+                    return VoiceCommand.Search(q.take(1000))
                 }
             }
         }
@@ -541,7 +541,7 @@ object VoiceCommandParser {
         t = t.replace(Regex("(早上|上午|中午|下午|晚上|傍晚|明天|今天|后天)"), " ")
         t = t.replace(Regex("[，。！？,\\.!\\?]+"), " ").trim()
         t = t.replace(Regex("\\s+"), " ").trim()
-        return t.take(40).ifBlank { "到时间啦" }
+        return t.take(2000).ifBlank { "到时间啦" }
     }
 
     private fun hit(text: String, vararg keys: String): Boolean =

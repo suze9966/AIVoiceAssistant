@@ -617,6 +617,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
         applyChatStyle()
+        // 从设置页返回后，重读面板续接开关，保证改完立即生效（不用杀进程）
+        if (::adapter.isInitialized) adapter.panelRecall = prefs.panelRecallEnabled
         if (::memory.isInitialized) memory.reload()
         reloadHistoryIfIdle()
         maybeGreetOnResume()
@@ -978,7 +980,7 @@ class MainActivity : AppCompatActivity() {
             refreshMoodSubtitle()
         }
         // ② 思考引擎：记录经历（供反思使用）
-        if (prefs.mindEnabled) mind.record("主人说：" + userText.take(50))
+        if (prefs.mindEnabled) mind.record("主人说：" + userText.take(200))
 
         // ③ 人设：接上茬闲聊；认真提问才开云端推理，闲聊仍直接开口
         llm.applyCloudThink = KnowledgeAssist.needsWeb(userText)
@@ -1193,7 +1195,7 @@ class MainActivity : AppCompatActivity() {
                 return@launch
             }
             val text = info.toSpeakText()
-            prefs.lastWeatherBrief = text.take(48)
+            prefs.lastWeatherBrief = text.take(500)
             XiaomoWidgetProvider.refresh(this@MainActivity)
             WeatherActivity.pendingInfo = info
             startActivity(Intent(this@MainActivity, WeatherActivity::class.java).putExtra(WeatherActivity.EXTRA_CITY, c))
@@ -1973,11 +1975,11 @@ class MainActivity : AppCompatActivity() {
     private fun findInHistory(query: String): String {
         val q = query.trim()
         if (q.isEmpty()) return "要找哪个字？"
-        val hits = history.filter { it.content.contains(q) }.takeLast(6)
+        val hits = history.filter { it.content.contains(q) }.takeLast(200)
         if (hits.isEmpty()) return "对话里没找到「$q」。"
         return hits.joinToString("\n") { m ->
             val who = if (m.isMe) "主人" else "小沫"
-            who + "：" + m.content.take(40)
+            who + "：" + m.content.take(300)
         }
     }
 
@@ -2044,7 +2046,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: ByteArray(0)
                 val mime = contentResolver.getType(uri) ?: "image/jpeg"
-                val reply = if (bytes.isEmpty()) "" else llm.chatVision(prompt, bytes.take(900_000).toByteArray(), mime)
+                val reply = if (bytes.isEmpty()) "" else llm.chatVision(prompt, bytes.take(4_000_000).toByteArray(), mime)
                 val text = reply.ifBlank { getString(R.string.toast_vision_fail) }
                 if (!isFinishing && !isDestroyed && history.isNotEmpty()) {
                     history[history.size - 1] = history.last().copy(content = text)
@@ -2148,7 +2150,7 @@ class MainActivity : AppCompatActivity() {
                 if (city.isNotBlank()) prefs.lastCity = city
                 val weatherText = runCatching { weather.query(city)?.toSpeakText().orEmpty() }.getOrDefault("")
                 if (weatherText.isNotBlank()) {
-                    prefs.lastWeatherBrief = weatherText.take(48)
+                    prefs.lastWeatherBrief = weatherText.take(500)
                     XiaomoWidgetProvider.refresh(this@MainActivity)
                 }
                 val next = reminders.upcoming().firstOrNull()?.let { reminders.formatItem(it) } ?: "暂无提醒"

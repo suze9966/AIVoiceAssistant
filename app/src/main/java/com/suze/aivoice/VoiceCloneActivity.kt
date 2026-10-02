@@ -413,9 +413,9 @@ class VoiceCloneActivity : AppCompatActivity() {
         private const val SAMPLE_RATE = 16000
         private const val CHANNEL = AudioFormat.CHANNEL_IN_MONO
         private const val ENCODING = AudioFormat.ENCODING_PCM_16BIT
-        private const val MAX_RECORD_MS = 15000L
+        private const val MAX_RECORD_MS = 300000L
         private const val MIN_RECORD_MS = 2000L
-        private const val MAX_FILE_BYTES = 8 * 1024 * 1024
+        private const val MAX_FILE_BYTES = 64 * 1024 * 1024
         private const val RECORD_FILE = "voice_clone_record.wav"
     }
 }

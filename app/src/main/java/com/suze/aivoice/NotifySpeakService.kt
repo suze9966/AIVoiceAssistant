@@ -13,7 +13,7 @@ class NotifySpeakService : NotificationListenerService() {
         val extras = sbn.notification?.extras ?: return
         val title = extras.getCharSequence("android.title")?.toString().orEmpty().trim()
         val text = extras.getCharSequence("android.text")?.toString().orEmpty().trim()
-        val line = listOf(title, text).filter { it.isNotBlank() }.joinToString("，").take(80)
+        val line = listOf(title, text).filter { it.isNotBlank() }.joinToString("，").take(3000)
         if (line.isBlank()) return
         val now = System.currentTimeMillis()
         if (line == lastLine && now - lastAt < 8_000L) return

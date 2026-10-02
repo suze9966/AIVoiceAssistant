@@ -34,9 +34,9 @@ class MindEngine(context: Context) {
     private val expBuffer: MutableList<String> = mutableListOf()
 
     init {
-        // 恢复历史经历（换行分隔，最多保留 80 条）
+        // 恢复历史经历（换行分隔，最多保留 2000 条）
         val raw = sp.getString("exp", "") ?: ""
-        raw.split("\n").filter { it.isNotBlank() }.takeLast(80).forEach { expBuffer.add(it) }
+        raw.split("\n").filter { it.isNotBlank() }.takeLast(2000).forEach { expBuffer.add(it) }
     }
 
     /** 记录一条经历（用户说了什么 / 发生了什么） */
@@ -47,8 +47,8 @@ class MindEngine(context: Context) {
         expCount = expCount + 1
     }
 
-    /** 是否到了该反思的时机（每 12 条经历反思一次） */
-    fun shouldReflect(): Boolean = expCount > 0 && expCount % 12 == 0
+    /** 是否到了该反思的时机（每 200 条经历反思一次） */
+    fun shouldReflect(): Boolean = expCount > 0 && expCount % 200 == 0
 
     /**
      * 生成“内心独白”提示词，要求模型先思考再回答。
@@ -93,7 +93,7 @@ class MindEngine(context: Context) {
 
     /** 周期性反思：把最近经历汇总成一句“总结性认知”，并可更新自主目标 */
     fun reflectionPrompt(): String {
-        val recent = expBuffer.takeLast(12).joinToString("；")
+        val recent = expBuffer.takeLast(1000).joinToString("；")
         return "【反思任务】以下是最近的经历：$recent。" +
             "请用一句话总结你对主人/这段关系的认识（不超过 30 字），" +
             "并想一个你接下来想主动做的小目标。输出格式：REFLECT: <总结> | GOAL: <目标>。"
@@ -104,7 +104,7 @@ class MindEngine(context: Context) {
         val r = Regex("REFLECT:\\s*(.+?)\\s*\\|\\s*GOAL:\\s*(.+)", RegexOption.DOT_MATCHES_ALL)
         val m = r.find(reply)
         if (m != null) {
-            goal = m.groupValues[2].trim().take(60)
+            goal = m.groupValues[2].trim().take(400)
             sp.edit().putString("selfView", m.groupValues[1].trim()).apply()
         }
     }
@@ -112,15 +112,15 @@ class MindEngine(context: Context) {
     fun experiences(): List<String> = expBuffer.toList()
 
     fun updateGoal(text: String) {
-        goal = text.trim().take(80)
+        goal = text.trim().take(500)
     }
 
     fun setSelfView(text: String) {
-        sp.edit().putString("selfView", text.trim().take(120)).apply()
+        sp.edit().putString("selfView", text.trim().take(800)).apply()
     }
 
     fun addExperience(text: String): Boolean {
-        val line = text.trim().take(120)
+        val line = text.trim().take(2000)
         if (line.isBlank()) return false
         record(line)
         return true
@@ -128,7 +128,7 @@ class MindEngine(context: Context) {
 
     fun updateExperience(index: Int, text: String): Boolean {
         if (index !in expBuffer.indices) return false
-        val line = text.trim().take(120)
+        val line = text.trim().take(2000)
         if (line.isBlank()) return false
         expBuffer[index] = line
         persistExperiences()

@@ -104,6 +104,76 @@ class RoleLoungeActivity : AppCompatActivity() {
         refreshLlmStatus()
     }
 
+    /** 从该角色的所有会话里挖「值得固化成世界书」的片段，让主人一键收录。 */
+    private fun weaveWorld(character: RoleCharacter) {
+        val metas = store.loadChatMetas(character.id)
+        val all = mutableListOf<ChatMessage>()
+        metas.forEach { m -> all.addAll(store.loadChat(m.id)) }
+        if (all.isEmpty()) {
+            Toast.makeText(this, R.string.toast_role_weave_none, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val candidates = RoleWorldWeaver.mine(character, all, limit = 200)
+        if (candidates.isEmpty()) {
+            Toast.makeText(this, R.string.toast_role_weave_none, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val labels = candidates.map { c ->
+            val key = c.keys.joinToString("/").ifBlank { "（常驻）" }
+            "$key\n${c.content.take(400)}…  · ${c.reason}"
+        }.toTypedArray()
+        val checked = BooleanArray(candidates.size) { true }
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.role_weave_title, candidates.size))
+            .setMultiChoiceItems(labels, checked) { _, which, isChecked -> checked[which] = isChecked }
+            .setPositiveButton(R.string.role_save) { _, _ ->
+                val picked = candidates.filterIndexed { i, _ -> checked[i] }
+                if (picked.isEmpty()) return@setPositiveButton
+                val updated = RoleWorldWeaver.apply(character, picked)
+                store.upsert(updated)
+                reload()
+                Toast.makeText(this, getString(R.string.toast_role_weave_done, picked.size), Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(R.string.role_cancel, null)
+            .show()
+    }
+
+    /** 角色卡体检：列出问题并支持一键修复。 */
+    private fun lintCard(character: RoleCharacter) {
+        val issues = RoleCardLint.check(character)
+        val score = RoleCardLint.score(character)
+        val sb = StringBuilder()
+        sb.append(getString(R.string.role_lint_score, score)).append("\n\n")
+        if (issues.isEmpty()) {
+            sb.append(getString(R.string.toast_role_lint_ok))
+        } else {
+            issues.forEach { i ->
+                val mark = when (i.level) {
+                    RoleCardLint.levelBad() -> "✕"
+                    RoleCardLint.levelWarn() -> "!"
+                    else -> "·"
+                }
+                sb.append(mark).append(" ").append(i.title)
+                if (i.detail.isNotBlank()) sb.append("\n   ").append(i.detail)
+                sb.append("\n")
+            }
+        }
+        val fixable = issues.count { it.fixable }
+        val builder = AlertDialog.Builder(this)
+            .setTitle(getString(R.string.role_lint_card, character.name))
+            .setMessage(sb.toString().trim())
+            .setNegativeButton(R.string.role_cancel, null)
+        if (fixable > 0) {
+            builder.setPositiveButton(R.string.role_lint_fix) { _, _ ->
+                val (fixed, notes) = RoleCardLint.autoFix(character)
+                store.upsert(fixed)
+                reload()
+                Toast.makeText(this, getString(R.string.toast_role_lint_fixed, notes.size), Toast.LENGTH_SHORT).show()
+            }
+        }
+        builder.show()
+    }
+
     private fun reload() {
         allItems.clear()
         allItems.addAll(store.loadCharacters())
@@ -161,7 +231,9 @@ class RoleLoungeActivity : AppCompatActivity() {
         pop.menu.add(0, 5, 2, getString(R.string.role_export_card))
         pop.menu.add(0, 6, 3, getString(R.string.role_share_card))
         pop.menu.add(0, 3, 4, getString(R.string.role_duplicate))
-        pop.menu.add(0, 2, 5, getString(R.string.role_delete))
+        pop.menu.add(0, 7, 5, getString(R.string.role_weave_world))
+        pop.menu.add(0, 8, 6, getString(R.string.role_lint_card))
+        pop.menu.add(0, 2, 7, getString(R.string.role_delete))
         pop.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 1 -> {
@@ -197,6 +269,14 @@ class RoleLoungeActivity : AppCompatActivity() {
                 }
                 2 -> {
                     confirmDelete(character)
+                    true
+                }
+                7 -> {
+                    weaveWorld(character)
+                    true
+                }
+                8 -> {
+                    lintCard(character)
                     true
                 }
                 else -> false
@@ -296,7 +376,7 @@ class RoleLoungeActivity : AppCompatActivity() {
                 holder.tags.visibility = View.GONE
             } else {
                 holder.tags.visibility = View.VISIBLE
-                holder.tags.text = tags.take(4).joinToString(" · ")
+                holder.tags.text = tags.take(30).joinToString(" · ")
             }
             val (preview, updatedAt) = store.lastPreview(item.id)
             holder.preview.text = preview.ifBlank { ctx.getString(R.string.role_preview_empty) }

@@ -42,9 +42,9 @@ class DefaultLlmToolHost(
         val q = city.trim().ifBlank { prefs.lastCity }
         val info = client.query(q) ?: return "没查到${q.ifBlank { "本地" }}的天气"
         if (info.place.isNotBlank()) prefs.lastCity = info.place
-        prefs.lastWeatherBrief = info.toSpeakText().take(48)
+        prefs.lastWeatherBrief = info.toSpeakText().take(500)
         runCatching { XiaomoWidgetProvider.refresh(context) }
-        return info.toSpeakText().take(800)
+        return info.toSpeakText().take(12000)
     }
 
     override fun recallMemory(query: String): String {
@@ -93,7 +93,7 @@ class DefaultLlmToolHost(
 }
 
 object LlmTools {
-    const val MAX_RESULT_CHARS = 8_000
+    const val MAX_RESULT_CHARS = 1_000_000
 
     fun schema(webSearchEnabled: Boolean): JSONArray {
         val arr = JSONArray()

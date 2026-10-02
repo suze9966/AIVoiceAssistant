@@ -89,8 +89,8 @@ class FreeChatClient {
     private fun tryBackup(history: List<ChatMessage>, timeoutMs: Long): String? {
         return try {
             val messages = JSONArray()
-            history.takeLast(40).forEach { m ->
-                if (m.content.isNotBlank()) messages.put(JSONObject().put("role", m.role).put("content", m.content.take(12000)))
+            history.takeLast(100).forEach { m ->
+                if (m.content.isNotBlank()) messages.put(JSONObject().put("role", m.role).put("content", m.content.take(100000)))
             }
             val body = JSONObject().put("model", "openai").put("messages", messages).toString()
             val req = Request.Builder().url(backupUrl)

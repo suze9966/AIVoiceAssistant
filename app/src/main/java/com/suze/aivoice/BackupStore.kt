@@ -70,7 +70,7 @@ class BackupStore(private val context: Context) {
 
     fun exportChatMarkdown(title: String, messages: List<ChatMessage>): File? {
         return try {
-            val safe = title.replace(Regex("[\\\\/:*?\"<>|]"), "_").take(24).ifBlank { "对话" }
+            val safe = title.replace(Regex("[\\\\/:*?\"<>|]"), "_").take(60).ifBlank { "对话" }
             val file = File(exportDir, safe + "-" + SimpleDateFormat("MMdd-HHmm", Locale.CHINA).format(Date()) + ".md")
             val sb = StringBuilder()
             sb.append("# ").append(title.ifBlank { "小沫对话" }).append("\n\n")

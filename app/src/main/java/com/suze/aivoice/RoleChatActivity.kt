@@ -29,6 +29,8 @@ class RoleChatActivity : AppCompatActivity() {
     private lateinit var store: RoleStore
     private lateinit var plugins: TavernPluginStore
     private lateinit var tts: TtsHelper
+    private val moodEngine by lazy { RoleMoodEngine(this) }
+    private val branchStore by lazy { StoryBranchStore(this) }
     private val searcher = SearchClient()
     private lateinit var adapter: ChatAdapter
     private lateinit var recycler: RecyclerView
@@ -226,7 +228,10 @@ class RoleChatActivity : AppCompatActivity() {
         }
         pop.menu.add(0, 7, 5, getString(R.string.role_export_chat))
         pop.menu.add(0, 3, 6, getString(R.string.menu_connect_llm))
-        pop.menu.add(0, 2, 7, getString(R.string.menu_clear))
+        pop.menu.add(0, 10, 7, getString(R.string.role_mood_panel))
+        pop.menu.add(0, 11, 8, getString(R.string.role_mark_anchor))
+        pop.menu.add(0, 12, 9, getString(R.string.role_story_lines))
+        pop.menu.add(0, 2, 10, getString(R.string.menu_clear))
         pop.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 1 -> {
@@ -262,6 +267,18 @@ class RoleChatActivity : AppCompatActivity() {
                 }
                 3 -> {
                     startActivity(Intent(this, LlmConnectActivity::class.java))
+                    true
+                }
+                10 -> {
+                    showMoodPanel(c)
+                    true
+                }
+                11 -> {
+                    markAnchor()
+                    true
+                }
+                12 -> {
+                    showAnchors()
                     true
                 }
                 2 -> {
@@ -362,7 +379,7 @@ class RoleChatActivity : AppCompatActivity() {
             return
         }
         val labels = greets.mapIndexed { i, text ->
-            getString(R.string.role_greeting_index, i + 1) + "\n" + RolePrompt.applyMacros(text, c).take(60)
+            getString(R.string.role_greeting_index, i + 1) + "\n" + RolePrompt.applyMacros(text, c).take(500)
         }.toTypedArray()
         AlertDialog.Builder(this)
             .setTitle(R.string.role_pick_greeting)
@@ -433,6 +450,7 @@ class RoleChatActivity : AppCompatActivity() {
             popup.menu.add(0, 2, 1, getString(R.string.menu_delete))
             popup.menu.add(0, 3, 2, getString(R.string.menu_respeak))
             if (!adapter.isMeAt(pos)) popup.menu.add(0, 4, 3, getString(R.string.menu_regenerate))
+            popup.menu.add(0, 5, 4, getString(R.string.role_mark_anchor))
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     1 -> {
@@ -450,6 +468,7 @@ class RoleChatActivity : AppCompatActivity() {
                         if (text.isNotBlank()) speakRole(text)
                     }
                     4 -> regenerateLast()
+                    5 -> markAnchorAt(pos)
                 }
                 true
             }
@@ -489,7 +508,7 @@ class RoleChatActivity : AppCompatActivity() {
         if (::tts.isInitialized) tts.stop()
         val c = character
         if (history.isNotEmpty() && history.last().role == "assistant" && history.last().content.isBlank()) {
-            history[history.size - 1] = ChatMessage("assistant", getString(R.string.toast_role_stopped), isMe = false)
+            history[history.size - 1] = history[history.size - 1].copy(content = getString(R.string.toast_role_stopped))
             adapter.updateLast(history.last().content)
         }
         persistChat()
@@ -526,7 +545,12 @@ class RoleChatActivity : AppCompatActivity() {
         llm.applyCloudThink = true
         llm.allowLocalFallback = false
         llm.toolsEnabled = true
-        llm.systemPromptOverride = plugins.applyPrompt(RolePrompt.build(c, history.dropLast(1)), user, c.name)
+        llm.systemPromptOverride = run {
+            val ctx = history.dropLast(1)
+            plugins.applyPrompt(
+                RolePrompt.build(c, ctx, buildExtras(c, ctx)), user, c.name
+            )
+        }
         llm.extraSystemPrompt = null
         sendJob?.cancel()
         sendJob = lifecycleScope.launch {
@@ -541,7 +565,7 @@ class RoleChatActivity : AppCompatActivity() {
                             runOnUiThread {
                                 if (session != speechSession || isFinishing || isDestroyed || history.isEmpty()) return@runOnUiThread
                                 val visible = plugins.applyOutput(llm.stripReasoning(snapshot), user, c.name)
-                                history[history.size - 1] = ChatMessage("assistant", visible, isMe = false)
+                                history[history.size - 1] = history[history.size - 1].copy(content = visible)
                                 adapter.updateLast(visible)
                                 scrollToBottom()
                             }
@@ -575,6 +599,154 @@ class RoleChatActivity : AppCompatActivity() {
         }
     }
 
+    private fun buildExtras(c: RoleCharacter, history: List<ChatMessage>): String {
+        val sb = StringBuilder()
+        runCatching {
+            val mood = moodEngine.promptBlock(c.id)
+            if (mood.isNotBlank()) sb.append(mood).append("\n")
+        }
+        runCatching {
+            val style = RoleActingTuner.promptBlock(history)
+            if (style.isNotBlank()) sb.append(style).append("\n")
+        }
+        return sb.toString()
+    }
+    private fun showMoodPanel(c: RoleCharacter) {
+        val m = moodEngine.get(c.id)
+        val msg = StringBuilder()
+        msg.append("当前心情：").append(m.mood).append("\n\n")
+        msg.append(m.bar()).append("\n")
+        msg.append("\n累计对话 ").append(m.turns).append(" 轮")
+        if (m.events.isNotEmpty()) {
+            msg.append("\n\n最近的情绪变化：\n")
+            m.events.takeLast(200).forEach { msg.append("· ").append(it).append("\n") }
+        }
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.role_mood_title, c.name))
+            .setMessage(msg.toString())
+            .setPositiveButton(R.string.role_mood_switch) { _, _ -> pickMood(c) }
+            .setNeutralButton(R.string.role_mood_reset) { _, _ ->
+                moodEngine.reset(c.id)
+                Toast.makeText(this, R.string.toast_role_mood_reset, Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(R.string.role_cancel, null)
+            .show()
+    }
+
+    private fun pickMood(c: RoleCharacter) {
+        val options = RoleMoodEngine.moodOptions().toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.role_mood_switch)
+            .setItems(options) { _, which ->
+                moodEngine.setMood(c.id, options[which])
+                Toast.makeText(this, getString(R.string.toast_role_mood_set, options[which]), Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(R.string.role_cancel, null)
+            .show()
+    }
+
+    private fun markAnchor() {
+        val c = character ?: return
+        if (history.isEmpty()) {
+            Toast.makeText(this, R.string.toast_role_anchor_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+        promptAnchorName(c, history.size)
+    }
+
+    /** 在指定消息位置打锚点：只保存到 pos（含）为止的上下文。 */
+    private fun markAnchorAt(pos: Int) {
+        val c = character ?: return
+        if (pos < 0 || pos >= history.size) {
+            markAnchor()
+            return
+        }
+        promptAnchorName(c, pos + 1)
+    }
+
+    private fun promptAnchorName(c: RoleCharacter, upTo: Int) {
+        val input = EditText(this)
+        input.hint = getString(R.string.role_hint_anchor_name)
+        AlertDialog.Builder(this)
+            .setTitle(R.string.role_mark_anchor)
+            .setView(input)
+            .setPositiveButton(R.string.role_save) { _, _ ->
+                val snapshot = history.take(upTo.coerceIn(0, history.size))
+                val a = branchStore.mark(c.id, input.text.toString().trim(), snapshot.size, snapshot)
+                Toast.makeText(this, getString(R.string.toast_role_anchor_saved, a.name), Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(R.string.role_cancel, null)
+            .show()
+    }
+
+    private fun showAnchors() {
+        val c = character ?: return
+        val anchors = branchStore.list(c.id)
+        if (anchors.isEmpty()) {
+            Toast.makeText(this, R.string.toast_role_anchor_none, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val labels = anchors.map { a ->
+            val when_ = android.text.format.DateFormat.format("MM-dd HH:mm", a.createdAt).toString()
+            "${a.name}（${a.atIndex} 条 · $when_）"
+        }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.role_story_lines)
+            .setItems(labels) { _, which -> confirmRestore(c, anchors[which]) }
+            .setNeutralButton(R.string.role_cancel, null)
+            .show()
+    }
+
+    private fun confirmRestore(c: RoleCharacter, a: StoryBranchStore.Anchor) {
+        AlertDialog.Builder(this)
+            .setTitle(a.name)
+            .setMessage(getString(R.string.role_anchor_restore_hint, a.atIndex))
+            .setPositiveButton(R.string.role_anchor_fork) { _, _ -> forkTo(c, a) }
+            .setNeutralButton(R.string.role_anchor_restore) { _, _ -> restoreAnchor(c, a) }
+            .setNegativeButton(R.string.role_cancel, null)
+            .show()
+    }
+
+    private fun restoreAnchor(c: RoleCharacter, a: StoryBranchStore.Anchor) {
+        val restored = branchStore.restore(a)
+        if (restored.isEmpty()) {
+            Toast.makeText(this, R.string.toast_role_anchor_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+        persistChat()
+        history.clear()
+        history.addAll(restored)
+        adapter.notifyDataSetChanged()
+        persistChat()
+        scrollToBottom()
+        Toast.makeText(this, getString(R.string.toast_role_anchor_restored, a.name), Toast.LENGTH_SHORT).show()
+    }
+
+    private fun forkTo(c: RoleCharacter, a: StoryBranchStore.Anchor) {
+        val restored = branchStore.restore(a)
+        val input = EditText(this)
+        input.hint = getString(R.string.role_hint_line_name)
+        input.setText(a.name + " · 分支")
+        AlertDialog.Builder(this)
+            .setTitle(R.string.role_anchor_fork)
+            .setView(input)
+            .setPositiveButton(R.string.role_save) { _, _ ->
+                val lineName = input.text.toString().trim().ifBlank { a.name + " · 分支" }
+                persistChat()
+                val meta = store.createChat(c.id, lineName)
+                store.saveChat(meta.id, restored, c.id)
+                branchStore.fork(a, lineName, restored)
+                Toast.makeText(this, getString(R.string.toast_role_line_created, lineName), Toast.LENGTH_SHORT).show()
+                val intent = Intent(this, RoleChatActivity::class.java)
+                intent.putExtra(EXTRA_ROLE_ID, c.id)
+                intent.putExtra(EXTRA_CHAT_ID, meta.id)
+                startActivity(intent)
+                finish()
+            }
+            .setNegativeButton(R.string.role_cancel, null)
+            .show()
+    }
+
     private fun roleFailText(): String {
         val reason = llm.lastCloudError.orEmpty()
         return if (reason.isNotBlank()) getString(R.string.toast_llm_fail, reason)
@@ -584,8 +756,13 @@ class RoleChatActivity : AppCompatActivity() {
     private fun finishAssistant(text: String, c: RoleCharacter, session: Long = speechSession) {
         if (session != speechSession) return
         if (history.isNotEmpty()) {
-            history[history.size - 1] = ChatMessage("assistant", text, isMe = false)
+            history[history.size - 1] = history[history.size - 1].copy(content = text)
             adapter.updateLast(text)
+        }
+        // 情绪共振：把这一轮的用户语气与角色回复喂给情绪引擎（长期状态）
+        runCatching {
+            val userText = history.dropLast(1).lastOrNull { it.role == "user" }?.content.orEmpty()
+            moodEngine.observe(c.id, userText, text)
         }
         persistChat()
         scrollToBottom()

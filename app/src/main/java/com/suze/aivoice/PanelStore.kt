@@ -27,7 +27,7 @@ data class PanelTemplate(
 class PanelStore(context: Context) {
 
     private val file = File(context.filesDir, "panel_templates.json")
-    private val maxKeep = 100
+    private val maxKeep = 5000
 
     @Volatile
     private var cache: MutableList<PanelTemplate>? = null

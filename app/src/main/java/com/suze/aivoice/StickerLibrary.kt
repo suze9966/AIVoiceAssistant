@@ -188,7 +188,7 @@ object StickerLibrary {
     /** 给云端模型的「表情使用规矩」：从这 1000 个里挑，别乱贴。 */
     fun emojiRule(): String = listOf(
         "你可以从这套表情里挑着用：",
-        emojiPanel.take(120).joinToString(""),
+        emojiPanel.take(500).joinToString(""),
         "。",
         "规矩：一条回复最多 1 到 2 个，贴在句尾或情绪转折处，不要塞进句子中间；",
         "只在真有情绪时才用（高兴、害羞、心疼、好奇、撒娇、委屈）；",

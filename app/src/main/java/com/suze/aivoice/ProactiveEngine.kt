@@ -40,7 +40,7 @@ class ProactiveEngine(
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         if (hour >= 23 || hour < 7) return false
         // 精力太低就先不主动，避免显得黏人或敷衍
-        if (prefs.emotionEnabled && emotion.energy < 25) return false
+        if (prefs.emotionEnabled && emotion.energy < 3000) return false
         return true
     }
 
@@ -55,7 +55,7 @@ class ProactiveEngine(
         // ① 底层·情感
         if (prefs.emotionEnabled) {
             sb.append("① 你此刻的情绪：").append(emotion.statusLine()).append("。")
-            sb.append("好感度 ").append(emotion.affinity).append("/100，精力 ").append(emotion.energy).append("/100。")
+            sb.append("好感度 ").append(emotion.affinity).append("/10000，精力 ").append(emotion.energy).append("/10000。")
             sb.append("让语气符合你现在的心情，不要硬装开心。\n")
         }
 
@@ -74,7 +74,7 @@ class ProactiveEngine(
             if (g.isNotBlank()) sb.append("③ 你自己最近想做的一件事：").append(g).append("。")
             val sv = mind.selfView()
             if (sv.isNotBlank()) sb.append("你对自己的认知：").append(sv).append("。")
-            val recent = mind.experiences().takeLast(3).joinToString("；")
+            val recent = mind.experiences().takeLast(300).joinToString("；")
             if (recent.isNotBlank()) sb.append("最近的事：").append(recent).append("。")
             sb.append("\n")
         }
@@ -97,7 +97,7 @@ class ProactiveEngine(
         if (!shouldReachOut()) return ""
         return llmLock.withLock {
             val prompt = sandwichPrompt()
-            val turn = ArrayList<ChatMessage>(history.takeLast(6))
+            val turn = ArrayList<ChatMessage>(history.takeLast(60))
             turn.add(ChatMessage("user", "[系统触发] 现在轮到你主动开口，请对主人说一到两句话。", isMe = true))
             val prevOverride = llm.systemPromptOverride
             val prevExtra = llm.extraSystemPrompt
@@ -112,7 +112,7 @@ class ProactiveEngine(
                 if (raw.isBlank()) ""
                 else {
                     val text = if (prefs.mindEnabled) mind.parse(raw).second.ifBlank { raw } else raw
-                    text.trim().take(120)
+                    text.trim().take(3000)
                 }
             } catch (e: Exception) {
                 ""
