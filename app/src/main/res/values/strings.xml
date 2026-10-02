@@ -372,6 +372,12 @@
     <string name="role_voice_default">跟随全局</string>
     <string name="menu_respeak">重说这条</string>
     <string name="menu_regenerate">重新生成</string>
+    <string name="menu_recall">撤回这条</string>
+    <string name="menu_edit">重新编辑</string>
+    <string name="toast_recalled">已撤回这一轮</string>
+    <string name="toast_edit_loaded">已放回输入框，改完再发</string>
+    <string name="toast_edit_only_me">只能重新编辑主人自己发的文字</string>
+    <string name="toast_busy_action">小沫还在回复，先等一下再操作</string>
     <string name="menu_find_chat">搜索对话</string>
     <string name="menu_export_chat">导出对话</string>
     <string name="menu_ask_image">问图</string>

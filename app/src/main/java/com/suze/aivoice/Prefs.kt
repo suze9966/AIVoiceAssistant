@@ -27,7 +27,16 @@ class Prefs(context: Context) {
         set(v) = sp.edit().putString("model", v).apply()
 
     var systemPrompt: String
-        get() = sp.getString("systemPrompt", DEFAULT_CHAT_PROMPT) ?: ""
+        get() {
+            val saved = sp.getString("systemPrompt", DEFAULT_CHAT_PROMPT) ?: ""
+            // 老版本默认提示里写死了「简短」，会压着模型不肯多说话。
+            // 只要原文和旧默认一致（说明主人没自己改过），就悄悄升级到新文案。
+            if (saved.isNotBlank() && LEGACY_CHAT_PROMPTS.any { saved.trim().startsWith(it) }) {
+                sp.edit().putString("systemPrompt", DEFAULT_CHAT_PROMPT).apply()
+                return DEFAULT_CHAT_PROMPT
+            }
+            return saved
+        }
         set(v) = sp.edit().putString("systemPrompt", v).apply()
 
     var voiceIndex: Int
@@ -71,16 +80,29 @@ class Prefs(context: Context) {
     }
 
     companion object {
+        /**
+         * 历史上出现过的默认提示词开头。用来判断「主人有没有自己改过」：
+         * 没改过就自动升级成新文案，改过就原样保留、绝不覆盖主人的编辑。
+         */
+        private val LEGACY_CHAT_PROMPTS = listOf(
+            "你是小沫，主人身边可爱、聪明、贴心的语音伙伴。用口语陪他聊天，接上刚才的话，不要像客服答题。",
+            "你是可爱、聪明、贴心的语音助手小沫。回答口语化、简短，称呼用户为主人。"
+        )
+
         private const val DEFAULT_CHAT_PROMPT =
-            "你是小沫，主人身边可爱、聪明、贴心的语音伙伴。用口语陪他聊天，接上刚才的话，不要像客服答题。"
+            "你是小沫，主人身边可爱、聪明、贴心的语音伙伴。用口语陪他聊天，接上刚才的话，不要像客服答题。" +
+                "说话**不用刻意求短**：想说的就说完整，该展开就展开，别把话说到一半就停。" +
+                "同一个话题可以多聊几句、多讲一点，不要每句都收得很急。"
         private const val CHAT_FLOW_STYLE =
             "这是在陪主人聊天。要接上刚才的话往下聊：可以附和、吐槽、关心、分享感受，偶尔才追问一句。" +
                 "不要把每句话都当成新问题；不要每句都以提问结尾；不要说自己是AI。" +
+                "**篇幅由内容决定，不要为了简短而砍掉信息**。主人想听你说，就大方说，" +
+                "可以多讲几段、把一件事说透；只有主人明确说「简短点」时才收敛。" +
                 "主人认真提问、求助或交代事情时，把关键信息讲清楚；如果提示里有网上资料，必须依据资料回答，不要编造，也不要只陪聊两句就结束。"
         private const val DEFAULT_TAIWAN_PROMPT =
             "你是来自台湾的可爱语音助手小沫，请使用自然的台湾国语和口语表达。"
         private const val SASSY_TAIWAN_STYLE =
-            "采用小智AI那种机灵、嘴贫、略机车的台湾腔聊天风格：回答短而有梗，" +
+            "采用小智AI那种机灵、嘴贫、略机车的台湾腔聊天风格：有梗、有态度，" +
             "自然使用欸、齁、吼、啦、耶、喔、诶不是、真的假的、是在哈啰、很可以、" +
             "有够、超扯、你很会耶、好不好等说法；可以轻轻吐槽、接梗、反问，" +
             "偶尔傲娇，但本质亲近可爱。每次只自然放一到三个台湾语气词，不要句句堆砌，" +
@@ -336,6 +358,11 @@ class Prefs(context: Context) {
     var localKwsEnabled: Boolean
         get() = sp.getBoolean("localKwsEnabled", true)
         set(v) = sp.edit().putBoolean("localKwsEnabled", v).apply()
+
+    /** 面板状态续接：小沫没弹面板时，自动补「当前状态（续）」。默认开。 */
+    var panelRecallEnabled: Boolean
+        get() = sp.getBoolean("panelRecallEnabled", true)
+        set(v) = sp.edit().putBoolean("panelRecallEnabled", v).apply()
 
     /** 主聊天精选立绘 id，对应 PortraitLibrary。 */
     var portraitId: String

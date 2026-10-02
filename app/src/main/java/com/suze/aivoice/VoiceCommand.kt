@@ -25,6 +25,17 @@ sealed class VoiceCommand {
     data class CalendarAdd(val atMillis: Long, val text: String) : VoiceCommand()
     data class FindChat(val query: String) : VoiceCommand()
     data object DailyBrief : VoiceCommand()
+    /** 面板模板：保存 / 套用 / 删除 / 列表 / 建字段模板。 */
+    data class PanelTemplateCmd(
+        val saveName: String? = null,
+        val applyName: String? = null,
+        val deleteName: String? = null,
+        val listAll: Boolean = false,
+        /** 新建纯字段模板（preset）。 */
+        val newPresetName: String? = null,
+        /** 新建时附带的字段（逗号/空格分隔）。 */
+        val fields: List<String> = emptyList()
+    ) : VoiceCommand()
     /** 改气泡样式：null 表示不改这一项。 */
     data class BubbleStyle(
         val shape: String? = null,
@@ -66,6 +77,7 @@ object VoiceCommandParser {
         val text = raw.trim()
         if (text.isEmpty()) return null
         parseBubbleStyle(text)?.let { return it }
+        parsePanelTemplate(text)?.let { return it }
         parseNews(text)?.let { return it }
         parseBrief(text)?.let { return it }
         parseWorldClock(text)?.let { return it }
@@ -94,6 +106,60 @@ object VoiceCommandParser {
      *   - 查询：我的气泡什么样 / 现在气泡是什么样
      *   - 重置：恢复默认气泡 / 重置气泡样式
      */
+    /**
+     * 面板模板口令（对应 GitHub stquickstatusbar 的配置管理）。
+     *
+     * 支持：
+     *   - 保存：存面板 龙鳞冒险 / 保存面板模板 龙鳞冒险
+     *   - 套用：套用面板 龙鳞冒险 / 应用面板 龙鳞冒险
+     *   - 删除：删除面板模板 龙鳞冒险
+     *   - 列表：面板模板列表 / 有哪些面板模板
+     *   - 建字段模板：新建字段模板 修仙，字段：气血 灵力 境界
+     */
+    private fun parsePanelTemplate(text: String): VoiceCommand.PanelTemplateCmd? {
+        if (!text.contains("面板") && !text.contains("字段模板")) return null
+        // 面板相关的游戏闲聊别误判
+        if (hit(text, "面板是什么", "什么是面板", "面板怎么用")) return null
+
+        // 列表
+        if (hit(text, "模板列表", "有哪些面板模板", "面板模板有哪些", "面板模板列表",
+                "我存了哪些面板", "我的面板模板", "列出面板模板", "看看面板模板")) {
+            return VoiceCommand.PanelTemplateCmd(listAll = true)
+        }
+        // 删除
+        if (hit(text, "删除面板模板", "删掉面板模板", "删除面板", "移除面板模板")) {
+            PanelStore.nameFromText(text)?.let {
+                return VoiceCommand.PanelTemplateCmd(deleteName = it)
+            }
+        }
+        // 新建字段模板：新建字段模板 修仙，字段：气血 灵力 境界
+        if (hit(text, "新建字段模板", "新建面板模板", "自定义字段模板")) {
+            val name = PanelStore.nameFromText(text) ?: return null
+            var fields = emptyList<String>()
+            val fIdx = maxOf(text.indexOf("字段："), text.indexOf("字段:"))
+            if (fIdx >= 0) {
+                val raw = text.substring(fIdx + 3)
+                fields = raw.split(Regex("[,\s，、；;]+"))
+                    .map { it.trim() }
+                    .filter { it.isNotBlank() && it.length <= 12 }
+            }
+            return VoiceCommand.PanelTemplateCmd(newPresetName = name, fields = fields)
+        }
+        // 套用
+        if (hit(text, "套用面板", "应用面板", "套用面板模板", "应用面板模板", "载入面板")) {
+            PanelStore.nameFromText(text)?.let {
+                return VoiceCommand.PanelTemplateCmd(applyName = it)
+            }
+        }
+        // 保存（放最后，避免「保存」被套用抢走）
+        if (hit(text, "保存面板", "存面板", "收藏面板", "记住面板", "保存面板模板")) {
+            PanelStore.nameFromText(text)?.let {
+                return VoiceCommand.PanelTemplateCmd(saveName = it)
+            }
+        }
+        return null
+    }
+
     private fun parseBubbleStyle(text: String): VoiceCommand.BubbleStyle? {
         // 必须提到「气泡/泡泡」，或命中壁纸取色口令（跟随壁纸等不含「气泡」二字）
         val bubbleWord = text.contains("气泡") || text.contains("泡泡")

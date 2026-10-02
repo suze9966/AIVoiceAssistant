@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 微信通话风格：半透明白圆按钮（默认态） -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
-    <solid android:color="#26FFFFFF"/>
+    <solid android:color="#3A7FC1EA"/>
 </shape>

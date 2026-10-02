@@ -61,6 +61,8 @@ class FreeChatClient {
                 .put("model", "gpt-3.5-turbo")
                 .put("messages", messages)
                 .put("temperature", 0.8)
+
+                .put("max_tokens", 2_048)
                 .toString()
             val req = Request.Builder()
                 .url(primaryUrl)

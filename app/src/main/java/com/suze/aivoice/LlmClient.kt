@@ -103,6 +103,9 @@ class LlmClient(private val prefs: Prefs) {
             .put("messages", messages)
             .put("temperature", 0.8)
             .put("stream", stream)
+            // 明确告诉接口能说多长。不给这个字段时，多数服务默认只有 512~1024 token，
+            // 小沫就会说到一半被硬截断（主人说的「吞字」）。
+            .put("max_tokens", MAX_REPLY_TOKENS)
         if (withTools) {
             body.put("tools", LlmTools.schema(prefs.webSearchEnabled))
             body.put("tool_choice", "auto")
@@ -173,6 +176,9 @@ class LlmClient(private val prefs: Prefs) {
 
     private fun localReply(history: List<ChatMessage>): String =
         if (allowLocalFallback) local.reply(history) else ""
+
+    /** 取走本轮本地闲聊决定要发的图片表情（没有就返回 null）。 */
+    fun takeLocalSticker(): String? = local.takePendingSticker()
 
     private fun cloudFail(reason: String): String {
         lastCloudError = reason
@@ -406,6 +412,7 @@ class LlmClient(private val prefs: Prefs) {
 
     suspend fun chat(history: List<ChatMessage>): String = withContext(Dispatchers.IO) {
         lastCloudError = null
+        local.takePendingSticker()
         if (!llmConfigured()) {
             if (allowLocalFallback && freeChatEnabled()) {
                 free.reply(freeHistory(history))?.takeIf { it.isNotBlank() }?.let { return@withContext it }
@@ -423,6 +430,7 @@ class LlmClient(private val prefs: Prefs) {
     suspend fun chatStream(history: List<ChatMessage>, onDelta: (String) -> Unit): String =
         withContext(Dispatchers.IO) {
             lastCloudError = null
+            local.takePendingSticker()
             if (!llmConfigured()) {
                 val online = if (allowLocalFallback && freeChatEnabled()) free.reply(freeHistory(history)) else null
                 val ans = online?.takeIf { it.isNotBlank() } ?: localReply(history)
@@ -455,6 +463,7 @@ class LlmClient(private val prefs: Prefs) {
             messages.put(JSONObject().put("role", "user").put("content", content))
             val body = JSONObject()
                 .put("model", prefs.model.take(MAX_MODEL_CHARS))
+                .put("max_tokens", MAX_REPLY_TOKENS)
                 .put("messages", messages)
                 .put("temperature", 0.4)
                 .put("stream", false)
@@ -491,13 +500,21 @@ class LlmClient(private val prefs: Prefs) {
     }
 
     companion object {
-        private const val MAX_HISTORY_MESSAGES = 40
-        private const val MAX_MESSAGE_CHARS = 12_000
-        private const val MAX_SYSTEM_CHARS = 16_000
+        // 主人明确说「不限制小沫说话的字数」，所以这些都放宽到几乎不会触发。
+        private const val MAX_HISTORY_MESSAGES = 120
+        private const val MAX_MESSAGE_CHARS = 60_000
+        private const val MAX_SYSTEM_CHARS = 64_000
         private const val MAX_MODEL_CHARS = 200
-        private const val MAX_RESPONSE_BYTES = 2 * 1024 * 1024
-        private const val MAX_OUTPUT_CHARS = 200_000
-        private const val MAX_SSE_LINE_CHARS = 256_000
+        private const val MAX_RESPONSE_BYTES = 8 * 1024 * 1024
+        private const val MAX_OUTPUT_CHARS = 1_000_000
+        private const val MAX_SSE_LINE_CHARS = 512_000
+
+        /**
+         * 单次回复允许的最大 token 数。
+         * 不设置时接口会用自己很小的默认值，回复会被截断。
+         * 这里给足额度，尽量让模型把话说完；个别接口有上限也会自己收敛。
+         */
+        private const val MAX_REPLY_TOKENS = 8_192
         private const val MAX_TOOL_ROUNDS = 4
         private val THINK_BLOCK = Regex("(?s)<think>.*?</think>|<thinking>.*?</thinking>")
         private const val CLOUD_THINK_PROMPT =

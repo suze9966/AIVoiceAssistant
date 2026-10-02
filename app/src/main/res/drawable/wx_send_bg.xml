@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 微信式发送按钮：小圆角矩形 + 微信尺寸，配色沿用浅蓝主题 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false">
+        <shape android:shape="rectangle">
+            <solid android:color="#D5D5D5"/>
+            <corners android:radius="4dp"/>
+        </shape>
+    </item>
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#1E6FB8"/>
+            <corners android:radius="4dp"/>
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#2E8BD6"/>
+            <corners android:radius="4dp"/>
+        </shape>
+    </item>
+</selector>

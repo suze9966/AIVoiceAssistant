@@ -53,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var memory: MemoryEngine
     private lateinit var weather: WeatherClient
     private lateinit var proactive: ProactiveEngine
+    private lateinit var panels: PanelStore
     private lateinit var adapter: ChatAdapter
     private lateinit var recycler: RecyclerView
     private lateinit var editInput: EditText
@@ -60,7 +61,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var micHalo: View
     private lateinit var ivChatBackground: android.widget.ImageView
     private lateinit var chatBgScrim: View
-    private lateinit var ivHeaderAvatar: android.widget.ImageView
+    private var ivHeaderAvatar: android.widget.ImageView? = null
+    private lateinit var btnSend: ImageButton
     private lateinit var drawerLayout: DrawerLayout
     private var pickingAvatar = true
     private var settingsBinder: SettingsBinder? = null
@@ -153,6 +155,11 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         prefs = Prefs(this)
+        panels = PanelStore(this)
+        // 让渲染器认识主人自定义的面板模板（模板名 → 字段行）
+        MiniMarkdown.externalTemplateResolver = { name ->
+            panels.find(name)?.let { panels.toPanelBody(it) }
+        }
         llm = LlmClient(prefs)
         tts = TtsHelper(this, prefs)
         store = HistoryStore(this)
@@ -181,11 +188,12 @@ class MainActivity : AppCompatActivity() {
         micHalo = findViewById(R.id.micHalo)
         ivChatBackground = findViewById(R.id.ivChatBackground)
         chatBgScrim = findViewById(R.id.chatBgScrim)
-        ivHeaderAvatar = findViewById(R.id.ivHeaderAvatar)
+        ivHeaderAvatar = null
         applyChatStyle()
         setupSettingsDrawer()
-        val btnMenu = findViewById<ImageButton>(R.id.btnMenu)
-        btnMenu.setOnClickListener { v ->
+        // 顶部只保留设置按钮：单击开设置抽屉，长按弹出功能菜单（原 ⭐ 菜单的 19 项功能全保留）
+        val btnMenu = findViewById<ImageButton>(R.id.btnDrawer)
+        val showMoreMenu: (android.view.View) -> Unit = { v ->
             val pop = PopupMenu(this, v)
             pop.menu.add(0, 1, 0, getString(R.string.btn_settings))
             pop.menu.add(0, 8, 1, getString(R.string.menu_sessions))
@@ -238,10 +246,13 @@ class MainActivity : AppCompatActivity() {
             }
             pop.show()
         }
+        btnMenu.setOnLongClickListener { v -> showMoreMenu(v); true }
 
         recycler = findViewById(R.id.recyclerChat)
         editInput = findViewById(R.id.editInput)
         adapter = ChatAdapter(history)
+        // 面板状态续接开关（主人可在设置里关）
+        adapter.panelRecall = prefs.panelRecallEnabled
         recycler.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
         recycler.adapter = adapter
         GlassKit.attach(
@@ -270,17 +281,28 @@ class MainActivity : AppCompatActivity() {
         }
         handleRemindIntent(intent)
 
-        val btnSend = findViewById<ImageButton>(R.id.btnSend)
+        btnSend = findViewById(R.id.btnSend)
         val btnMic = findViewById<ImageButton>(R.id.btnMic)
-
         fun submitInput(): Boolean {
             val text = editInput.text.toString().trim()
             if (text.isEmpty() || isSending) return false
             editInput.setText("")
+            refreshSendIcon()
             sendToLlm(text)
             return true
         }
-        btnSend.setOnClickListener { submitInput() }
+        btnSend.setOnClickListener {
+            if (editInput.text.toString().trim().isEmpty()) {
+                showMoreMenu(btnSend)
+            } else {
+                submitInput()
+            }
+        }
+        editInput.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) { refreshSendIcon() }
+        })
         editInput.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEND) submitInput() else false
         }
@@ -304,6 +326,74 @@ class MainActivity : AppCompatActivity() {
         refreshMoodSubtitle()
         // 恢复用户保存的音色、区域、语速和音调。
         applySavedVoice()
+    }
+
+    /**
+     * 排版规则：小沫可以像助手一样输出结构化内容。
+     * 这些标记在聊天气泡里会被真正渲染（加粗、表格、代码块、列表、分隔线），
+     * 朗读时会被自动剥掉，所以不用担心读出来是「星号星号」。
+     */
+    private val LAYOUT_RULE = buildString {
+        append("你还能像专业助手那样**排版输出**，让答案更好读：\n")
+        append("- `**重点**` 加粗强调；`# 标题` / `## 小节` 分节\n")
+        append("- `- 项目` 或 `1. 序号` 列清单，`---` 画分隔线\n")
+        append("- `| 表头 | 值 |` 画表格（前后各留一行空行更好看）\n")
+        append("- ``` 代码块 ``` 放代码；`行内代码` 用反引号\n")
+        append("- `> 引用` 引用一段话\n")
+        append("日常闲聊就用口语，**别硬套排版**；只有内容多、有理有据、需要分点时再排版。\n")
+        append("主人问技术问题、要清单、要对比、要步骤时，大胆用表格和列表，写完整、别偷懒。\n")
+        append("\n")
+        append(PANEL_RULE)
+    }
+
+    /**
+     * 系统面板规则：玩文字游戏时能弹出状态卡（血条 / 好感度 / 任务栏）。
+     * 面板直接长在聊天气泡里，不需要任何额外菜单或页面。
+     */
+    private val PANEL_RULE = buildString {
+        append("**玩文字游戏 / 角色扮演时**，你可以随时用「系统面板」展示状态，超有代入感：\n")
+        append("写一个 ```panel 围栏，第一行当标题，后面每行 `名字 = 数值`：\n")
+        append("```panel:血条\n")
+        append("⚔️ 冒险状态\n")
+        append("生命值 = 80/100\n")
+        append("魔力值 = 45/100\n")
+        append("地点 = 幽暗森林\n")
+        append("```\n")
+        append("规则：\n")
+        append("- `当前/最大` 或 `80%` 会自动画成**彩色进度条**（≥60% 绿、≥30% 橙、更低红）\n")
+        append("- 不是数值的行就原样显示，可以写地点、装备、任务\n")
+        append("- 面板能选样式：`panel:血条`、`panel:星星`、`panel:爱心`、`panel:霓虹`、\n")
+        append("  `panel:樱花`、`panel:宝石`、`panel:龙鳞`、`panel:传说`、`panel:随机`…\n")
+        append("- **一共 100 种样式**（血条/魔法/经验/体力/星星/爱心/方块/霓虹/像素/火焰/冰霜/雷电/\n")
+        append("  樱花/宝箱/金币/宝石/月光/太阳/云朵/水滴/叶子/玫瑰/音符/书本/药水/钥匙/王冠/盾牌/\n")
+        append("  利剑/弓箭/卷轴/沙漏/时钟/地图/罗盘/战旗/城堡/森林/海洋/火山/沙漠/雪原/星空/彩虹/\n")
+        append("  闪电战/暗影/圣光/诅咒/龙鳞/凤羽/狼牙/猫爪/兔耳/熊猫/狐狸/企鹅/青蛙/花朵/藤蔓/蘑菇/\n")
+        append("  蜜蜂/蝴蝶/鲸鱼/鲨鱼/海豚/岩浆/极光/日出/日落/流星/银河/黑洞/量子/机械/齿轮/电路/\n")
+        append("  数据/代码/终端/像素心/复古/街机/赛博/蒸汽/炼金/魔药/符文/水晶/星尘/梦境/回忆/时光/\n")
+        append("  命运/荣耀/传说/神话/风暴/曙光），随便挑、也能写 `panel:随机` 换换心情\n")
+        append("- 玩冒险 / 养成 / 战斗时，**每回合或关键节点**都该弹一次面板，让主人看到数值变化；\n")
+        append("  打完架就结算伤害，好感度涨了就更新条，别只在开头弹一次\n")
+        append("- 不玩游戏时不用弹面板，正常聊天就行\n")
+        append("面板进阶写法（都用得上，越花越好）：\n")
+        append("- **自定义阈值配色**：`生命值 = 20/100 #FF5252#4CAF50`，前面的 # 是低血色、后面是高血色\n")
+        append("- **渐变进度条**：`体力 = 70/100 ~渐变`，每格颜色从红渐变到绿，超好看\n")
+        append("- **迷你条**：`饥饿 = 40/100 mini`，用更短的条，适合栏位多的时候\n")
+        append("- **字段副说明**：`攻击 = 42 | 双手大剑`，竖线后面是灰色小字注释\n")
+        append("- 三种标记可以叠着写，例如：`怒气 = 88/100 ~渐变 #FF1744#FFD600`\n")
+        append("- 配合面板样式还能更花：`panel:龙鳞`、`panel:赛博`、`panel:极光`、`panel:黎明` 随便挑\n")
+        append("玩冒险 / 养成 / 战斗时记得把人物的血、蓝、体力、好感、声望都做成条，越丰富越带感。\n")
+        append("**面板预设**（不用自己列字段，写个名字就行）：\n")
+        append("- 在面板第一行写 `preset:预设名`，例如：\n")
+        append("```panel:霓虹\n")
+        append("preset:修仙\n")
+        append("```\n")
+        append("- 可选预设：战斗 / 冒险 / 养成 / 日常 / 恋爱 / 探索 / 对决 / 经营 / 修仙 / 赛博\n")
+        append("- 用了预设后，记得把里面的字段填成真实数值（比如 `气血 = 88/100`），别留 0/100\n")
+        append("**状态续接**：你弹过一次面板后，接下来就算不写面板，系统也会自动在气泡底部\n")
+        append("补一个「📌 当前状态（续）」，所以数值不会断档——但**关键节点还是主动弹新面板**更好。\n")
+        append("**自定义面板模板**：主人可以自己存面板。当主人说「存面板 名字」「套用面板 名字」\n")
+        append("时，那不是要你回答，是系统命令，直接按提示回复即可。你也可以在面板第一行写\n")
+        append("`preset:自定义模板名` 来套用主人自建的字段模板。")
     }
 
     /**
@@ -334,6 +424,13 @@ class MainActivity : AppCompatActivity() {
     }
 
 
+    /** 微信式底部栏：有字显示「发送」，无字显示「＋」。 */
+    private fun refreshSendIcon() {
+        if (!::btnSend.isInitialized || !::editInput.isInitialized) return
+        val has = editInput.text.toString().trim().isNotEmpty()
+        btnSend.setImageResource(if (has) R.drawable.ic_send_wx else R.drawable.ic_plus_circle_wx)
+    }
+
     private fun refreshMoodSubtitle() {
         if (!::emotion.isInitialized) return
         if (::tvStatus.isInitialized) tvStatus.text = emotion.statusLine()
@@ -353,6 +450,12 @@ class MainActivity : AppCompatActivity() {
             if (!adapter.isMeAt(pos)) popup.menu.add(0, 4, 3, getString(R.string.menu_regenerate))
             popup.menu.add(0, 5, 4, getString(R.string.menu_bubble_save))
             popup.menu.add(0, 6, 5, getString(R.string.menu_bubble_role))
+            // 文字消息专属：撤回 / 重新编辑
+            val isText = adapter.messageAt(pos)?.type == ChatMessage.TYPE_TEXT
+            if (isText) {
+                popup.menu.add(0, 7, 6, getString(R.string.menu_recall))
+                if (adapter.isMeAt(pos)) popup.menu.add(0, 8, 7, getString(R.string.menu_edit))
+            }
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     1 -> {
@@ -372,6 +475,8 @@ class MainActivity : AppCompatActivity() {
                     4 -> regenerateLast()
                     5 -> quickSaveBubbleStyle()
                     6 -> quickBindRoleStyle()
+                    7 -> recallTurn(pos, refill = false)
+                    8 -> recallTurn(pos, refill = true)
                 }
                 true
             }
@@ -382,6 +487,7 @@ class MainActivity : AppCompatActivity() {
     /** 语音状态光环：聆听时点亮 */
     private fun setHalo(on: Boolean) {
         if (!::micHalo.isInitialized) return
+        micHalo.visibility = if (on) View.VISIBLE else View.GONE
         val res = if (on) R.drawable.halo_ring_active else R.drawable.halo_ring
         micHalo.setBackgroundResource(res)
     }
@@ -578,7 +684,7 @@ class MainActivity : AppCompatActivity() {
         if (!::ivChatBackground.isInitialized) return
         ChatStyleStore.applyBackground(ivChatBackground)
         chatBgScrim.visibility = if (ChatStyleStore.hasBackground(this)) View.VISIBLE else View.GONE
-        ChatStyleStore.applyAvatar(ivHeaderAvatar)
+        ivHeaderAvatar?.let { ChatStyleStore.applyAvatar(it) }
         findViewById<View>(R.id.headerGlass)?.invalidate()
         findViewById<View>(R.id.bottomGlass)?.invalidate()
     }
@@ -894,11 +1000,12 @@ class MainActivity : AppCompatActivity() {
         }
         // 表情包能力：告诉模型可发 emoji 与图片表情包
         extra.append("\n")
-        extra.append("你可以自然地在聊天里使用 emoji 表情（如 😊👍😂）增添温度；")
-        extra.append("当情绪强烈、想逗主人开心时，你可以发一张图片表情包，")
-        extra.append("使用方式是在回复里写一个标记：[sticker:关键词]，")
-        extra.append("可用关键词有：" + StickerLibrary.stickerHint() + "。")
-        extra.append("注意：一条回复最多发一个表情包标记，不要解释这个标记。")
+        extra.append("你有自己的一整套表情，可以像人一样挑着用：")
+        extra.append(StickerLibrary.emojiRule())
+        extra.append(StickerLibrary.localStickerRule())
+        // 排版能力：告诉小沫可以用 Markdown 输出结构化内容（气泡里会真渲染，朗读时会自动剥符号）
+        extra.append("\n\n")
+        extra.append(LAYOUT_RULE)
         val baseExtra = extra.toString()
         if (appendUser) {
             adapter.add(ChatMessage("user", userText, isMe = true))
@@ -954,7 +1061,8 @@ class MainActivity : AppCompatActivity() {
             finalText = if (stickerUrl != null) {
                 if (textNoSticker.isNotBlank()) textNoSticker else "（发了一张表情包）"
             } else finalText
-            val sticker = stickerUrl
+            // 本地闲聊时按情绪决定要发的图片表情（云端已用 [sticker:] 标记时以云端为准）
+            val sticker = stickerUrl ?: llm.takeLocalSticker()
             val spokenRaw = rawText
             val spokenFinal = finalText
             if (prefs.mindEnabled && thought.isNotBlank()) {
@@ -1001,23 +1109,41 @@ class MainActivity : AppCompatActivity() {
      */
     private fun setupEmojiPanel() {
         val btnEmoji = findViewById<ImageButton>(R.id.btnEmoji)
-        val panel = findViewById<android.widget.HorizontalScrollView>(R.id.emojiPanel)
-        val row = findViewById<android.widget.LinearLayout>(R.id.emojiRow)
-        if (row.childCount == 0) {
-            val size = (44 * resources.displayMetrics.density).toInt()
-            StickerLibrary.emojiPanel.forEach { emo ->
+        val panel = findViewById<android.widget.ScrollView>(R.id.emojiPanel)
+        btnEmoji.setOnClickListener {
+            val show = panel.visibility != View.VISIBLE
+            // 面板有 1000 个 emoji，首次打开时才构建，避免拖慢启动。
+            if (show) buildEmojiPanel(panel)
+            panel.visibility = if (show) View.VISIBLE else View.GONE
+        }
+    }
+
+    /** 惰性构建表情面板：1000 个 emoji 分成多行，每行 8 个。 */
+    private fun buildEmojiPanel(panel: android.widget.ScrollView) {
+        val grid = panel.findViewById<android.widget.LinearLayout>(R.id.emojiRow) ?: return
+        if (grid.childCount > 0) return
+        val size = (40 * resources.displayMetrics.density).toInt()
+        val perRow = 8
+        val list = StickerLibrary.emojiPanel
+        var i = 0
+        while (i < list.size) {
+            val rowView = android.widget.LinearLayout(this)
+            rowView.orientation = android.widget.LinearLayout.HORIZONTAL
+            rowView.layoutParams = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT)
+            for (k in 0 until perRow) {
+                if (i >= list.size) break
+                val emo = list[i]; i++
                 val tv = TextView(this)
                 tv.text = emo
-                tv.textSize = 26f
+                tv.textSize = 24f
                 tv.gravity = android.view.Gravity.CENTER
-                val lp = android.widget.LinearLayout.LayoutParams(size, size)
-                tv.layoutParams = lp
+                tv.layoutParams = android.widget.LinearLayout.LayoutParams(0, size, 1f)
                 tv.setOnClickListener { sendEmoji(emo) }
-                row.addView(tv)
+                rowView.addView(tv)
             }
-        }
-        btnEmoji.setOnClickListener {
-            panel.visibility = if (panel.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+            grid.addView(rowView)
         }
     }
 
@@ -1025,7 +1151,7 @@ class MainActivity : AppCompatActivity() {
     private fun sendEmoji(emoji: String) {
         if (isSending) return
         // 统一交给 sendToLlm 添加消息，避免同一个 emoji 被加入两次。
-        findViewById<android.widget.HorizontalScrollView>(R.id.emojiPanel).visibility = View.GONE
+        findViewById<android.widget.ScrollView>(R.id.emojiPanel).visibility = View.GONE
         sendToLlm(emoji)
     }
 
@@ -1222,7 +1348,12 @@ class MainActivity : AppCompatActivity() {
         return t.trimStart()
     }
 
-    /** 流式只在段落或较长停顿处先开口，不在每个句号切开，避免语音一顿一顿。 */
+    /**
+     * 流式回复里什么时候先开口。
+     *
+     * 只在**换行**处切（即模型自己分了段），且积累够长才出声，
+     * 避免每个句子都触发一次合成，听起来断断续续。
+     */
     private fun takeCompletedSpeech(full: String): String? {
         val speakable = visibleSpeakable(full)
         if (streamSpokenUntil >= speakable.length) return null
@@ -1230,7 +1361,8 @@ class MainActivity : AppCompatActivity() {
         val cut = rest.indexOfFirst { ch -> ch.code == 10 }
         if (cut < 0) return null
         val chunk = rest.substring(0, cut + 1).trim()
-        if (chunk.length < 24) return null
+        // 门槛从 24 字提到 200 字：积累够一段再开口，不要一句一停。
+        if (chunk.length < 200) return null
         streamSpokenUntil += cut + 1
         return chunk
     }
@@ -1295,6 +1427,8 @@ class MainActivity : AppCompatActivity() {
     private fun switchToSession(id: String) {
         if (id.isBlank() || id == activeChatId) return
         persistHistory()
+        // 换对话时清掉面板状态记忆，避免不同对话之间串状态
+        MiniMarkdown.PanelMemory.clear()
         activeChatId = id
         prefs.activeChatId = id
         history.clear()
@@ -1414,10 +1548,95 @@ class MainActivity : AppCompatActivity() {
             is VoiceCommand.FindChat -> replyLocal(userText, findInHistory(command.query))
             VoiceCommand.DailyBrief -> speakDailyBrief(userText)
             is VoiceCommand.BubbleStyle -> handleBubbleStyle(userText, command)
+            is VoiceCommand.PanelTemplateCmd -> handlePanelTemplate(userText, command)
         }
     }
 
     /** 处理「改气泡形状/颜色/字号/宽度/预设」口令：落库 → 刷新列表 → 回话确认。 */
+    /** 面板模板：保存 / 套用 / 删除 / 列表 / 新建字段模板。 */
+    private fun handlePanelTemplate(userText: String, cmd: VoiceCommand.PanelTemplateCmd) {
+        // 列表
+        if (cmd.listAll) {
+            val list = panels.load()
+            val body = if (list.isEmpty()) "还没有存过面板模板哦，玩文字游戏时说「存面板 名字」就能存下来～"
+            else list.joinToString("\n") { t ->
+                val kind = if (t.isPreset) "字段模板" else "面板模板"
+                "「${t.name}」[$kind·${t.fields.size} 字段]"
+            }
+            replyLocal(userText, body)
+            return
+        }
+        // 删除
+        if (cmd.deleteName != null) {
+            val ok = panels.remove(cmd.deleteName)
+            replyLocal(
+                userText,
+                if (ok) "已经删掉面板模板「${cmd.deleteName}」啦。"
+                else "没找到叫「${cmd.deleteName}」的面板模板哦。"
+            )
+            return
+        }
+        // 新建字段模板
+        if (cmd.newPresetName != null) {
+            val fields = if (cmd.fields.isEmpty())
+                listOf("字段1", "字段2", "字段3") else cmd.fields
+            val tpl = PanelTemplate(
+                name = cmd.newPresetName,
+                fields = fields,
+                styleName = "",
+                title = "${cmd.newPresetName} 状态",
+                isPreset = true
+            )
+            panels.put(tpl)
+            replyLocal(
+                userText,
+                "字段模板「${cmd.newPresetName}」建好啦～字段：" +
+                        fields.joinToString("、") +
+                        "\n之后在面板第一行写 `preset:${cmd.newPresetName}` 就能套用。"
+            )
+            return
+        }
+        // 保存当前面板
+        if (cmd.saveName != null) {
+            if (!MiniMarkdown.PanelMemory.has()) {
+                replyLocal(userText, "现在还没有面板可以存哦，先让小沫弹个面板吧～")
+                return
+            }
+            val tpl = PanelTemplate(
+                name = cmd.saveName,
+                fields = MiniMarkdown.PanelMemory.fields,
+                styleName = MiniMarkdown.PanelMemory.styleName,
+                title = MiniMarkdown.PanelMemory.title,
+                isPreset = false
+            )
+            panels.put(tpl)
+            replyLocal(
+                userText,
+                "面板「${cmd.saveName}」存好啦～共 ${tpl.fields.size} 个字段。" +
+                        "\n以后说「套用面板 ${cmd.saveName}」就能用。"
+            )
+            return
+        }
+        // 套用模板
+        if (cmd.applyName != null) {
+            val tpl = panels.find(cmd.applyName)
+            if (tpl == null) {
+                replyLocal(userText, "没找到叫「${cmd.applyName}」的面板模板哦，先「存面板 ${cmd.applyName}」吧～")
+                return
+            }
+            val body = panels.toPanelBody(tpl)
+            val sb = StringBuilder()
+            val styleTag = if (tpl.styleName.isNotBlank()) ":${tpl.styleName}" else ""
+            sb.append("```panel$styleTag\n")
+            body.forEach { sb.append(it).append('\n') }
+            sb.append("```")
+            // 直接把面板当小沫的消息发出来
+            replyLocal(userText, sb.toString())
+            return
+        }
+        replyLocal(userText, "面板模板用法：存面板 名字 / 套用面板 名字 / 删除面板模板 名字 / 面板模板列表")
+    }
+
     private fun handleBubbleStyle(userText: String, command: VoiceCommand.BubbleStyle) {
         // 收藏夹：列表
         if (command.listFavorites) {
@@ -1684,6 +1903,40 @@ class MainActivity : AppCompatActivity() {
             arrayOf(Manifest.permission.POST_NOTIFICATIONS),
             REQ_NOTIFY
         )
+    }
+
+    /**
+     * 撤回这一轮：主人发的那条 + 紧邻的小沫回复，一起从对话里拿掉。
+     * 菜单里已有「删除这条」负责单条删除，所以撤回做成整轮回退，两者不重复。
+     * 只处理文字消息；小沫正在回复时先拦一下，避免流式回调写到一半被抽掉。
+     */
+    private fun recallTurn(pos: Int, refill: Boolean) {
+        val msg = adapter.messageAt(pos) ?: return
+        if (msg.type != ChatMessage.TYPE_TEXT) return
+        if (refill && !msg.isMe) {
+            Toast.makeText(this, R.string.toast_edit_only_me, Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (isSending) {
+            Toast.makeText(this, R.string.toast_busy_action, Toast.LENGTH_SHORT).show()
+            return
+        }
+        // 计算这一轮的结束下标：主人消息后面紧跟的小沫回复一并撤回
+        var endIndex = pos
+        if (msg.isMe && pos + 1 < history.size && !history[pos + 1].isMe) endIndex = pos + 1
+        // 从后往前删，避免下标位移
+        for (i in endIndex downTo pos) history.removeAt(i)
+        adapter.replaceAll(history)
+        persistHistory()
+        if (refill) {
+            editInput.setText(msg.content)
+            editInput.setSelection(editInput.text.length)
+            editInput.requestFocus()
+            Toast.makeText(this, R.string.toast_edit_loaded, Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, R.string.toast_recalled, Toast.LENGTH_SHORT).show()
+        }
+        refreshSendIcon()
     }
 
     private fun regenerateLast() {

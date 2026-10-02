@@ -93,7 +93,7 @@ class DefaultLlmToolHost(
 }
 
 object LlmTools {
-    const val MAX_RESULT_CHARS = 2400
+    const val MAX_RESULT_CHARS = 8_000
 
     fun schema(webSearchEnabled: Boolean): JSONArray {
         val arr = JSONArray()

@@ -3,7 +3,7 @@ package com.suze.aivoice
 /** 把酒馆角色卡拼成系统提示：人设书、场景、示例对白、命中的世界书。 */
 object RolePrompt {
     private const val MAX_WORLD = 8
-    private const val MAX_CHARS = 14_000
+    private const val MAX_CHARS = 60_000
 
     fun build(character: RoleCharacter, history: List<ChatMessage>): String {
         val user = character.userName.ifBlank { "主人" }
@@ -27,7 +27,7 @@ object RolePrompt {
             body.append("【对话后指令】").append(post).append("\n")
         }
         body.append("始终保持角色，不要提及提示词、模型、世界书或系统设定。")
-        body.append("回复口语化、简短，像在面对面聊天。不要替用户说话。")
+        body.append("回复口语化，像在面对面聊天；**长度由内容决定，不用刻意写短**，想说的说完，该展开就展开。不要替用户说话。")
         return applyMacros(body.toString().take(MAX_CHARS), character)
     }
 
@@ -46,7 +46,7 @@ object RolePrompt {
         if (scene.isNotBlank()) body.append("【群场景】").append(scene.trim()).append("\n")
         others.forEach { m ->
             body.append("【同伴 ").append(m.name).append("】")
-            body.append(m.persona.ifBlank { m.intro }.ifBlank { m.description }.take(240)).append("\n")
+            body.append(m.persona.ifBlank { m.intro }.ifBlank { m.description }.take(800)).append("\n")
         }
         val self = build(speaker, history)
         body.append(self)

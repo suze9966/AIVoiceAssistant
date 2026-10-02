@@ -5,9 +5,9 @@
         <item name="colorOnPrimary">@color/white</item>
         <item name="colorSecondary">@color/teal_200</item>
         <item name="android:statusBarColor" tools:targetApi="l">@color/gray_bg</item>
-        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
         <item name="android:navigationBarColor" tools:targetApi="l">@color/surface_soft</item>
-        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
         <item name="android:windowBackground">@drawable/glass_page_bg</item>
         <item name="android:windowDrawsSystemBarBackgrounds" tools:targetApi="l">true</item>
     </style>

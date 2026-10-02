@@ -29,6 +29,14 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
     /** 气泡样式是否用主人自定义（口令改过的）。默认走运行时自定义。 */
     var useCustomBubbleStyle: Boolean = true
 
+    /**
+     * 面板状态续接：小沫没弹面板时自动补「当前状态（续）」。
+     *
+     * 默认关闭 —— PanelMemory 是进程级单例，而本 Adapter 被主聊天 / 角色聊天 / 群聊共用，
+     * 默认开启会让不同聊天串状态。只有主聊天（MainActivity）显式打开。
+     */
+    var panelRecall: Boolean = false
+
     /** 角色专属样式提供器：返回非空时优先用该样式（角色聊天里按角色区分）。 */
     var styleProvider: (() -> BubbleStyleStore.Style?)? = null
 
@@ -49,6 +57,10 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
 
     class VH(view: View) : RecyclerView.ViewHolder(view) {
         val tvMsg: TextView = view.findViewById(R.id.tvMsg)
+        /** 待渲染的原始文本（等颜色确定后再渲染）。 */
+        var pendingRaw: String = ""
+        /** 是否纯 emoji（纯 emoji 不套 Markdown 排版）。 */
+        var pureEmoji: Boolean = false
         val tvSpeaker: TextView? = view.findViewById(R.id.tvSpeaker)
         val ivSticker: ImageView = view.findViewById(R.id.ivSticker)
         val ivAvatar: ImageView? = view.findViewById(R.id.ivAvatar)
@@ -90,10 +102,12 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
                 holder.tvMsg.visibility = View.VISIBLE
                 val style = if (useCustomBubbleStyle) currentStyle(holder.itemView.context) else null
                 val raw = msg.content
-                holder.tvMsg.text = if (style?.trimQuotes == true) trimWrappingQuotes(raw) else raw
+                // 富文本渲染放到本方法末尾（颜色确定之后），这里先记下原文
+                holder.pendingRaw = if (style?.trimQuotes == true) trimWrappingQuotes(raw) else raw
                 val pureEmoji = msg.type == ChatMessage.TYPE_EMOJI ||
                         ChatMessage.isPureEmoji(msg.content)
                 holder.tvMsg.textSize = if (pureEmoji) EMOJI_SIZE_SP else TEXT_SIZE_SP
+                holder.pureEmoji = pureEmoji
             }
         }
         // 气泡形状与颜色：主人用口令改过就按自定义画，否则保留原 drawable
@@ -135,6 +149,14 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
                 }
             }
         }
+        // 渲染富文本：**无论用不用自定义气泡都要渲染**，否则默认样式下小沫的排版出不来
+        if (msg.type != ChatMessage.TYPE_IMAGE) {
+            val col = resolveTextColor(holder, msg)
+            // 历史状态回填只对「最后一条」小沫消息生效，避免 RecyclerView 重绑历史消息时被污染
+            val isLast = position == items.size - 1
+            val recall = !msg.isMe && panelRecall && isLast
+            holder.tvMsg.text = renderRich(holder.pendingRaw, holder.pureEmoji, col, recall)
+        }
         holder.itemView.setOnLongClickListener {
             val pos = holder.bindingAdapterPosition
             if (pos != RecyclerView.NO_POSITION) onItemLongClick?.invoke(pos)
@@ -171,6 +193,37 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
     }
 
     /** 去掉文本首尾成对的引号（中英文双引号 / 单引号）。 */
+    /**
+     * 富文本渲染：
+     * - 纯 emoji 消息不套 Markdown（否则可能把 emoji 序列拆坏）
+     * - 渲染异常时回退纯文本，绝不让消息消失
+     */
+    /**
+     * 取当前气泡该用的正文色：
+     * - 自定义样式 → 用样式里的文字色
+     * - 默认样式 → 用布局里 TextView 已有的颜色（文字色 / 提示色）
+     */
+    private fun resolveTextColor(holder: VH, msg: ChatMessage): Int {
+        val ctx = holder.itemView.context
+        if (useCustomBubbleStyle) {
+            val style = currentStyle(ctx)
+            if (style != null && !style.isDefault) {
+                return BubbleStyleStore.textColorFor(msg.isMe, style)
+            }
+        }
+        val tv = holder.tvMsg
+        return if (tv.textColors != null) tv.textColors.defaultColor else tv.currentTextColor
+    }
+
+    private fun renderRich(raw: String, pureEmojiFlag: Boolean, color: Int, recallState: Boolean = false): CharSequence {
+        if (pureEmojiFlag || raw.isEmpty()) return raw
+        return try {
+            MiniMarkdown.render(raw, color, recallState)
+        } catch (e: Exception) {
+            raw
+        }
+    }
+
     private fun trimWrappingQuotes(text: String): String {
         if (text.length < 2) return text
         val pairs = listOf(

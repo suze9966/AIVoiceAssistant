@@ -198,9 +198,38 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
         emotionPitch = pitch.coerceIn(0.5f, 1.6f)
     }
 
+    /**
+     * 剥离 emoji 后再朗读：屏幕上保留表情，嘴里不念「微笑的表情」这种废话。
+     * 同时去掉 [sticker:xxx] 标记与变体选择符（U+FE0F）。
+     */
+    fun stripForSpeech(text: String): String {
+        val out = StringBuilder(text.length)
+        var i = 0
+        while (i < text.length) {
+            val cp = text.codePointAt(i)
+            val cc = Character.charCount(cp)
+            val skip = cp == 0xFE0F || cp == 0xFE0E || cp == 0x200D ||
+                    (cp in 0x1F000..0x1FAFF) ||
+                    (cp in 0x2600..0x27BF) ||
+                    (cp in 0x2B00..0x2BFF) ||
+                    (cp in 0x2190..0x21FF) ||
+                    (cp in 0x1F1E6..0x1F1FF)
+            if (!skip) out.appendCodePoint(cp)
+            i += cc
+        }
+        val cleaned = out.toString()
+            .replace(Regex("\\[\\s*sticker\\s*:[^\\]]{1,32}\\]", RegexOption.IGNORE_CASE), "")
+        // 剥掉 Markdown 标记：标题井号、加粗星号、行内代码反引号、表格竖线、分隔线、列表符号等
+        // 否则 TTS 会一字一句念出「星号星号」「反引号」这种噪音
+        return MiniMarkdown.stripForSpeech(cleaned)
+            .replace(Regex("[ \\t]{2,}"), " ")
+            .trim()
+    }
+
     fun speak(text: String, taiwan: Boolean = false) {
         if (text.isBlank()) return
-        val trimmed = text.trim()
+        val trimmed = stripForSpeech(text)
+        if (trimmed.isBlank()) return
         if (isSpeaking && currentText == trimmed && speakQueue.isEmpty()) return
         speakQueue.clear()
         sessionEngine = ""
@@ -215,7 +244,7 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
 
     fun enqueueSpeak(text: String, taiwan: Boolean = false) {
         if (text.isBlank()) return
-        val chunks = splitSpeakChunks(text.trim())
+        val chunks = splitSpeakChunks(stripForSpeech(text))
         if (chunks.isEmpty()) return
         if (!isSpeaking && speakQueue.isEmpty()) {
             speak(text, taiwan)
@@ -278,9 +307,16 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
     private fun canUseClone(): Boolean =
         prefs.siliconflowKey.isNotBlank() && prefs.cloneVoiceEnabled && prefs.cloneVoiceUri.startsWith("speech:")
 
+    /**
+     * 把长回复切成适合合成的片段。
+     *
+     * 主人要求「不限制小沫说话的字数」，所以这里的阈值放得很宽：
+     * - 一整段短于 600 字**完全不切**，一口气合成，避免句号处断掉；
+     * - 只有真的很长时才切，而且优先在换行/句末切，尽量少切。
+     */
     private fun splitSpeakChunks(text: String): List<String> {
         val t = text.trim()
-        if (t.length <= 220) return listOf(t)
+        if (t.length <= 600) return listOf(t)
         val out = ArrayList<String>()
         val buf = StringBuilder()
         fun flush() {
@@ -294,15 +330,15 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
             val hitEnd = ch == '。' || ch == '！' || ch == '？' || ch == '!' || ch == '?' || ch == '；'
             val hitComma = ch == '，' || ch == ',' || ch == '、'
             when {
-                hitBreak && buf.toString().trim().length >= 24 -> flush()
-                hitEnd && buf.length >= 180 -> flush()
-                hitComma && buf.length >= 240 -> flush()
-                buf.length >= 280 -> flush()
+                hitBreak && buf.toString().trim().length >= 400 -> flush()
+                hitEnd && buf.length >= 500 -> flush()
+                hitComma && buf.length >= 800 -> flush()
+                buf.length >= 1000 -> flush()
             }
         }
         flush()
         if (out.isEmpty()) return listOf(t)
-        if (out.size >= 2 && out[0].length < 24) {
+        if (out.size >= 2 && out[0].length < 120) {
             out[1] = out[0] + out[1]
             out.removeAt(0)
         }

@@ -27,6 +27,7 @@ class BackupStore(private val context: Context) {
                 putOne(zip, File(context.filesDir, "reminders.json"), "reminders.json")
                 putOne(zip, File(context.filesDir, "memory.json"), "memory.json")
                 putOne(zip, File(context.filesDir, "emotion_tree.json"), "emotion_tree.json")
+                putOne(zip, File(context.filesDir, "panel_templates.json"), "panel_templates.json")
                 zip.putNextEntry(ZipEntry("prefs-safe.json"))
                 zip.write(safePrefs().toString().toByteArray(Charsets.UTF_8))
                 zip.closeEntry()
@@ -61,6 +62,8 @@ class BackupStore(private val context: Context) {
                     }
                 }
             } ?: return false
+            // 导入后清掉各 Store 的内存缓存，避免读到的还是旧数据
+            PanelStore(context).invalidate()
             true
         } catch (_: Exception) { false }
     }

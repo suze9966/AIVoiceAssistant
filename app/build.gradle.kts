@@ -47,6 +47,10 @@ android {
     buildFeatures {
         viewBinding = true
     }
+    androidResources {
+        // 内置的 1000 张表情图不压缩，assets.open() 直接读取，更快也不占额外解压
+        noCompress.add("png")
+    }
 }
 
 dependencies {

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 微信输入框：浅灰白圆角，无描边 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#F2F2F2"/>
+    <corners android:radius="6dp"/>
+</shape>

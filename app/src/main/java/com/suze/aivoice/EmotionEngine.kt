@@ -289,7 +289,7 @@ class EmotionEngine(context: Context) {
             UserCue.PRAISE -> "主人在夸你。害羞地领情，别卖萌过头，别把好感度说出来。"
             UserCue.MISS -> "主人想你了。温柔接住，可以说也想他，但一句够了。"
             UserCue.LONELY -> "主人有点孤单。告诉他你在，邀请他慢慢说。"
-            UserCue.DISMISS -> "主人有点不想多说。回答短一点，给他退路，别追问。"
+            UserCue.DISMISS -> "主人有点不想多说。别追问，给他退路；想说就陪着，不想说也别硬聊。"
             UserCue.CURIOUS -> "主人在问。先回答，再决定要不要追一句。"
             UserCue.NONE -> "先听懂这句话的意思，再用你现在的心情回应。"
         }
@@ -297,7 +297,7 @@ class EmotionEngine(context: Context) {
             Mood.HAPPY -> "语气轻快一点，可以用感叹号和一个 emoji，不要句句堆。"
             Mood.CALM -> "语气平稳温和，句子中等长度。"
             Mood.CURIOUS -> "可以追一句，但一次只问一个问题。"
-            Mood.SHY -> "句子短一点，有点腼腆，可以用省略号。"
+            Mood.SHY -> "有点腼腆，可以用省略号，语气轻一点。"
             Mood.TIRED -> "语气懒懒的，句子短，少用感叹号。"
             Mood.SAD -> "语气轻、慢，不要贪嘴，不要讲笑话。"
             Mood.ANNOYED -> "可以傲娇一下，但一句就收，不要真生气。"

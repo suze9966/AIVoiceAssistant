@@ -78,6 +78,92 @@ class LocalChatEngine(private val prefs: Prefs) {
 
     private fun say(s: String): String = tw(s)
 
+    /**
+     * 本地闲聊也带上表情：按当前心情挑一个贴在句尾。
+     * 不是每句都贴——只有这句话本身带情绪（问句/陈述事实不贴），
+     * 且主人刚才没说难听话时才贴，避免显得没心没肺。
+     */
+    private fun moodSay(s: String): String {
+        val base = say(s)
+        if (!shouldEmoji(s)) return base
+        return base + StickerLibrary.moodsFor(currentMood()?.name)
+    }
+
+    /** 本轮回复要不要**额外**发一张图片表情（由 MainActivity 取走后发）。 */
+    var pendingSticker: String? = null
+        private set
+
+    /**
+     * 本地闲聊时，情绪够强才决定发一张图片表情。
+     *
+     * 「够强」的判定：这句话本身有情绪 + 确实值得用图表达 + 概率约 1/4，
+     * 避免每次聊天都甩图。具体触发场景：
+     * - 主人说累 / 难过 / 生气，小沫安慰时；
+     * - 主人夸奖 / 说想小沫，小沫害羞时；
+     * - 小沫自己心情很好（HAPPY）时；
+     * - 讲完笑话时。
+     */
+    private fun maybeSticker(cue: EmotionEngine.UserCue, line: String): String {
+        val strong = cue in setOf(
+            EmotionEngine.UserCue.TIRED, EmotionEngine.UserCue.SAD,
+            EmotionEngine.UserCue.ANGRY, EmotionEngine.UserCue.PRAISE,
+            EmotionEngine.UserCue.MISS, EmotionEngine.UserCue.HAPPY
+        ) || currentMood() == EmotionEngine.Mood.HAPPY
+        if (!strong) return line
+        // 问句 / 事实陈述不配图
+        if (!shouldEmoji(line)) return line
+        // 只偶尔发，别每次都甩图
+        if (Math.random() > 0.28) return line
+        val mood = when (cue) {
+            EmotionEngine.UserCue.TIRED -> "TIRED"
+            EmotionEngine.UserCue.SAD -> "SAD"
+            EmotionEngine.UserCue.ANGRY -> "ANNOYED"
+            EmotionEngine.UserCue.PRAISE, EmotionEngine.UserCue.MISS -> "SHY"
+            else -> currentMood()?.name ?: "HAPPY"
+        }
+        val s = StickerLibrary.localStickerFor(mood)
+        if (s.isBlank()) return line
+        pendingSticker = s
+        // 图片表情会单独占一条气泡，文字里的 emoji 就撤掉，
+        // 避免同一个情绪在一轮里表达两遍。
+        return stripTrailingEmoji(line)
+    }
+
+    /** 去掉句尾的 emoji（含变体选择符/零宽连接符/空格）。 */
+    private fun stripTrailingEmoji(s: String): String {
+        var end = s.length
+        while (end > 0) {
+            val cp = s.codePointBefore(end)
+            val isEmoji = (cp in 0x1F300..0x1FAFF) || (cp in 0x2600..0x27BF) ||
+                    (cp in 0x1F000..0x1F2FF) || (cp in 0x2B00..0x2BFF) ||
+                    cp == 0xFE0F || cp == 0x200D || cp == 0x20
+            if (!isEmoji) break
+            end -= Character.charCount(cp)
+        }
+        return s.substring(0, end).trimEnd()
+    }
+
+    /** 取走并清空这一轮待发的图片表情。 */
+    fun takePendingSticker(): String? {
+        val s = pendingSticker
+        pendingSticker = null
+        return s
+    }
+
+    /** 判断这句话适不适合贴表情：带情绪、不带问号、不是纯事实陈述。 */
+    private fun shouldEmoji(s: String): Boolean {
+        val t = s.trim()
+        if (t.isEmpty()) return false
+        // 问句不贴（等主人回答，别自作多情）
+        if (t.endsWith("？") || t.endsWith("?")) return false
+        // 纯报时/报日期不贴
+        if (t.contains("现在是 ") || t.contains("今天是 ")) return false
+        // 太短的口头应答（嗯嗯 / 好的 / 行）不贴，免得像硬凑。
+        // 这个阈值只影响「要不要贴表情」，不影响说话长度。
+        if (t.length <= 6) return false
+        return true
+    }
+
     private fun careByCue(cue: EmotionEngine.UserCue): String? = when (cue) {
         EmotionEngine.UserCue.TIRED -> pick(
             "辛苦了呀，先歇一会儿，我在的。",
@@ -216,7 +302,9 @@ class LocalChatEngine(private val prefs: Prefs) {
         )
     }
 
-    private fun continueChat(text: String, lastAssistant: String): String {
+    private fun continueChat(text: String, lastAssistant: String): String = moodSay(continueChatInner(text, lastAssistant))
+
+    private fun continueChatInner(text: String, lastAssistant: String): String {
         val t = text.trim()
         val prev = lastAssistant.replace('\n', ' ').trim()
         if (isShortAck(t) && prev.isNotBlank()) {
@@ -229,7 +317,7 @@ class LocalChatEngine(private val prefs: Prefs) {
         }
         val snippet = topicSnippet(t)
         if (snippet.isNotBlank()) {
-            return when (currentMood()) {
+            return moodSay(when (currentMood()) {
                 EmotionEngine.Mood.ANNOYED -> "「$snippet」啊…行，我听见了。"
                 EmotionEngine.Mood.SHY -> "你说的「$snippet」…我记下了。"
                 EmotionEngine.Mood.TIRED -> "「$snippet」我听着，不着急。"
@@ -248,7 +336,7 @@ class LocalChatEngine(private val prefs: Prefs) {
                 "刚才那句我记得，你说下去吧。"
             )
         }
-        return idleByMood()
+        return moodSay(idleByMood())
     }
 
     fun reply(history: List<ChatMessage>): String {
@@ -262,7 +350,16 @@ class LocalChatEngine(private val prefs: Prefs) {
 
     fun reply(input: String): String = replyTurn(input, "")
 
+    /**
+     * 对外统一出口：先跑原来的逻辑，再按情绪决定这一轮要不要配一张图片表情。
+     * 图片表情由 MainActivity 取走后单独发一条 TYPE_IMAGE 气泡。
+     */
     private fun replyTurn(input: String, lastAssistant: String): String {
+        val line = replyTurnInner(input, lastAssistant)
+        return maybeSticker(userCue(input), line)
+    }
+
+    private fun replyTurnInner(input: String, lastAssistant: String): String {
         turn++
         val text = input.trim()
         if (text.isEmpty()) {
@@ -297,11 +394,11 @@ class LocalChatEngine(private val prefs: Prefs) {
         }
 
         val cue = userCue(text)
-        careByCue(cue)?.let { return say(it) }
+        careByCue(cue)?.let { return moodSay(it) }
 
         if (matchAny(lower, "你好", "您好", "hi", "hello", "哈喽", "嗨")) {
             val name = lastName?.let { "，$it" } ?: "，主人"
-            return say(greetByMood(name))
+            return moodSay(greetByMood(name))
         }
         if (matchAny(lower, "早上好", "早安", "morning")) {
             return say(
@@ -389,7 +486,7 @@ class LocalChatEngine(private val prefs: Prefs) {
             )
         }
 
-        return say(continueChat(text, lastAssistant))
+        return say(continueChatInner(text, lastAssistant))
     }
 
     private fun matchAny(text: String, vararg keys: String): Boolean =
