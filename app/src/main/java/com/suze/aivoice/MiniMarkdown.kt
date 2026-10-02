@@ -289,29 +289,29 @@ object MiniMarkdown {
     private const val BAR_CELLS = 14
 
     /** 面板行的「键 = 值」分隔符。 */
-    private val PANEL_SEP = Regex("\s*[=:：]\s*")
+    private val PANEL_SEP = Regex("\\s*[=:：]\\s*")
 
     /** 请求渐变条：`60/100 ~渐变`。 */
-    private val TAG_GRADIENT = Regex("(?:~|～)\s*(?:渐变|gradient)?", RegexOption.IGNORE_CASE)
+    private val TAG_GRADIENT = Regex("(?:~|～)\\s*(?:渐变|gradient)?", RegexOption.IGNORE_CASE)
 
     /** 请求迷你条：`62/100 mini`。 */
     private val TAG_MINI = Regex("(?:mini|迷你|短条)", RegexOption.IGNORE_CASE)
 
     /** 自定义阈值配色：`80/100 #FF5722#43A047`（低色#高色）。 */
-    private val TAG_THRESH = Regex("#([0-9A-Fa-f]{6})\s*#([0-9A-Fa-f]{6})")
+    private val TAG_THRESH = Regex("#([0-9A-Fa-f]{6})\\s*#([0-9A-Fa-f]{6})")
 
     /** 字段副说明：`攻击 42 | 双手大剑`。 */
-    private val PANEL_NOTE_SEP = Regex("\s*[|｜]\s*")
+    private val PANEL_NOTE_SEP = Regex("\\s*[|｜]\\s*")
 
     /** 迷你条格数。 */
     private const val BAR_CELLS_MINI = 8
 
 
     /** 进度条数值形态：`当前/最大`。 */
-    private val BAR_VALUE = Regex("^(\d+)\s*/\s*(\d+)$")
+    private val BAR_VALUE = Regex("^(\\d+)\\s*/\\s*(\\d+)$")
 
     /** 百分比形态：`80%`。 */
-    private val PERCENT_VALUE = Regex("^(\d+)\s*%$")
+    private val PERCENT_VALUE = Regex("^(\\d+)\\s*%$")
 
     /** 外部模板解析器：由 App 注入（PanelStore），把「模板名」换成字段行。 */
     var externalTemplateResolver: ((String) -> List<String>?)? = null

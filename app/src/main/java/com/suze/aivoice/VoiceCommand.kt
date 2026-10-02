@@ -139,7 +139,7 @@ object VoiceCommandParser {
             val fIdx = maxOf(text.indexOf("字段："), text.indexOf("字段:"))
             if (fIdx >= 0) {
                 val raw = text.substring(fIdx + 3)
-                fields = raw.split(Regex("[,\s，、；;]+"))
+                fields = raw.split(Regex("[,\\s，、；;]+"))
                     .map { it.trim() }
                     .filter { it.isNotBlank() && it.length <= 12 }
             }

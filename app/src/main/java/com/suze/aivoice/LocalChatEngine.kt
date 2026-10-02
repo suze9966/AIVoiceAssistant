@@ -327,7 +327,7 @@ class LocalChatEngine(private val prefs: Prefs) {
                     "「$snippet」这事我记下了。",
                     "嗯，关于「$snippet」，我陪你聊。"
                 )
-            }
+            })
         }
         if (prev.isNotBlank()) {
             return pick(

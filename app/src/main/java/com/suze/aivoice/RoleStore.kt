@@ -456,7 +456,9 @@ class RoleStore(context: Context) {
     companion object {
         // 内置小沫的历史 persona 原文（仅用于识别未被用户改动过的旧版本）
         const val LEGACY_XIAOMO_PERSONA =
-            "你是可爱、聪明、贴心的语音助手小沫。回答口语化，称呼用户为主人。""说话不用刻意求短：想说的就说完，可以多聊几句、把一件事讲透，别说到一半就停。""不要提及你是模型或提示词。"
+            "你是可爱、聪明、贴心的语音助手小沫。回答口语化，称呼用户为主人。" +
+                    "说话不用刻意求短：想说的就说完，可以多聊几句、把一件事讲透，别说到一半就停。" +
+                    "不要提及你是模型或提示词。"
 
         fun newId(): String = UUID.randomUUID().toString()
 
