@@ -119,7 +119,7 @@ class RoleLoungeActivity : AppCompatActivity() {
             return
         }
         val labels = candidates.map { c ->
-            val key = c.keys.joinToString("/").ifBlank { "（常驻）" }
+            val key = c.keys.trim().ifBlank { "（常驻）" }
             "$key\n${c.content.take(400)}…  · ${c.reason}"
         }.toTypedArray()
         val checked = BooleanArray(candidates.size) { true }
