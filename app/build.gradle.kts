@@ -15,22 +15,34 @@ android {
         versionName = "1.1"
     }
 
+    val keystorePropsFile = rootProject.file("keystore.properties")
+    val keystoreProps = java.util.Properties()
+    if (keystorePropsFile.exists()) {
+        keystorePropsFile.inputStream().use { keystoreProps.load(it) }
+    }
+
     signingConfigs {
-        create("xiaomo") {
-            storeFile = file("xiaomo-debug.jks")
-            storePassword = "xiaomo9966"
-            keyAlias = "xiaomo"
-            keyPassword = "xiaomo9966"
+        if (keystorePropsFile.exists()) {
+            create("xiaomo") {
+                storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
         }
     }
 
     buildTypes {
         debug {
-            signingConfig = signingConfigs.getByName("xiaomo")
+            if (signingConfigs.findByName("xiaomo") != null) {
+                signingConfig = signingConfigs.getByName("xiaomo")
+            }
         }
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("xiaomo")
+            if (signingConfigs.findByName("xiaomo") != null) {
+                signingConfig = signingConfigs.getByName("xiaomo")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
