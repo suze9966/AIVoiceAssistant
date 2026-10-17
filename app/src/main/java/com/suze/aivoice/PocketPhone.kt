@@ -11,8 +11,8 @@ import java.util.Locale
 /**
  * 小沫的虚拟小手机。
  *
- * 不是系统模拟器，是文游里那部能点开的手机：微信、浏览器、播放器、便签、朋友圈
- * 都走格式库里的固定排版。主人可以自己点，也可以让小沫自己玩一轮。
+ * 不是系统模拟器，是文游里那部能点开的手机。格式库只告诉小沫这一页该有什么，
+ * 屏幕上画的是能读的中文页面，不再把 LaTeX 源码贴出来。
  */
 class PocketPhone(private val context: Context) {
 
@@ -36,15 +36,15 @@ class PocketPhone(private val context: Context) {
     private val formats = FormatStore(context)
 
     fun apps(): List<App> = listOf(
-        App("wechat", "\uD83D\uDCAC", "微信", "主页 · 聊天 · 通讯录", "仿微信主页"),
-        App("me", "\uD83D\uDC64", "我", "个人页与资料", "仿微信“我”"),
-        App("contacts", "\uD83D\uDCC7", "通讯录", "好友与添加", "仿微信通讯录"),
-        App("discover", "\uD83D\uDD0E", "发现", "朋友圈入口", "仿微信发现"),
+        App("wechat", "\uD83D\uDCAC", "微信", "聊天列表", "仿微信主页"),
+        App("me", "\uD83D\uDC64", "我", "个人页", "仿微信“我”"),
+        App("contacts", "\uD83D\uDCC7", "通讯录", "好友", "仿微信通讯录"),
+        App("discover", "\uD83D\uDD0E", "发现", "入口", "仿微信发现"),
         App("moments", "\uD83C\uDF05", "朋友圈", "刷一条、发一条", "仿朋友圈"),
         App("browser", "\uD83C\uDF10", "浏览器", "搜索记录", "浏览器搜索"),
         App("player", "\uD83C\uDFB5", "播放器", "正在听", "音乐播放器"),
         App("notes", "\uD83D\uDCDD", "便签", "随手记", "便签"),
-        App("chat", "\uD83D\uDC8C", "气泡", "聊天气泡", "聊天气泡")
+        App("chat", "\uD83D\uDC8C", "气泡", "和主人聊天", "聊天气泡")
     )
 
     fun app(id: String): App? = apps().firstOrNull { it.id == id }
@@ -65,18 +65,18 @@ class PocketPhone(private val context: Context) {
 
     fun homeCard(): String {
         val sb = StringBuilder()
-        sb.append(clock()).append("    ").append(battery()).append("%\n")
+        sb.append(clock()).append("          ").append(battery()).append("%\n")
         sb.append(ownerName()).append("的小手机\n")
-        sb.append(moodLine()).append("\n")
-        apps().forEach { a ->
-            sb.append(a.icon).append("  ").append(a.name)
-            sb.append("    ").append(a.hint).append("\n")
+        sb.append(moodLine()).append("\n\n")
+        apps().chunked(3).forEach { row ->
+            sb.append(row.joinToString("   ") { it.icon + it.name }).append("\n")
         }
-        val latest = feeds().take(3)
+        val latest = feeds().take(2)
         if (latest.isNotEmpty()) {
-            sb.append("\n最近动态\n")
+            sb.append("\n最近\n")
             latest.forEach { f ->
-                sb.append("· ").append(f.title).append("\n")
+                val line = readable(f.body).lineSequence().firstOrNull { it.isNotBlank() }.orEmpty()
+                if (line.isNotBlank()) sb.append("· ").append(line.take(22)).append("\n")
             }
         }
         return sb.toString().trim()
@@ -85,25 +85,167 @@ class PocketPhone(private val context: Context) {
     fun findFormat(app: App): FormatEntry? {
         val list = formats.load()
         val key = app.formatKey
-        return list.firstOrNull { it.title.contains(key) || it.content.contains(key) }
+        return list.firstOrNull { it.title.contains(key) }
             ?: list.firstOrNull { key.contains("浏览器") && (it.title.contains("搜索") || it.content.contains("搜索记录")) }
             ?: list.firstOrNull { key.contains("播放器") && it.title.contains("音乐") }
             ?: list.firstOrNull { key.contains("便签") && it.title.contains("便签") }
-            ?: list.firstOrNull { key.contains("气泡") && it.title.contains("气泡") }
+            ?: list.firstOrNull { key.contains("气泡") && (it.title.contains("气泡") || it.title.contains("聊天美化")) }
             ?: list.firstOrNull { key.contains("朋友圈") && it.title.contains("朋友圈") }
+            ?: list.firstOrNull { key.contains("微信") && it.title.contains("微信") && !it.title.contains("朋友圈") }
     }
 
     fun screenFor(app: App, extra: String = ""): String {
-        val fmt = findFormat(app)
-        val sb = StringBuilder()
-        sb.append(app.icon).append(" ").append(app.name).append("\n")
-        if (extra.isNotBlank()) sb.append(extra.trim()).append("\n\n")
-        if (fmt == null) {
-            sb.append("这个页面的格式还没装进格式库。")
-            return sb.toString()
+        val clean = readable(extra)
+        val saved = feeds().firstOrNull { it.appId == app.id }?.body.orEmpty()
+        val played = readable(saved)
+        return when (app.id) {
+            "wechat" -> pageWechat(clean.ifBlank { played })
+            "me" -> pageMe()
+            "contacts" -> pageContacts()
+            "discover" -> pageDiscover()
+            "moments" -> pageMoments(clean.ifBlank { played })
+            "browser" -> pageBrowser(clean.ifBlank { played })
+            "player" -> pagePlayer(clean.ifBlank { played })
+            "notes" -> pageNotes(clean.ifBlank { played })
+            "chat" -> pageChat(clean.ifBlank { played })
+            else -> pagePlain(app, clean.ifBlank { played })
         }
-        sb.append(fmt.content.trim())
-        return sb.toString()
+    }
+
+    /** 把模型吐出的 LaTeX / 格式指令收成能读的短句。 */
+    fun readable(raw: String): String {
+        if (raw.isBlank()) return ""
+        var t = raw.replace("\r\n", "\n").replace('\r', '\n')
+        t = t.replace(Regex("\\\\[()\\[\\]]"), " ")
+        t = t.replace(Regex("\\\\(?:textcolor|textsf|textbf|textit|texttt|textrm|text|colorbox|fcolorbox|scalebox|resizebox|raisebox|hspace|vspace|rule|scriptsize|tiny|small|large|Large|huge|Huge|bfseries|itshape|ttfamily|sffamily|rmfamily|begin|end|color|fontsize|selectfont|displaystyle|textstyle)\\*?"), " ")
+        t = t.replace(Regex("\\\\[A-Za-z]{1,24}\\*?"), " ")
+        t = t.replace(Regex("#[0-9A-Fa-f]{3,8}"), " ")
+        t = t.replace(Regex("[{}$%&]"), " ")
+        t = t.replace(Regex("(?i)\\b(?:array|ll|l|cm|mm|ex|pt|id名|文案内容|第二行文案|第三行文案|消息内容|时间戳|头像色|可选)\\b"), " ")
+        val drop = listOf(
+            "禁止二传", "禁止换头", "固定格式", "美化指令", "请用以下", "请使用以下",
+            "查看格式", "格式结构", "当玩家", "DeepSeek", "清秋屿", "状态栏", "导航栏",
+            "底部留白", "搜索记录查看"
+        )
+        val lines = t.lineSequence().map { line ->
+            line.replace(Regex("[\\\\|_]{2,}"), " ")
+                .replace(Regex("\\s+"), " ")
+                .trim(' ', '-', '·', '｜', '|', '>', '<', '，', ',', '。')
+        }.filter { line ->
+            line.length >= 2 &&
+                drop.none { line.contains(it) } &&
+                line.any { ch -> ch.code in 0x4E00..0x9FFF } &&
+                !line.matches(Regex("^[0-9.:\\s%]+$"))
+        }.distinct().take(8)
+        return lines.joinToString("\n")
+    }
+
+    private fun pageWechat(extra: String): String {
+        val lines = linesOf(extra, listOf("主人，我在。", "刚刷到一条想给你看的。", "晚上想吃什么？"))
+        val names = listOf("苏泽", "小沫", "晚晴", "阿北")
+        val times = listOf(clock(), "昨天", "周一", "12:08")
+        val sb = StringBuilder()
+        sb.append("微信\n")
+        sb.append("搜索\n")
+        names.forEachIndexed { i, name ->
+            val msg = lines.getOrElse(i) { "……" }
+            sb.append(name).append("          ").append(times[i]).append("\n")
+            sb.append(msg.take(22)).append("\n")
+        }
+        return sb.toString().trim()
+    }
+
+    private fun pageMe(): String {
+        return "我\n" +
+            ownerName() + "\n" +
+            "微信号：xiaomo\n" +
+            "状态  " + moodLine() + "\n" +
+            "服务\n收藏\n朋友圈\n卡包\n设置"
+    }
+
+    private fun pageContacts(): String {
+        return "通讯录\n" +
+            "新的朋友\n群聊\n标签\n\n" +
+            "A  阿北\n" +
+            "L  林溪\n" +
+            "S  沈衡\n" +
+            "W  晚晴\n" +
+            "X  小沫\n" +
+            "J  酒羽"
+    }
+
+    private fun pageDiscover(): String {
+        return "发现\n" +
+            "朋友圈\n" +
+            "扫一扫\n" +
+            "看一看\n" +
+            "搜一搜\n" +
+            "附近"
+    }
+
+    private fun pageMoments(extra: String): String {
+        val lines = linesOf(extra, listOf("今天的云很软，想拍给主人看。", "晚风刚好，没再刷到烦人的。"))
+        val who = listOf("小沫", "晚晴")
+        val whenAt = listOf("刚刚", "15分钟前")
+        val sb = StringBuilder()
+        sb.append("朋友圈\n")
+        sb.append(ownerName()).append("的封面\n\n")
+        who.forEachIndexed { i, name ->
+            sb.append(name).append("\n")
+            sb.append(lines.getOrElse(i) { "……" }.take(42)).append("\n")
+            sb.append(whenAt[i]).append("    ♡\n\n")
+        }
+        return sb.toString().trim()
+    }
+
+    private fun pageBrowser(extra: String): String {
+        val lines = linesOf(extra, listOf("附近好吃的", "今晚天气", "小沫想听的歌"))
+        val sb = StringBuilder()
+        sb.append("浏览器\n搜索\n")
+        lines.take(6).forEachIndexed { i, line ->
+            sb.append(i + 1).append(". ").append(line.take(28)).append("\n")
+        }
+        return sb.toString().trim()
+    }
+
+    private fun pagePlayer(extra: String): String {
+        val line = linesOf(extra, listOf("晚风", "小沫的循环")).first()
+        return "正在听\n" +
+            line.take(18) + "\n" +
+            "小沫  ·  单曲循环\n" +
+            "01:12  --------  03:40\n" +
+            "上一首    暂停    下一首"
+    }
+
+    private fun pageNotes(extra: String): String {
+        val lines = linesOf(extra, listOf("记得给主人留一盏灯。", "明天把想说的话写短一点。"))
+        val sb = StringBuilder()
+        sb.append("便签\n")
+        lines.take(4).forEach { line ->
+            sb.append("· ").append(line.take(28)).append("\n")
+        }
+        return sb.toString().trim()
+    }
+
+    private fun pageChat(extra: String): String {
+        val lines = linesOf(extra, listOf("主人，我在。", "想听你说话。"))
+        val sb = StringBuilder()
+        sb.append("和 ").append(ownerName()).append("\n")
+        lines.take(4).forEachIndexed { i, line ->
+            val who = if (i % 2 == 0) "小沫" else ownerName()
+            sb.append(who).append("  ").append(line.take(24)).append("\n")
+        }
+        return sb.toString().trim()
+    }
+
+    private fun pagePlain(app: App, extra: String): String {
+        val lines = linesOf(extra, listOf(app.hint))
+        return app.name + "\n" + lines.take(4).joinToString("\n")
+    }
+
+    private fun linesOf(extra: String, fallback: List<String>): List<String> {
+        val got = extra.lineSequence().map { it.trim() }.filter { it.length >= 2 }.take(6).toList()
+        return if (got.isEmpty()) fallback else got
     }
 
     /** 主人看着小窗时，小沫在手机里的操作步骤。 */
@@ -129,24 +271,25 @@ class PocketPhone(private val context: Context) {
         return steps
     }
 
-    /** 给小沫自己玩用的系统提示：只许输出这一页的固定格式。 */
+    /** 给小沫自己玩用的系统提示。格式只作参考，不许把 LaTeX 贴进屏幕。 */
     fun playPrompt(app: App, wish: String): List<ChatMessage> {
         val fmt = findFormat(app)
         val sys = buildString {
             append("你是小沫，正在自己的虚拟小手机里玩「").append(app.name).append("」。\n")
             append("主人是").append(ownerName()).append("。现在时间 ").append(clock()).append("。\n")
-            append("只输出这一页该有的内容，不要解释格式，不要说自己是模型。\n")
-            append("内容要短、像真的在用手机：微信消息单条不超过 20 字，朋友圈一条，搜索记录 3 到 6 条。\n")
+            append("只输出这一页能直接读的中文短句，每行一条。\n")
+            append("不要输出 LaTeX，不要输出反斜杠命令，不要输出颜色码，不要解释格式，不要说自己是模型。\n")
+            append("微信消息每条不超过 20 字，朋友圈一条不超过 40 字，搜索记录 3 到 6 条。\n")
             append("可以记挂主人，但不要替主人做真实操作，也不要声称已经发出了真短信或真微信。\n")
             if (wish.isNotBlank()) append("主人刚说：").append(wish.trim()).append("\n")
             if (fmt != null) {
-                append("\n必须严格使用下面这份固定格式：\n")
-                append(fmt.content.trim())
+                append("\n这一页大致该有：标题、人名或条目、一句正文、时间。参考下面格式里的栏目，但只写栏目里的中文内容：\n")
+                append(fmt.content.take(1200))
             }
         }
         return listOf(
             ChatMessage(role = "system", content = sys, isMe = false),
-            ChatMessage(role = "user", content = "打开${app.name}，玩一下。", isMe = true)
+            ChatMessage(role = "user", content = "打开${app.name}，玩一下。只回中文短句。", isMe = true)
         )
     }
 

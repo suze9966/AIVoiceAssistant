@@ -1,5 +1,8 @@
 package com.suze.aivoice
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ValueAnimator
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.graphics.Typeface
@@ -12,6 +15,8 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.view.animation.DecelerateInterpolator
+import android.view.animation.OvershootInterpolator
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -21,6 +26,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 /** 小沫的虚拟小手机。默认就是可拖、可缩放的小窗，也能钉到其他应用上层。 */
 class PocketPhoneActivity : AppCompatActivity() {
@@ -34,6 +40,7 @@ class PocketPhoneActivity : AppCompatActivity() {
     private lateinit var dock: LinearLayout
     private lateinit var ops: TextView
     private lateinit var pinBtn: TextView
+    private lateinit var card: View
     private var current: PocketPhone.App? = null
     private var playing = false
     private var overlay = false
@@ -43,14 +50,20 @@ class PocketPhoneActivity : AppCompatActivity() {
     private var dragY = 0
     private var startX = 0f
     private var startY = 0f
-    private var sizeW = 0
-    private var sizeH = 0
+    private var baseW = 0
+    private var baseH = 0
+    private var pinchScale = 1f
+    private var resizing = false
+    private var closing = false
+    private var moveAnimator: ValueAnimator? = null
+    private var sizeAnimator: ValueAnimator? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_pocket)
         phone = PocketPhone(this)
         llm = LlmClient(Prefs(this))
+        card = findViewById(R.id.pocketRoot)
         screen = findViewById(R.id.tvPocketScreen)
         status = findViewById(R.id.tvPocketStatus)
         title = findViewById(R.id.tvPocketTitle)
@@ -64,7 +77,7 @@ class PocketPhoneActivity : AppCompatActivity() {
             } else if (current != null) {
                 showHome()
             } else {
-                finish()
+                closeWithAnim()
             }
         }
         findViewById<TextView>(R.id.btnPocketPlay).setOnClickListener {
@@ -83,6 +96,7 @@ class PocketPhoneActivity : AppCompatActivity() {
         }
         buildDock()
         showHome()
+        playEnter()
     }
 
     private fun buildDock() {
@@ -105,6 +119,8 @@ class PocketPhoneActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        moveAnimator?.cancel()
+        sizeAnimator?.cancel()
         removeOverlay()
         super.onDestroy()
     }
@@ -132,10 +148,14 @@ class PocketPhoneActivity : AppCompatActivity() {
         val lp = currentLp() ?: return false
         when (ev.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                moveAnimator?.cancel()
                 dragX = lp.x
                 dragY = lp.y
                 startX = ev.rawX
                 startY = ev.rawY
+                card.animate().cancel()
+                card.scaleX = 0.985f
+                card.scaleY = 0.985f
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
@@ -144,39 +164,137 @@ class PocketPhoneActivity : AppCompatActivity() {
                 applyLayout(lp)
                 return true
             }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> return false
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                card.animate().scaleX(1f).scaleY(1f).setDuration(180)
+                    .setInterpolator(OvershootInterpolator(1.4f)).start()
+                snapToEdge()
+                return true
+            }
         }
         return false
     }
 
     private fun resizeWindow(ev: MotionEvent): Boolean {
-        val lp = currentLp() ?: return false
+        val lp = currentLp() ?: return true
         when (ev.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                sizeW = if (lp.width > 0) lp.width else window.decorView.width
-                sizeH = if (lp.height > 0) lp.height else window.decorView.height
+                sizeAnimator?.cancel()
+                card.animate().cancel()
+                baseW = if (lp.width > 0) lp.width else card.width
+                baseH = if (lp.height > 0) lp.height else card.height
                 startX = ev.rawX
                 startY = ev.rawY
+                pinchScale = 1f
+                resizing = true
+                card.pivotX = card.width / 2f
+                card.pivotY = card.height * 0.42f
             }
             MotionEvent.ACTION_MOVE -> {
+                if (!resizing || baseW <= 0 || baseH <= 0) return true
                 val dm = resources.displayMetrics
-                lp.width = (sizeW + (ev.rawX - startX).toInt()).coerceIn(minW(), dm.widthPixels)
-                lp.height = (sizeH + (ev.rawY - startY).toInt()).coerceIn(minH(), dm.heightPixels)
-                applyLayout(lp)
+                val wantW = (baseW + (ev.rawX - startX)).coerceIn(minW().toFloat(), dm.widthPixels.toFloat())
+                val wantH = (baseH + (ev.rawY - startY)).coerceIn(minH().toFloat(), dm.heightPixels.toFloat())
+                val sx = wantW / baseW
+                val sy = wantH / baseH
+                pinchScale = ((sx + sy) / 2f).coerceIn(0.72f, 1.45f)
+                card.scaleX = pinchScale
+                card.scaleY = pinchScale
             }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> finishResize(lp)
         }
         return true
     }
 
+    private fun finishResize(lp: WindowManager.LayoutParams) {
+        if (!resizing) return
+        resizing = false
+        val dm = resources.displayMetrics
+        val from = pinchScale.coerceIn(0.72f, 1.45f)
+        val targetW = (baseW * from).roundToInt().coerceIn(minW(), dm.widthPixels)
+        val targetH = (baseH * from).roundToInt().coerceIn(minH(), dm.heightPixels)
+        lp.width = targetW
+        lp.height = targetH
+        card.animate().cancel()
+        card.scaleX = 1f
+        card.scaleY = 1f
+        applyLayout(lp)
+        card.scaleX = 0.985f
+        card.scaleY = 0.985f
+        card.animate().scaleX(1f).scaleY(1f).setDuration(180)
+            .setInterpolator(OvershootInterpolator(1.35f)).start()
+        pinchScale = 1f
+    }
+
     private fun scaleBy(factor: Float) {
+        if (resizing) return
         val lp = currentLp() ?: return
         val dm = resources.displayMetrics
-        val w = if (lp.width > 0) lp.width else window.decorView.width
-        val h = if (lp.height > 0) lp.height else window.decorView.height
-        lp.width = (w * factor).toInt().coerceIn(minW(), dm.widthPixels)
-        lp.height = (h * factor).toInt().coerceIn(minH(), dm.heightPixels)
-        applyLayout(lp)
+        val w = if (lp.width > 0) lp.width else card.width
+        val h = if (lp.height > 0) lp.height else card.height
+        if (w <= 0 || h <= 0) return
+        val targetW = (w * factor).roundToInt().coerceIn(minW(), dm.widthPixels)
+        val targetH = (h * factor).roundToInt().coerceIn(minH(), dm.heightPixels)
+        card.pivotX = card.width / 2f
+        card.pivotY = card.height * 0.42f
+        card.animate().cancel()
+        card.scaleX = (targetW.toFloat() / w).coerceIn(0.88f, 1.12f)
+        card.scaleY = (targetH.toFloat() / h).coerceIn(0.88f, 1.12f)
+        card.animate().scaleX(1f).scaleY(1f).setDuration(220)
+            .setInterpolator(OvershootInterpolator(1.15f)).start()
+        animateSize(w, h, targetW, targetH)
     }
+
+    private fun animateSize(fromW: Int, fromH: Int, toW: Int, toH: Int) {
+        val lp = currentLp() ?: return
+        sizeAnimator?.cancel()
+        if (fromW == toW && fromH == toH) {
+            lp.width = toW
+            lp.height = toH
+            applyLayout(lp)
+            return
+        }
+        sizeAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 260
+            interpolator = DecelerateInterpolator(1.6f)
+            addUpdateListener { anim ->
+                val t = anim.animatedValue as Float
+                val cur = currentLp() ?: return@addUpdateListener
+                cur.width = (fromW + (toW - fromW) * t).roundToInt()
+                cur.height = (fromH + (toH - fromH) * t).roundToInt()
+                applyLayout(cur)
+            }
+            start()
+        }
+    }
+
+    private fun snapToEdge() {
+        val lp = currentLp() ?: return
+        val dm = resources.displayMetrics
+        val w = if (lp.width > 0) lp.width else card.width
+        val h = if (lp.height > 0) lp.height else card.height
+        val maxX = (dm.widthPixels - w).coerceAtLeast(0)
+        val maxY = (dm.heightPixels - h - statusReserve()).coerceAtLeast(0)
+        val targetX = lp.x.coerceIn(0, maxX)
+        val targetY = lp.y.coerceIn(0, maxY)
+        if (targetX == lp.x && targetY == lp.y) return
+        val fromX = lp.x
+        val fromY = lp.y
+        moveAnimator?.cancel()
+        moveAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 220
+            interpolator = DecelerateInterpolator(1.8f)
+            addUpdateListener { anim ->
+                val t = anim.animatedValue as Float
+                val cur = currentLp() ?: return@addUpdateListener
+                cur.x = (fromX + (targetX - fromX) * t).roundToInt()
+                cur.y = (fromY + (targetY - fromY) * t).roundToInt()
+                applyLayout(cur)
+            }
+            start()
+        }
+    }
+
+    private fun statusReserve(): Int = (28 * resources.displayMetrics.density).roundToInt()
 
     private fun minW(): Int = (resources.displayMetrics.widthPixels * 0.42f).toInt()
 
@@ -188,6 +306,31 @@ class PocketPhoneActivity : AppCompatActivity() {
         } else {
             window.attributes = lp
         }
+    }
+
+    private fun playEnter() {
+        card.pivotX = resources.displayMetrics.widthPixels * 0.43f
+        card.pivotY = resources.displayMetrics.heightPixels * 0.26f
+        card.scaleX = 0.86f
+        card.scaleY = 0.86f
+        card.alpha = 0.55f
+        card.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(280)
+            .setInterpolator(OvershootInterpolator(1.05f)).start()
+    }
+
+    private fun closeWithAnim() {
+        if (closing) return
+        closing = true
+        card.animate().cancel()
+        card.pivotX = card.width / 2f
+        card.pivotY = card.height * 0.42f
+        card.animate().scaleX(0.82f).scaleY(0.82f).alpha(0f).setDuration(160)
+            .setInterpolator(DecelerateInterpolator())
+            .setListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    finish()
+                }
+            }).start()
     }
 
     private fun pinOverlay() {
@@ -224,7 +367,13 @@ class PocketPhoneActivity : AppCompatActivity() {
         lp.gravity = Gravity.TOP or Gravity.START
         lp.x = window.attributes.x
         lp.y = window.attributes.y
+        root.scaleX = 0.92f
+        root.scaleY = 0.92f
+        root.alpha = 0.7f
         runCatching { wm().addView(root, lp) }.onFailure {
+            root.scaleX = 1f
+            root.scaleY = 1f
+            root.alpha = 1f
             (findViewById<View>(android.R.id.content) as? ViewGroup)?.addView(root)
             Toast.makeText(this, R.string.pocket_need_overlay, Toast.LENGTH_LONG).show()
             return
@@ -233,24 +382,34 @@ class PocketPhoneActivity : AppCompatActivity() {
         overlayParams = lp
         overlay = true
         pinBtn.text = getString(R.string.pocket_unpin)
+        root.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(220)
+            .setInterpolator(OvershootInterpolator(1.1f)).start()
         moveTaskToBack(true)
         Toast.makeText(this, R.string.pocket_pinned, Toast.LENGTH_SHORT).show()
     }
 
     private fun closeOverlay() {
         val view = overlayView ?: return
-        runCatching { wm().removeView(view) }
-        overlayView = null
-        overlayParams = null
-        overlay = false
-        pinBtn.text = getString(R.string.pocket_pin)
-        val content = findViewById<ViewGroup>(android.R.id.content)
-        if (view.parent == null) content.addView(view)
-        placeWindow()
+        view.animate().cancel()
+        view.animate().scaleX(0.9f).scaleY(0.9f).alpha(0.4f).setDuration(140).withEndAction {
+            runCatching { wm().removeView(view) }
+            view.scaleX = 1f
+            view.scaleY = 1f
+            view.alpha = 1f
+            overlayView = null
+            overlayParams = null
+            overlay = false
+            pinBtn.text = getString(R.string.pocket_pin)
+            val content = findViewById<ViewGroup>(android.R.id.content)
+            if (view.parent == null) content.addView(view)
+            placeWindow()
+            playEnter()
+        }.start()
     }
 
     private fun removeOverlay() {
         val view = overlayView ?: return
+        view.animate().cancel()
         runCatching { wm().removeView(view) }
         overlayView = null
         overlayParams = null
@@ -266,7 +425,7 @@ class PocketPhoneActivity : AppCompatActivity() {
         current = null
         title.text = getString(R.string.pocket_title)
         status.text = phone.clock() + "  ·  " + phone.battery() + "%"
-        screen.typeface = Typeface.MONOSPACE
+        screen.typeface = Typeface.DEFAULT
         screen.text = phone.homeCard()
     }
 
@@ -274,7 +433,7 @@ class PocketPhoneActivity : AppCompatActivity() {
         current = app
         title.text = app.icon + " " + app.name
         status.text = phone.clock()
-        screen.typeface = Typeface.MONOSPACE
+        screen.typeface = Typeface.DEFAULT
         screen.text = phone.screenFor(app, extra)
     }
 

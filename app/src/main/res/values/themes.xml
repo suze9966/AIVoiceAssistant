@@ -5,6 +5,11 @@
         <item name="android:backgroundDimEnabled">false</item>
         <item name="android:windowCloseOnTouchOutside">false</item>
         <item name="android:windowBackground">@color/input_bg</item>
+        <item name="android:windowAnimationStyle">@style/PocketWindowAnim</item>
+    </style>
+    <style name="PocketWindowAnim">
+        <item name="android:windowEnterAnimation">@anim/pocket_enter</item>
+        <item name="android:windowExitAnimation">@anim/pocket_exit</item>
     </style>
     <style name="Theme.AIVoice" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="colorPrimary">@color/purple_500</item>
