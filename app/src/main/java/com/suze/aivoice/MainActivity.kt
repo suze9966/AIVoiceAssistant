@@ -1083,15 +1083,14 @@ class MainActivity : AppCompatActivity() {
 
             if (prefs.streamEnabled) {
                 val rawBuffer = StringBuilder()
-                rawText = llm.chatStream(requestHistory) { delta ->
+                rawText = FormatStore.readableScene(llm.chatStream(requestHistory) { delta ->
                     if (delta.isEmpty()) return@chatStream
                     val snapshot = synchronized(rawBuffer) {
                         rawBuffer.append(delta)
                         FormatStore.readableScene(rawBuffer.toString())
                     }
                     runOnUiThread { applyStreamSnapshot(session, snapshot) }
-                }.ifBlank { llmFailText() }
-                rawText = FormatStore.readableScene(rawText)
+                }.ifBlank { llmFailText() })
             } else {
                 val reply = FormatStore.readableScene(llm.chat(requestHistory).ifBlank { llmFailText() })
                 runOnUiThread {
