@@ -670,6 +670,11 @@
     <string name="pocket_playing">小沫正在玩…</string>
     <string name="pocket_busy">小沫还在玩上一页</string>
     <string name="pocket_empty">这一页小沫没玩出内容，再试一次吧</string>
+    <string name="pocket_music_loading">正在联网找歌…</string>
+    <string name="pocket_music_playing">正在联网播放</string>
+    <string name="pocket_music_paused">已暂停</string>
+    <string name="pocket_music_fail">这台电台暂时连不上，换一首试试</string>
+    <string name="pocket_music_empty">网上没找到能播的歌，换个词试试</string>
     <string name="pocket_pin">小窗</string>
     <string name="pocket_bigger">放大</string>
     <string name="pocket_smaller">缩小</string>

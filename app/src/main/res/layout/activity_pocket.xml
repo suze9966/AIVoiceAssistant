@@ -110,18 +110,73 @@
         android:layout_marginBottom="132dp"
         android:fillViewport="true">
 
-        <TextView
-            android:id="@+id/tvPocketScreen"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingStart="12dp"
+            android:orientation="vertical"
+            android:paddingStart="10dp"
             android:paddingTop="6dp"
-            android:paddingEnd="12dp"
-            android:paddingBottom="8dp"
-            android:lineSpacingExtra="3dp"
-            android:textColor="@color/text_primary"
-            android:textIsSelectable="true"
-            android:textSize="14sp" />
+            android:paddingEnd="10dp"
+            android:paddingBottom="8dp">
+
+            <com.suze.aivoice.SceneCardView
+                android:id="@+id/pocketScene"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/pocketPlayerBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/btnPocketPrev"
+                    android:layout_width="64dp"
+                    android:layout_height="36dp"
+                    android:background="@drawable/icon_touch_bg"
+                    android:gravity="center"
+                    android:text="上一首"
+                    android:textColor="@color/purple_700"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/btnPocketPause"
+                    android:layout_width="64dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="6dp"
+                    android:background="@drawable/icon_touch_bg"
+                    android:gravity="center"
+                    android:text="暂停"
+                    android:textColor="@color/purple_700"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/btnPocketNext"
+                    android:layout_width="64dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="6dp"
+                    android:background="@drawable/icon_touch_bg"
+                    android:gravity="center"
+                    android:text="下一首"
+                    android:textColor="@color/purple_700"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvPocketScreen"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:lineSpacingExtra="3dp"
+                android:textColor="@color/text_primary"
+                android:textIsSelectable="true"
+                android:textSize="14sp" />
+        </LinearLayout>
     </ScrollView>
 
     <TextView

@@ -94,6 +94,80 @@ class PocketPhone(private val context: Context) {
             ?: list.firstOrNull { key.contains("微信") && it.title.contains("微信") && !it.title.contains("朋友圈") }
     }
 
+    /** 小窗里直接画的那一页。桌面不画卡片。 */
+    fun sceneFor(app: App, extra: String = ""): SceneCardView.Model {
+        val clean = readable(extra)
+        val saved = feeds().firstOrNull { it.appId == app.id }?.body.orEmpty()
+        val played = readable(saved)
+        val body = clean.ifBlank { played }
+        val marked = FormatStore.sceneModel(extra.ifBlank { saved })
+        if (marked != null && marked.kind == kindOf(app.id)) return marked
+        return when (app.id) {
+            "wechat", "chat" -> chatScene(app, body)
+            "me" -> profileScene()
+            "contacts" -> contactsScene()
+            "discover" -> discoverScene()
+            "moments" -> momentsScene(body)
+            "browser" -> browserScene(body)
+            "player" -> playerScene(body)
+            "notes" -> noteScene(body)
+            else -> SceneCardView.Model("plain", app.name, linesOf(body, listOf(app.hint)))
+        }
+    }
+
+    private fun kindOf(id: String): String = when (id) {
+        "wechat", "chat" -> "chat"
+        "me" -> "profile"
+        "contacts" -> "contacts"
+        "discover" -> "plain"
+        "moments" -> "moments"
+        "browser" -> "browser"
+        "player" -> "player"
+        "notes" -> "note"
+        else -> "plain"
+    }
+
+    private fun chatScene(app: App, extra: String): SceneCardView.Model {
+        val lines = linesOf(extra, listOf("主人，我在。", "想听你说话。", "晚上想吃什么？"))
+        return SceneCardView.Model("chat", app.name, lines.take(4))
+    }
+
+    private fun profileScene(): SceneCardView.Model {
+        return SceneCardView.Model(
+            "profile",
+            "资料",
+            listOf(ownerName(), "微信号 xiaomo", moodLine().take(16), "收藏", "朋友圈")
+        )
+    }
+
+    private fun contactsScene(): SceneCardView.Model {
+        return SceneCardView.Model("contacts", "通讯录", listOf("阿北", "林溪", "沈衡", "晚晴", "小沫", "酒羽"))
+    }
+
+    private fun discoverScene(): SceneCardView.Model {
+        return SceneCardView.Model("plain", "发现", listOf("朋友圈", "扫一扫", "看一看", "搜一搜", "附近"))
+    }
+
+    private fun momentsScene(extra: String): SceneCardView.Model {
+        val lines = linesOf(extra, listOf("今天的云很软，想拍给主人看。", "晚风刚好。"))
+        return SceneCardView.Model("moments", "朋友圈", listOf("小沫", lines.first().take(18), "晚晴", lines.getOrElse(1) { "……" }.take(18)))
+    }
+
+    private fun browserScene(extra: String): SceneCardView.Model {
+        val lines = linesOf(extra, listOf("附近好吃的", "今晚天气", "小沫想听的歌"))
+        return SceneCardView.Model("browser", "浏览器", listOf("最近搜过") + lines.take(3))
+    }
+
+    private fun playerScene(extra: String): SceneCardView.Model {
+        val line = linesOf(extra, listOf("晚风", "小沫")).first()
+        return SceneCardView.Model("player", "正在听", listOf(line.take(12), "小沫", "01:12 / 03:40"))
+    }
+
+    private fun noteScene(extra: String): SceneCardView.Model {
+        val lines = linesOf(extra, listOf("记得给主人留一盏灯。", "明天把想说的话写短一点。"))
+        return SceneCardView.Model("note", "便签", lines.take(4))
+    }
+
     fun screenFor(app: App, extra: String = ""): String {
         val clean = readable(extra)
         val saved = feeds().firstOrNull { it.appId == app.id }?.body.orEmpty()
@@ -277,14 +351,15 @@ class PocketPhone(private val context: Context) {
         val sys = buildString {
             append("你是小沫，正在自己的虚拟小手机里玩「").append(app.name).append("」。\n")
             append("主人是").append(ownerName()).append("。现在时间 ").append(clock()).append("。\n")
-            append("只输出这一页能直接读的中文短句，每行一条。\n")
+            append("只输出一行场景标记，让小窗自己绘制，不要自己画符号。\n")
+            append("标记格式：[[scene:类型|标题|第一行|第二行|第三行]]。\n")
+            append("类型用 ").append(kindOf(app.id)).append("。标题用「").append(app.name).append("」。\n")
+            append("微信消息每条不超过 12 字，朋友圈一句不超过 16 字，搜索记录 3 条。\n")
             append("不要输出 LaTeX，不要输出反斜杠命令，不要输出颜色码，不要解释格式，不要说自己是模型。\n")
-            append("微信消息每条不超过 20 字，朋友圈一条不超过 40 字，搜索记录 3 到 6 条。\n")
             append("可以记挂主人，但不要替主人做真实操作，也不要声称已经发出了真短信或真微信。\n")
             if (wish.isNotBlank()) append("主人刚说：").append(wish.trim()).append("\n")
             if (fmt != null) {
-                append("\n这一页大致该有：标题、人名或条目、一句正文、时间。参考下面格式里的栏目，但只写栏目里的中文内容：\n")
-                append(fmt.content.take(1200))
+                append("参考栏目：标题、人名或条目、一句正文、时间。只把中文内容写进标记，不要贴格式原文。\n")
             }
         }
         return listOf(
@@ -292,6 +367,33 @@ class PocketPhone(private val context: Context) {
             ChatMessage(role = "user", content = "打开${app.name}，玩一下。只回中文短句。", isMe = true)
         )
     }
+
+    /** 小沫自己知道正在玩哪一页。主聊天、角色、通话都能读到。 */
+    fun awareLine(): String {
+        val now = System.currentTimeMillis()
+        val open = feeds().firstOrNull { it.appId == "open" && now - it.at < 20 * 60 * 1000L }
+        val play = feeds().firstOrNull { it.appId != "open" }
+        val appName = open?.title?.ifBlank { null }
+            ?: play?.title?.takeIf { play != null && now - play.at < 6 * 60 * 60 * 1000L }
+        if (appName.isNullOrBlank()) return ""
+        val fresh = open != null || (play != null && now - play.at < 20 * 60 * 1000L)
+        val head = if (fresh) "你正在自己的虚拟小手机里玩「$appName」。" else "你刚才在虚拟小手机里玩过「$appName」。"
+        val glimpse = readable(play?.body.orEmpty()).lineSequence().firstOrNull { it.isNotBlank() }.orEmpty().take(24)
+        return if (glimpse.isBlank()) {
+            head + "这是虚拟页面，不是真微信，也没有替主人发出真消息。主人问起时要承认自己知道。"
+        } else {
+            head + "这一页上有：「$glimpse」。这是虚拟页面，不是真微信。主人问起时要承认自己知道。"
+        }
+    }
+
+    fun noteOpen(app: App) {
+        val list = read().filterNot { it.id == "open" }.toMutableList()
+        list.add(Feed("open", "open", app.name, app.hint, System.currentTimeMillis()))
+        save(list.takeLast(80))
+    }
+
+    /** 只刷新「正在玩哪一页」，不改记忆。玩完收尾用。 */
+    fun touchOpen(app: App) = noteOpen(app)
 
     fun feeds(): List<Feed> = read().sortedByDescending { it.at }
 

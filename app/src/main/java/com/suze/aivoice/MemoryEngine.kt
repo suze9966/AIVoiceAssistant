@@ -206,6 +206,22 @@ class MemoryEngine(context: Context) {
         }.take(limit)
     }
 
+    /** 虚拟小手机只留一条最新记忆，打开记忆页能看到，也不会越玩越堆。 */
+    fun rememberPocket(content: String) {
+        val c = content.trim()
+        if (c.isBlank()) return
+        val idx = items.indexOfFirst { it.content.startsWith("我在虚拟小手机") }
+        val text = SafeCut.takeUnitsSafe(c, 500)
+        if (idx >= 0) {
+            val old = items[idx]
+            items[idx] = old.copy(type = TYPE_FACT, content = text, weight = old.weight + 1, time = System.currentTimeMillis())
+        } else {
+            remember(TYPE_FACT, text)
+            return
+        }
+        persist()
+    }
+
     fun addManual(type: String, content: String): Boolean {
         val c = content.trim()
         if (c.isBlank()) return false

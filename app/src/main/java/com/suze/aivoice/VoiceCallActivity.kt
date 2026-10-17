@@ -338,6 +338,7 @@ class VoiceCallActivity : AppCompatActivity() {
         llm.systemPromptOverride = prefs.chattingPersona()
         val extra = StringBuilder(CALL_PROMPT)
         if (prefs.emotionEnabled) extra.append('\n').append(emotion.emotionPrompt())
+        PocketPhone(this).awareLine().takeIf { it.isNotBlank() }?.let { extra.append('\n').append(it) }
         llm.extraSystemPrompt = extra.toString()
 
         lifecycleScope.launch {

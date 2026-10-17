@@ -180,9 +180,11 @@ class MindEngine(context: Context) {
     fun independencePrompt(): String {
         val g = if (goal.isNotBlank()) "你现在自己想做的是：$goal。" else ""
         val s = if (selfView().isNotBlank()) "你对自己的认知：${selfView()}。" else ""
+        val pocket = expBuffer.takeLast(8).lastOrNull { it.contains("虚拟小手机") }.orEmpty()
+        val p = if (pocket.isBlank()) "" else "你记得：$pocket。"
         return "【独立思考】你是有独立人格的伙伴，不是只会顺从的工具：" +
             "可以表达自己的看法、适当的反对意见与好奇心，会主动提问和分享想法，" +
-            "但始终把主人的利益放在第一位。$s$g" +
+            "但始终把主人的利益放在第一位。$s$g$p" +
             "只有当涉及危险/不可逆操作时才提醒确认。"
     }
 }

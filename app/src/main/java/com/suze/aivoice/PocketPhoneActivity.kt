@@ -5,6 +5,8 @@ import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.content.Intent
 import android.graphics.PixelFormat
+import android.media.AudioAttributes
+import android.media.MediaPlayer
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Build
@@ -24,8 +26,10 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 /** 小沫的虚拟小手机。默认就是可拖、可缩放的小窗，也能钉到其他应用上层。 */
@@ -34,12 +38,15 @@ class PocketPhoneActivity : AppCompatActivity() {
     private lateinit var phone: PocketPhone
     private lateinit var llm: LlmClient
     private lateinit var screen: TextView
+    private lateinit var scene: SceneCardView
     private lateinit var status: TextView
     private lateinit var title: TextView
     private lateinit var input: EditText
     private lateinit var dock: LinearLayout
     private lateinit var ops: TextView
     private lateinit var pinBtn: TextView
+    private lateinit var playerBar: View
+    private lateinit var pauseBtn: TextView
     private lateinit var card: View
     private var current: PocketPhone.App? = null
     private var playing = false
@@ -55,6 +62,10 @@ class PocketPhoneActivity : AppCompatActivity() {
     private var pinchScale = 1f
     private var resizing = false
     private var closing = false
+    private var music: MediaPlayer? = null
+    private var tracks = listOf<PocketMusic.Track>()
+    private var trackIndex = 0
+    private var musicJob: kotlinx.coroutines.Job? = null
     private var moveAnimator: ValueAnimator? = null
     private var sizeAnimator: ValueAnimator? = null
 
@@ -65,12 +76,18 @@ class PocketPhoneActivity : AppCompatActivity() {
         llm = LlmClient(Prefs(this))
         card = findViewById(R.id.pocketRoot)
         screen = findViewById(R.id.tvPocketScreen)
+        scene = findViewById(R.id.pocketScene)
         status = findViewById(R.id.tvPocketStatus)
         title = findViewById(R.id.tvPocketTitle)
         input = findViewById(R.id.editPocket)
         dock = findViewById(R.id.appDockRow)
         ops = findViewById(R.id.tvPocketOps)
         pinBtn = findViewById(R.id.btnPocketPin)
+        playerBar = findViewById(R.id.pocketPlayerBar)
+        pauseBtn = findViewById(R.id.btnPocketPause)
+        findViewById<TextView>(R.id.btnPocketPrev).setOnClickListener { stepTrack(-1) }
+        pauseBtn.setOnClickListener { toggleMusic() }
+        findViewById<TextView>(R.id.btnPocketNext).setOnClickListener { stepTrack(1) }
         findViewById<TextView>(R.id.btnPocketBack).setOnClickListener {
             if (overlay) {
                 closeOverlay()
@@ -121,6 +138,8 @@ class PocketPhoneActivity : AppCompatActivity() {
     override fun onDestroy() {
         moveAnimator?.cancel()
         sizeAnimator?.cancel()
+        musicJob?.cancel()
+        stopMusic()
         removeOverlay()
         super.onDestroy()
     }
@@ -426,15 +445,133 @@ class PocketPhoneActivity : AppCompatActivity() {
         title.text = getString(R.string.pocket_title)
         status.text = phone.clock() + "  ·  " + phone.battery() + "%"
         screen.typeface = Typeface.DEFAULT
+        scene.bind(null)
         screen.text = phone.homeCard()
+        playerBar.visibility = View.GONE
+        stopMusic()
     }
 
-    private fun showApp(app: PocketPhone.App, extra: String = "") {
+    private fun showApp(app: PocketPhone.App, extra: String = "", remember: Boolean = true) {
         current = app
         title.text = app.icon + " " + app.name
         status.text = phone.clock()
         screen.typeface = Typeface.DEFAULT
+        scene.bind(phone.sceneFor(app, extra))
         screen.text = phone.screenFor(app, extra)
+        phone.noteOpen(app)
+        if (app.id == "player") {
+            playerBar.visibility = View.VISIBLE
+            if (tracks.isEmpty()) startMusic(extra)
+        } else {
+            playerBar.visibility = View.GONE
+            stopMusic()
+        }
+        if (!remember) return
+        val opened = "我在虚拟小手机里打开了「" + app.name + "」"
+        MemoryEngine(this).rememberPocket(opened)
+        if (Prefs(this).mindEnabled) MindEngine(this).record(opened)
+    }
+
+    private fun startMusic(wish: String) {
+        musicJob?.cancel()
+        status.text = getString(R.string.pocket_music_loading)
+        musicJob = lifecycleScope.launch {
+            val found = withContext(Dispatchers.IO) { runCatching { PocketMusic.search(wish) }.getOrDefault(emptyList()) }
+            if (isDestroyed) return@launch
+            if (current?.id != "player") return@launch
+            tracks = found
+            trackIndex = 0
+            if (found.isEmpty()) {
+                status.text = getString(R.string.pocket_music_empty)
+                return@launch
+            }
+            playTrack(0)
+        }
+    }
+
+    private fun playTrack(index: Int) {
+        val list = tracks
+        if (list.isEmpty()) return
+        val i = ((index % list.size) + list.size) % list.size
+        trackIndex = i
+        val track = list[i]
+        stopMusic()
+        status.text = getString(R.string.pocket_music_loading)
+        val player = MediaPlayer()
+        music = player
+        player.setAudioAttributes(
+            AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                .build()
+        )
+        player.setOnPreparedListener {
+            if (music !== player || isDestroyed) return@setOnPreparedListener
+            it.start()
+            pauseBtn.text = "暂停"
+            showNowPlaying(track)
+        }
+        player.setOnCompletionListener {
+            if (music !== player) return@setOnCompletionListener
+            if (track.live) showNowPlaying(track) else stepTrack(1)
+        }
+        player.setOnErrorListener { mp, _, _ ->
+            if (music === mp) {
+                music = null
+                runCatching { mp.release() }
+                status.text = getString(R.string.pocket_music_fail)
+                val next = trackIndex + 1
+                if (next < tracks.size) playTrack(next)
+            }
+            true
+        }
+        runCatching { player.setDataSource(track.url); player.prepareAsync() }.onFailure {
+            status.text = getString(R.string.pocket_music_fail)
+        }
+    }
+
+    private fun showNowPlaying(track: PocketMusic.Track) {
+        val kind = if (track.live) "电台" else "试听"
+        val line = track.title + "\n" + track.artist + "  ·  " + kind
+        scene.bind(SceneCardView.Model("player", "正在听", listOf(track.title, track.artist, kind)))
+        screen.text = "正在听\n" + line + "\n" + getString(R.string.pocket_music_playing)
+        status.text = track.title
+        val app = current
+        if (app != null) {
+            MemoryEngine(this).rememberPocket("我在虚拟小手机的播放器里正在听「" + track.title + "」")
+        }
+    }
+
+    private fun stepTrack(delta: Int) {
+        if (tracks.isEmpty()) {
+            startMusic("")
+            return
+        }
+        playTrack(trackIndex + delta)
+    }
+
+    private fun toggleMusic() {
+        val player = music
+        if (player == null) {
+            if (tracks.isEmpty()) startMusic("") else playTrack(trackIndex)
+            return
+        }
+        if (player.isPlaying) {
+            player.pause()
+            pauseBtn.text = "播放"
+            status.text = getString(R.string.pocket_music_paused)
+        } else {
+            player.start()
+            pauseBtn.text = "暂停"
+            status.text = tracks.getOrNull(trackIndex)?.title ?: getString(R.string.pocket_music_playing)
+        }
+    }
+
+    private fun stopMusic() {
+        val player = music ?: return
+        music = null
+        runCatching { player.stop() }
+        runCatching { player.release() }
     }
 
     private fun openByWish(wish: String) {
@@ -443,6 +580,11 @@ class PocketPhoneActivity : AppCompatActivity() {
     }
 
     private fun play(wish: String) {
+        if (current?.id == "player") {
+            tracks = emptyList()
+            startMusic(wish)
+            return
+        }
         if (playing) {
             Toast.makeText(this, R.string.pocket_busy, Toast.LENGTH_SHORT).show()
             return
@@ -473,7 +615,14 @@ class PocketPhoneActivity : AppCompatActivity() {
             if (isDestroyed) return@launch
             val text = reply.trim().ifBlank { getString(R.string.pocket_empty) }
             phone.addFeed(app.id, app.name, text)
-            showApp(app, text)
+            val glimpse = phone.readable(text).lineSequence().firstOrNull { it.isNotBlank() }.orEmpty()
+            val played = "我在虚拟小手机的「" + app.name + "」里玩了一下" +
+                if (glimpse.isBlank()) "。" else "，看到：" + glimpse.take(40)
+            MemoryEngine(this@PocketPhoneActivity).rememberPocket(played)
+            if (Prefs(this@PocketPhoneActivity).mindEnabled) {
+                MindEngine(this@PocketPhoneActivity).record(played)
+            }
+            showApp(app, text, remember = false)
             shown.add(steps.last())
             showOps(shown.takeLast(4))
             status.text = phone.clock()

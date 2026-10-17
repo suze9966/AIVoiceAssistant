@@ -632,6 +632,10 @@ class RoleChatActivity : AppCompatActivity() {
             val fmt = formats.promptBlock()
             if (fmt.isNotBlank()) sb.append(fmt).append("\n")
         }
+        runCatching {
+            val pocket = PocketPhone(this).awareLine()
+            if (pocket.isNotBlank()) sb.append(pocket).append("\n")
+        }
         return sb.toString()
     }
     /**

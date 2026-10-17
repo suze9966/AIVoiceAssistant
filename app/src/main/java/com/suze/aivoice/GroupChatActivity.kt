@@ -396,6 +396,9 @@ class GroupChatActivity : AppCompatActivity() {
                             buildString {
                                 append(relationGraph.promptBlock(speaker.name, members.map { it.name }))
                                 if (fmtBlock.isNotBlank()) append("\n").append(fmtBlock)
+                                PocketPhone(this@GroupChatActivity).awareLine()
+                                    .takeIf { it.isNotBlank() }
+                                    ?.let { append("\n").append(it) }
                             }
                         ),
                         user,

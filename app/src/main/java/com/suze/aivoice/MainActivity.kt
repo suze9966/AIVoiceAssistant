@@ -1041,6 +1041,8 @@ class MainActivity : AppCompatActivity() {
         if (prefs.emotionEnabled) {
             extra.append(emotion.emotionPrompt())
         }
+        val pocketAware = PocketPhone(this).awareLine()
+        if (pocketAware.isNotBlank()) extra.append("\n").append(pocketAware)
         // 表情包能力：告诉模型可发 emoji 与图片表情包
         extra.append("\n")
         extra.append("你有自己的一整套表情，可以像人一样挑着用：")

@@ -55,7 +55,12 @@ class SceneCardView @JvmOverloads constructor(
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val m = model
-        val w = (280 * density).toInt()
+        val fallback = (280 * density).toInt()
+        val w = when (MeasureSpec.getMode(widthMeasureSpec)) {
+            MeasureSpec.EXACTLY -> MeasureSpec.getSize(widthMeasureSpec).coerceAtLeast(1)
+            MeasureSpec.AT_MOST -> MeasureSpec.getSize(widthMeasureSpec).coerceAtMost(fallback).coerceAtLeast(1)
+            else -> fallback
+        }
         val h = if (m == null) 0 else when (m.kind) {
             "player" -> (168 * density).toInt()
             "moments", "profile", "browser" -> (168 * density).toInt()
