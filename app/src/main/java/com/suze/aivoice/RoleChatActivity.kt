@@ -82,7 +82,7 @@ class RoleChatActivity : AppCompatActivity() {
                 if (!isFinishing && !isDestroyed) tvStatus.text = label
             }
         }
-        adapter = ChatAdapter(history)
+        adapter = ChatAdapter(history, formats)
         adapter.chatFont = ChatFontStore.load(this)
         adapter.bindAiAvatar = { view -> bindBubbleAvatar(view) }
         // 按角色区分气泡：该角色设过专属样式就用它，否则跟随全局

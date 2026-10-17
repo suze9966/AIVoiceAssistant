@@ -380,5 +380,34 @@ class Prefs(context: Context) {
             return if (PortraitLibrary.has(saved)) saved else PortraitLibrary.DEFAULT_ID
         }
         set(v) = sp.edit().putString("portraitId", v).apply()
+
+    /**
+     * 聊天气泡里场景卡的主人尺寸，单位 dp。
+     * 只给气泡用，小手机窗口不读这两项。0 表示还没拖过。
+     * 旧的全局尺寸只作没单独拖过时的回退。
+     */
+    var sceneCardWidthDp: Float
+        get() = sp.getFloat("sceneCardWidthDp", 0f)
+        set(v) = sp.edit().putFloat("sceneCardWidthDp", v).apply()
+
+    var sceneCardHeightDp: Float
+        get() = sp.getFloat("sceneCardHeightDp", 0f)
+        set(v) = sp.edit().putFloat("sceneCardHeightDp", v).apply()
+
+    fun sceneCardSize(key: String): Pair<Float, Float> {
+        val id = key.trim().ifBlank { "plain" }
+        val w = sp.getFloat("sceneW_$id", 0f)
+        val h = sp.getFloat("sceneH_$id", 0f)
+        if (w > 0f && h > 0f) return w to h
+        return sceneCardWidthDp to sceneCardHeightDp
+    }
+
+    fun saveSceneCardSize(key: String, widthDp: Float, heightDp: Float) {
+        val id = key.trim().ifBlank { "plain" }
+        sp.edit()
+            .putFloat("sceneW_$id", widthDp)
+            .putFloat("sceneH_$id", heightDp)
+            .apply()
+    }
 }
 

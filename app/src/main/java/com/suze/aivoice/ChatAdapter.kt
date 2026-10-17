@@ -8,8 +8,10 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 
-class ChatAdapter(private val items: MutableList<ChatMessage>) :
-    RecyclerView.Adapter<ChatAdapter.VH>() {
+class ChatAdapter(
+    private val items: MutableList<ChatMessage>,
+    private val formats: FormatStore? = null
+) : RecyclerView.Adapter<ChatAdapter.VH>() {
 
     companion object {
         private const val TYPE_ME = 1
@@ -18,6 +20,11 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
         /** emoji 表情气泡的大字号 / 普通字号 */
         private const val EMOJI_SIZE_SP = 40f
         private const val TEXT_SIZE_SP = 16f
+
+        fun sceneSizeKey(model: SceneCardView.Model): String {
+            val title = model.title.trim().replace(Regex("[^\\w\\u4e00-\\u9fff·.]+"), "").take(24)
+            return model.kind + "_" + title.ifBlank { "card" }
+        }
     }
 
     /** 长按某条消息的回调：position 为条目下标 */
@@ -107,6 +114,9 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
             ChatMessage.TYPE_IMAGE -> {
                 holder.ivSticker.visibility = View.VISIBLE
                 holder.tvMsg.visibility = View.GONE
+                holder.sceneCard?.rememberSize = false
+                holder.sceneCard?.applyUserSize(0f, 0f)
+                holder.sceneCard?.onSizeChanged = null
                 holder.sceneCard?.bind(null)
                 ImageLoader.load(msg.content, holder.ivSticker)
             }
@@ -171,15 +181,31 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
             // 历史状态回填只对「最后一条」小沫消息生效，避免 RecyclerView 重绑历史消息时被污染
             val isLast = position == items.size - 1
             val recall = !msg.isMe && panelRecall && isLast
-            val scene = if (holder.pureEmoji) null else FormatStore.sceneModel(holder.pendingRaw)
+            val scene = if (holder.pureEmoji || msg.isMe) null else {
+                FormatStore.sceneModel(holder.pendingRaw)
+                    ?: formats?.pickedSceneCard(holder.pendingRaw)
+                    ?: formats?.wrapEnabled(holder.pendingRaw)
+            }
             if (scene != null) {
-                holder.sceneCard?.bind(scene)
-                holder.sceneCard?.setOnClickListener {
+                val card = holder.sceneCard
+                card?.rememberSize = true
+                val sizeKey = ChatAdapter.sceneSizeKey(scene)
+                val prefs = Prefs(holder.itemView.context)
+                val saved = prefs.sceneCardSize(sizeKey)
+                card?.applyUserSize(saved.first, saved.second)
+                card?.bind(scene)
+                card?.onSizeChanged = { w, h ->
+                    Prefs(holder.itemView.context).saveSceneCardSize(sizeKey, w, h)
+                }
+                card?.setOnClickListener {
                     if (scene.kind == "player") onSceneClick?.invoke(scene)
                 }
                 holder.tvMsg.visibility = View.GONE
                 holder.tvMsg.text = ""
             } else {
+                holder.sceneCard?.rememberSize = false
+                holder.sceneCard?.applyUserSize(0f, 0f)
+                holder.sceneCard?.onSizeChanged = null
                 holder.sceneCard?.bind(null)
                 holder.tvMsg.visibility = View.VISIBLE
                 holder.tvMsg.text = renderRich(holder.pendingRaw, holder.pureEmoji, col, recall)

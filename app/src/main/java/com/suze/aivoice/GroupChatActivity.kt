@@ -79,7 +79,7 @@ class GroupChatActivity : AppCompatActivity() {
                 if (!isFinishing && !isDestroyed) tvStatus.text = label
             }
         }
-        adapter = ChatAdapter(history)
+        adapter = ChatAdapter(history, formats)
         adapter.chatFont = ChatFontStore.load(this)
         adapter.bindMessageAvatar = { view, msg -> bindBubbleAvatar(view, msg) }
         recycler.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }

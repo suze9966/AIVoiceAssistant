@@ -41,7 +41,7 @@ class FormatStore(private val context: Context) {
     private fun builtins(): List<FormatEntry> = try {
         val names = context.assets.list("formats")?.toList().orEmpty()
             .filter { it.endsWith(".txt") || it.endsWith(".md") }
-            .sorted()
+            .sortedWith(compareBy({ if (it.any { ch -> ch.code > 0x2E80 }) 1 else 0 }, { it }))
         names.mapNotNull { n ->
             val text = runCatching {
                 context.assets.open("formats/$n").bufferedReader().use { it.readText() }
@@ -207,6 +207,9 @@ class FormatStore(private val context: Context) {
 
     fun enabled(): List<FormatEntry> = loadRef().filter { it.enabled && it.content.isNotBlank() }
 
+    /** 当前启用的美化卡。后面的消息都套这一张，停用后恢复普通气泡。 */
+    fun activeBeauty(): FormatEntry? = enabled().firstOrNull { isBeauty(it) }
+
     /** 注入用的提示词块：只给栏目参考，禁止把 LaTeX 指令回吐进气泡。 */
     fun promptBlock(): String {
         val actives = enabled()
@@ -273,6 +276,7 @@ class FormatStore(private val context: Context) {
             "系统：[[scene:system|系统|第一行|第二行]]。" +
             "弹幕：[[scene:danmaku|弹幕|直播中|弹幕飘过]]。" +
             "讨论：[[scene:forum|讨论|楼主说|回复]]。" +
+            "聊天美化、气泡美化也用这一行，类型写 plain，标题写格式名，后面跟能看见的短句。" +
             "标记前后可以有一句能读的中文，但禁止输出 LaTeX，禁止输出反斜杠命令，" +
             "禁止输出颜色码、.sy 文件名、「禁止二传」「清秋屿」这类版权行，也禁止把格式指令原文贴进回复。"
     }
@@ -307,6 +311,7 @@ class FormatStore(private val context: Context) {
         title.contains("讨论") || title.contains("帖") || title.contains("论坛") -> "\uD83D\uDCF0"
         title.contains("浏览器") || title.contains("搜索") -> "\uD83D\uDD0D"
         title.contains("群聊") || title.contains("聊天记录") -> "\uD83D\uDC65"
+        title.contains("美化") -> "\uD83C\uDFA8"
         title.contains("微信") || title.contains("资料") -> "\uD83D\uDCC7"
         title.contains("系统") || title.contains("控制台") || title.contains("终端") -> "\uD83D\uDDA5"
         title.contains("短信") || title.contains("聊天界面") -> "\uD83D\uDC8C"
@@ -376,6 +381,43 @@ class FormatStore(private val context: Context) {
     /** 清空缓存（外部改了文件后调用）。 */
     fun invalidate() { cache = null }
 
+    /** 主人刚点了文游场景时，回复里即使没有场景标记，也按那一页画出来。 */
+    fun pickedSceneCard(raw: String): SceneCardView.Model? {
+        val id = Prefs(context).sceneFormatId
+        if (id.isBlank()) return null
+        if (raw.contains("没查到") || raw.contains("正在查询")) return null
+        val entry = load().firstOrNull { it.id == id } ?: return null
+        if (!isBeauty(entry)) return null
+        return beautyFrom(entry)
+    }
+
+    /** 启用美化卡后，把小沫后面的普通回复收进同一张卡，不再只出纯文字。 */
+    fun wrapEnabled(raw: String): SceneCardView.Model? {
+        val body = raw.trim()
+        if (body.isBlank()) return null
+        if (body.contains("[[scene:")) return null
+        if (body.contains("\\textcolor") || body.contains("\\ovalbox")) return null
+        if (looksLikeLatexDump(body)) return null
+        val entry = activeBeauty() ?: return null
+        val linesOut = body.lineSequence()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .map { it.removePrefix("- ").removePrefix("· ").trim() }
+            .filter { it.isNotEmpty() && !it.startsWith("\\") }
+            .take(8)
+            .toList()
+        if (linesOut.isEmpty()) return null
+        val title = when {
+            entry.title.contains("2.0") || entry.title.contains("2_0") -> "聊天美化2.0"
+            entry.title.contains("表情") -> "聊天美化·表情"
+            entry.title.contains("双语") -> "聊天美化·双语"
+            entry.title.isNotBlank() -> entry.title.take(16)
+            else -> "聊天美化"
+        }
+        return SceneCardView.Model("beauty", title, linesOut)
+    }
+
+
     companion object {
 
         private val DROP_LINE = listOf(
@@ -404,16 +446,72 @@ class FormatStore(private val context: Context) {
             if (raw.isBlank()) return null
             val marked = parseSceneMark(raw)
             if (marked != null) return marked
+            beautyModel(raw)?.let { return it }
             if (!looksLikeLatexDump(raw) && !looksLikeScenePage(raw)) return null
             val head = sceneHead(raw) ?: return null
             return SceneCardView.Model(head.second, head.first, sceneLines(raw, head.first))
+        }
+
+        private fun isBeauty(entry: FormatEntry): Boolean {
+            val blob = entry.title + "\n" + entry.content.take(800)
+            return blob.contains("美化") || blob.contains("核心排版") || blob.contains("ovalbox") || blob.contains("气泡")
+        }
+
+        /** 点文游场景时立刻能画的卡片。美化类直接出美化框，其余交给模型。 */
+        fun previewCard(entry: FormatEntry): String? {
+            if (!isBeauty(entry)) return null
+            val model = beautyFrom(entry)
+            val body = model.lines.take(6).joinToString("|")
+            return "[[scene:beauty|" + model.title + if (body.isBlank()) "]]" else "|$body]]"
+        }
+
+        private fun beautyFrom(entry: FormatEntry): SceneCardView.Model {
+            val title = when {
+                entry.title.contains("2.0") || entry.title.contains("2_0") -> "聊天美化2.0"
+                entry.title.contains("表情") -> "聊天美化·表情"
+                entry.title.contains("双语") -> "聊天美化·双语"
+                entry.title.isNotBlank() -> entry.title.take(16)
+                else -> "聊天美化"
+            }
+            val lines = readableFields(entry.content).ifEmpty {
+                listOf("核心排版规则", "颜色与样式约束", "AI发言边界", "消息与气泡格式")
+            }.take(8)
+            return SceneCardView.Model("beauty", title, lines)
+        }
+
+        /** 格式指令被原样贴进气泡时，收成可拖大的美化框，不再裁成一小块规则标题。 */
+        private fun beautyModel(raw: String): SceneCardView.Model? {
+            if (!raw.contains("美化") && !raw.contains("核心排版") && !raw.contains("ovalbox")) return null
+            val title = when {
+                raw.contains("2.0") || raw.contains("2_0") -> "聊天美化2.0"
+                raw.contains("表情") -> "聊天美化·表情"
+                raw.contains("双语") -> "聊天美化·双语"
+                raw.contains("美化框") -> "聊天美化框"
+                else -> "聊天美化"
+            }
+            val rules = Regex("(?m)^\\s*[0-9]+[.、]\\s*(.{2,28})").findAll(raw)
+                .map { it.groupValues[1].trim().trimEnd('：', ':', '。') }
+                .filter { it.isNotEmpty() && !it.contains("\\") }
+                .distinct()
+                .take(8)
+                .toList()
+            val heads = Regex("(?m)^\\s*[一二三四五六七八九十]+、\\s*(.{2,16})").findAll(raw)
+                .map { it.groupValues[1].trim() }
+                .filter { it.isNotEmpty() }
+                .distinct()
+                .take(6)
+                .toList()
+            val lines = (rules.ifEmpty { heads }).ifEmpty {
+                listOf("核心排版规则", "颜色与样式约束", "AI发言边界", "消息与气泡格式")
+            }
+            return SceneCardView.Model("beauty", title, lines)
         }
 
         /** 气泡认得出的场景标记：[[scene:player|正在听|梦哑|任然]] */
         fun parseSceneMark(raw: String): SceneCardView.Model? {
             val m = Regex("\\[\\[scene:([a-z]+)\\|([^\\]]+)]]").find(raw) ?: return null
             val kind = m.groupValues[1]
-            if (kind !in setOf("player", "moments", "chat", "profile", "browser", "contacts", "note", "system", "danmaku", "forum", "plain")) return null
+            if (kind !in setOf("player", "moments", "chat", "profile", "browser", "contacts", "note", "system", "danmaku", "forum", "plain", "beauty")) return null
             val parts = m.groupValues[2].split("|").map { it.trim() }.filter { it.isNotEmpty() }
             if (parts.isEmpty()) return null
             return SceneCardView.Model(kind, parts.first(), parts.drop(1).take(6))

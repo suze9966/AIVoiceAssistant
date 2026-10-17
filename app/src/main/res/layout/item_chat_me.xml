@@ -23,7 +23,7 @@
             android:contentDescription="@string/app_name" />
         <com.suze.aivoice.SceneCardView
             android:id="@+id/sceneCard"
-            android:layout_width="280dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:visibility="gone"
             android:contentDescription="@string/app_name" />

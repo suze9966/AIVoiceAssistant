@@ -282,7 +282,7 @@ class MainActivity : AppCompatActivity() {
 
         recycler = findViewById(R.id.recyclerChat)
         editInput = findViewById(R.id.editInput)
-        adapter = ChatAdapter(history)
+        adapter = ChatAdapter(history, formats)
         // 面板状态续接开关（主人可在设置里关）
         adapter.panelRecall = prefs.panelRecallEnabled
         // 字体设置：从偏好读一次，之后每次 onResume 再刷新
@@ -1359,6 +1359,9 @@ class MainActivity : AppCompatActivity() {
     private fun detectWeatherQuery(text: String): String? {
         val t = text.trim()
         if (t.isEmpty()) return null
+        // 文游场景提示句只是在选格式，不是在查天气。
+        if (t.startsWith("用「") && t.contains("格式呈现")) return null
+        if (t.contains("文游") || t.contains("美化") || t.contains("格式")) return null
         // 含“天气”关键词才触发
         if (!t.contains("\u5929\u6c14") && !t.contains("\u6c14\u6e29")) return null
         // 提取城市：去掉常见问法词
@@ -1920,6 +1923,7 @@ class MainActivity : AppCompatActivity() {
      */
     private fun showSceneMenu() {
         val list = formats.load().filter { it.content.isNotBlank() }
+            .sortedWith(compareBy({ if (it.title.any { ch -> ch.code > 0x2E80 }) 1 else 0 }, { it.title }))
         if (list.isEmpty()) {
             replyLocal("格式库列表", getString(R.string.toast_format_empty))
             return
@@ -1929,16 +1933,7 @@ class MainActivity : AppCompatActivity() {
             .setTitle(R.string.menu_scene_title)
             .setItems(labels) { _, which ->
                 val e = list.getOrNull(which) ?: return@setItems
-                formats.useOnce(e.id)
-                if (editInput.text.isNullOrBlank()) {
-                    editInput.setText(getString(R.string.scene_prompt_hint, e.title))
-                    editInput.setSelection(editInput.text?.length ?: 0)
-                }
-                Toast.makeText(
-                    this,
-                    getString(R.string.toast_scene_picked, e.title),
-                    Toast.LENGTH_SHORT
-                ).show()
+                showPickedScene(e)
             }
             .setNeutralButton(R.string.menu_scene_manage) { _, _ -> showFormatLibrary() }
             .setNegativeButton(R.string.menu_scene_cancel, null)
@@ -2232,6 +2227,22 @@ class MainActivity : AppCompatActivity() {
         ensureNotifyPermission()
         val item = reminders.add(topic, atMillis, repeatDaily, advanceMin)
         replyLocal(userText, getString(R.string.toast_remind_set, reminders.formatItem(item), item.text))
+    }
+
+    private fun showPickedScene(entry: FormatEntry) {
+        val hint = getString(R.string.scene_prompt_hint, entry.title)
+        if (editInput.text.isNullOrBlank()) {
+            editInput.setText(hint)
+            editInput.setSelection(editInput.text?.length ?: 0)
+        }
+        val card = formats.previewCard(entry)
+        if (card != null) {
+            replyLocal(hint, card)
+            Toast.makeText(this, "「" + entry.title + "」已经画出来了，右下角可以拖大小", Toast.LENGTH_SHORT).show()
+            return
+        }
+        formats.useOnce(entry.id)
+        Toast.makeText(this, getString(R.string.toast_scene_picked, entry.title), Toast.LENGTH_SHORT).show()
     }
 
     private fun llmFailText(): String {

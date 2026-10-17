@@ -27,10 +27,20 @@ class SceneCardView @JvmOverloads constructor(
 
     private var model: Model? = null
     var onIconClick: ((Int) -> Unit)? = null
+    var onSizeChanged: ((Float, Float) -> Unit)? = null
     private val iconHits = ArrayList<Pair<RectF, Int>>()
     private val baseDensity = resources.displayMetrics.density
     private var density = baseDensity
     private var uiScale = 1f
+    private var userW = 0
+    private var userH = 0
+    private var dragW = 0
+    private var dragH = 0
+    private var dragX = 0f
+    private var dragY = 0f
+    private var resizing = false
+    /** 只有聊天气泡打开。小手机铺满的那张卡不记尺寸，避免拖手柄把整页缩成一块。 */
+    var rememberSize: Boolean = false
 
     /** 小窗放大缩小时，画面里的字和图形跟窗口一起变。聊天气泡不调用，保持原尺寸。 */
     fun setUiScale(scale: Float) {
@@ -64,13 +74,62 @@ class SceneCardView @JvmOverloads constructor(
     fun bind(next: Model?) {
         model = next
         visibility = if (next == null) GONE else VISIBLE
-        isClickable = next?.kind == "home"
+        isClickable = next != null
         requestLayout()
         invalidate()
     }
 
+    /** 主人拖过的宽高，单位是 dp。0 表示还没调过。 */
+    fun applyUserSize(widthDp: Float, heightDp: Float) {
+        userW = if (widthDp > 0f) (widthDp * baseDensity).toInt() else 0
+        userH = if (heightDp > 0f) (heightDp * baseDensity).toInt() else 0
+        requestLayout()
+        invalidate()
+    }
+
+    private fun handleSize(): RectF {
+        val s = 36f * baseDensity
+        return RectF((width - s).coerceAtLeast(0f), (height - s).coerceAtLeast(0f), width.toFloat(), height.toFloat())
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (model?.kind != "home") return super.onTouchEvent(event)
+        val m = model ?: return super.onTouchEvent(event)
+        val handle = handleSize()
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                if (rememberSize && handle.contains(event.x, event.y)) {
+                    resizing = true
+                    dragW = if (width > 0) width else userW
+                    dragH = if (height > 0) height else userH
+                    dragX = event.rawX
+                    dragY = event.rawY
+                    parent?.requestDisallowInterceptTouchEvent(true)
+                    return true
+                }
+            }
+            MotionEvent.ACTION_MOVE -> {
+                if (!resizing) return m.kind == "home"
+                val minW = (160 * baseDensity).toInt()
+                val minH = (96 * baseDensity).toInt()
+                val maxW = (resources.displayMetrics.widthPixels * 0.92f).toInt()
+                val maxH = (resources.displayMetrics.heightPixels * 0.72f).toInt()
+                userW = (dragW + (event.rawX - dragX)).toInt().coerceIn(minW, maxW)
+                userH = (dragH + (event.rawY - dragY)).toInt().coerceIn(minH, maxH)
+                requestLayout()
+                return true
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                if (resizing) {
+                    resizing = false
+                    parent?.requestDisallowInterceptTouchEvent(false)
+                    if (userW > 0 && userH > 0) {
+                        onSizeChanged?.invoke(userW / baseDensity, userH / baseDensity)
+                    }
+                    return true
+                }
+            }
+        }
+        if (m.kind != "home") return super.onTouchEvent(event)
         if (event.actionMasked == MotionEvent.ACTION_UP) {
             val hit = iconHits.firstOrNull { it.first.contains(event.x, event.y) }
             if (hit != null) {
@@ -83,18 +142,35 @@ class SceneCardView @JvmOverloads constructor(
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val m = model
-        val fallback = (280 * density).toInt()
-        val w = when (MeasureSpec.getMode(widthMeasureSpec)) {
-            MeasureSpec.EXACTLY -> MeasureSpec.getSize(widthMeasureSpec).coerceAtLeast(1)
-            MeasureSpec.AT_MOST -> MeasureSpec.getSize(widthMeasureSpec).coerceAtMost(fallback).coerceAtLeast(1)
+        val fallback = (300 * baseDensity).toInt()
+        val maxW = (resources.displayMetrics.widthPixels * 0.92f).toInt()
+        val w = when {
+            userW > 0 -> userW.coerceIn((160 * baseDensity).toInt(), maxW)
+            MeasureSpec.getMode(widthMeasureSpec) == MeasureSpec.EXACTLY ->
+                MeasureSpec.getSize(widthMeasureSpec).coerceAtLeast(1)
+            MeasureSpec.getMode(widthMeasureSpec) == MeasureSpec.AT_MOST ->
+                MeasureSpec.getSize(widthMeasureSpec).coerceAtMost(fallback).coerceAtLeast(1)
             else -> fallback
         }
-        val h = if (m == null) 0 else when (m.kind) {
-            "home" -> (300 * density).toInt()
-            "player" -> (168 * density).toInt()
-            "moments", "profile", "browser" -> (168 * density).toInt()
-            "system", "danmaku" -> (150 * density).toInt()
-            else -> (148 * density).toInt()
+        val natural = if (m == null) 0 else when (m.kind) {
+            "home" -> (300 * baseDensity).toInt()
+            "beauty" -> (220 * baseDensity).toInt()
+            "player" -> (196 * baseDensity).toInt()
+            "moments", "profile", "browser" -> (188 * baseDensity).toInt()
+            "system", "danmaku" -> (168 * baseDensity).toInt()
+            else -> (176 * baseDensity).toInt()
+        }
+        val h = when {
+            m == null -> 0
+            userH > 0 -> userH.coerceIn((96 * baseDensity).toInt(), (resources.displayMetrics.heightPixels * 0.72f).toInt())
+            else -> natural
+        }
+        if (w > 0 && h > 0 && userW > 0) {
+            val fit = (w / 280f / baseDensity).coerceIn(0.55f, 2.4f)
+            if (kotlin.math.abs(density - baseDensity * fit) >= 0.02f) {
+                uiScale = fit
+                density = baseDensity * fit
+            }
         }
         setMeasuredDimension(w, h)
     }
@@ -106,11 +182,12 @@ class SceneCardView @JvmOverloads constructor(
         bg.color = when (m.kind) {
             "home" -> Color.parseColor("#7EB6E8")
             "system" -> Color.parseColor("#07110A")
-            "profile", "browser", "contacts" -> Color.parseColor("#F4F4F4")
+            "beauty", "profile", "browser", "contacts" -> Color.parseColor("#F4F4F4")
             "note" -> Color.parseColor("#FFF8E8")
             else -> Color.parseColor("#1E1E1E")
         }
         canvas.drawRoundRect(r, rad, rad, bg)
+        drawResizeHandle(canvas)
         when (m.kind) {
             "home" -> drawHome(canvas, m)
             "player" -> drawPlayer(canvas, m)
@@ -123,8 +200,21 @@ class SceneCardView @JvmOverloads constructor(
             "system" -> drawSystem(canvas, m)
             "danmaku" -> drawDanmaku(canvas, m)
             "forum" -> drawForum(canvas, m)
+            "beauty" -> drawBeauty(canvas, m)
             else -> drawPlain(canvas, m)
         }
+    }
+
+    private fun drawResizeHandle(canvas: Canvas) {
+        if (!rememberSize || width < 8 || height < 8) return
+        val s = 16f * baseDensity
+        val x = width - 8f * baseDensity
+        val y = height - 8f * baseDensity
+        track.color = Color.parseColor("#CCFFFFFF")
+        track.strokeWidth = 2.4f * baseDensity
+        canvas.drawLine(x - s, y, x, y, track)
+        canvas.drawLine(x, y - s, x, y, track)
+        canvas.drawLine(x - s * 0.55f, y, x, y - s * 0.55f, track)
     }
 
     private fun drawHome(canvas: Canvas, m: Model) {
@@ -407,6 +497,31 @@ class SceneCardView @JvmOverloads constructor(
         }
     }
 
+    private fun drawBeauty(canvas: Canvas, m: Model) {
+        ink.color = Color.parseColor("#2F2440")
+        ink.textSize = 16f * density
+        ink.typeface = Typeface.DEFAULT_BOLD
+        canvas.drawText(cut(m.title.ifBlank { "聊天美化" }, 14), 16f * density, 28f * density, ink)
+        accent.color = Color.parseColor("#C7A8E0")
+        canvas.drawRect(16f * density, 38f * density, 64f * density, 42f * density, accent)
+        val rows = if (m.lines.isEmpty()) listOf("核心排版规则", "颜色与样式约束", "AI发言边界") else m.lines
+        val gap = ((height - 78f * density) / rows.size.coerceAtLeast(1)).coerceIn(20f * density, 32f * density)
+        var y = 64f * density
+        rows.forEachIndexed { i, row ->
+            if (y > height - 28f * density) return@forEachIndexed
+            card.color = Color.parseColor("#F7F1FB")
+            val bubble = RectF(14f * density, y - 14f * density, width - 14f * density, y + 8f * density)
+            canvas.drawRoundRect(bubble, 12f * density, 12f * density, card)
+            ink.color = Color.parseColor("#C7A8E0")
+            ink.textSize = 12f * density
+            ink.typeface = Typeface.DEFAULT
+            canvas.drawText((i + 1).toString() + ".", 22f * density, y, ink)
+            ink.color = Color.parseColor("#2F4F4F")
+            canvas.drawText(cut(row, 18), 42f * density, y, ink)
+            y += gap
+        }
+    }
+
     private fun drawPlain(canvas: Canvas, m: Model) {
         ink.color = Color.parseColor("#EBEBEB")
         ink.textSize = 15f * density
@@ -428,6 +543,8 @@ class SceneCardView @JvmOverloads constructor(
 
     private fun cut(text: String, n: Int): String {
         val t = text.trim()
-        return if (t.length <= n) t else t.take(n) + "…"
+        val room = ((width / baseDensity - 36f) / 13f).toInt()
+        val limit = maxOf(n, room).coerceIn(4, 80)
+        return if (t.length <= limit) t else t.take(limit) + "…"
     }
 }
