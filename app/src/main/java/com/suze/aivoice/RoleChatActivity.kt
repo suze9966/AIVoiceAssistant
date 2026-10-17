@@ -571,7 +571,7 @@ class RoleChatActivity : AppCompatActivity() {
                             val snapshot = rawBuffer.toString()
                             runOnUiThread {
                                 if (session != speechSession || isFinishing || isDestroyed || history.isEmpty()) return@runOnUiThread
-                                val visible = plugins.applyOutput(llm.stripReasoning(snapshot), user, c.name)
+                                val visible = plugins.applyOutput(FormatStore.readableScene(llm.stripReasoning(snapshot)), user, c.name)
                                 history[history.size - 1] = history[history.size - 1].copy(content = visible)
                                 adapter.updateLast(visible)
                                 scrollToBottom()
@@ -588,10 +588,12 @@ class RoleChatActivity : AppCompatActivity() {
                     persistChat()
                     return@launch
                 }
-                val finalText = plugins.applyOutput(
-                    llm.stripReasoning(rawText).ifBlank { roleFailText() },
-                    user,
-                    c.name
+                val finalText = FormatStore.readableScene(
+                    plugins.applyOutput(
+                        llm.stripReasoning(rawText).ifBlank { roleFailText() },
+                        user,
+                        c.name
+                    )
                 )
                 finishAssistant(finalText, c, session)
             } catch (e: Exception) {

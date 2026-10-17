@@ -411,7 +411,7 @@ class GroupChatActivity : AppCompatActivity() {
                                 val snapshot = rawBuffer.toString()
                                 runOnUiThread {
                                     if (session != speechSession || isFinishing || isDestroyed || history.isEmpty()) return@runOnUiThread
-                                    val visible = plugins.applyOutput(llm.stripReasoning(snapshot), user, speaker.name)
+                                    val visible = FormatStore.readableScene(plugins.applyOutput(llm.stripReasoning(snapshot), user, speaker.name))
                                     history[history.size - 1] = history.last().copy(content = visible)
                                     adapter.updateLast(visible)
                                     scrollToBottom()
@@ -428,10 +428,12 @@ class GroupChatActivity : AppCompatActivity() {
                         persistChat()
                         return@launch
                     }
-                    val finalText = plugins.applyOutput(
-                        llm.stripReasoning(rawText).ifBlank { groupFailText() },
-                        user,
-                        speaker.name
+                    val finalText = FormatStore.readableScene(
+                        plugins.applyOutput(
+                            llm.stripReasoning(rawText).ifBlank { groupFailText() },
+                            user,
+                            speaker.name
+                        )
                     )
                     finishSpeaker(finalText, speaker, session)
                 }

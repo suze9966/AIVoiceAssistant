@@ -71,6 +71,7 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
         var pureEmoji: Boolean = false
         val tvSpeaker: TextView? = view.findViewById(R.id.tvSpeaker)
         val ivSticker: ImageView = view.findViewById(R.id.ivSticker)
+        val sceneCard: SceneCardView? = view.findViewById(R.id.sceneCard)
         val ivAvatar: ImageView? = view.findViewById(R.id.ivAvatar)
         /** 气泡下方的小字日期时间。 */
         val tvTime: TextView? = view.findViewById(R.id.tvTime)
@@ -105,6 +106,7 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
             ChatMessage.TYPE_IMAGE -> {
                 holder.ivSticker.visibility = View.VISIBLE
                 holder.tvMsg.visibility = View.GONE
+                holder.sceneCard?.bind(null)
                 ImageLoader.load(msg.content, holder.ivSticker)
             }
             else -> {
@@ -168,7 +170,16 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
             // 历史状态回填只对「最后一条」小沫消息生效，避免 RecyclerView 重绑历史消息时被污染
             val isLast = position == items.size - 1
             val recall = !msg.isMe && panelRecall && isLast
-            holder.tvMsg.text = renderRich(holder.pendingRaw, holder.pureEmoji, col, recall)
+            val scene = if (holder.pureEmoji) null else FormatStore.sceneModel(holder.pendingRaw)
+            if (scene != null) {
+                holder.sceneCard?.bind(scene)
+                holder.tvMsg.visibility = View.GONE
+                holder.tvMsg.text = ""
+            } else {
+                holder.sceneCard?.bind(null)
+                holder.tvMsg.visibility = View.VISIBLE
+                holder.tvMsg.text = renderRich(holder.pendingRaw, holder.pureEmoji, col, recall)
+            }
         }
         // 气泡下方的小字日期时间（旧数据 at<=0 时自动隐藏）
         holder.tvTime?.let { label ->

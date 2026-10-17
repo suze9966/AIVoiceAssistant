@@ -207,19 +207,20 @@ class FormatStore(private val context: Context) {
 
     fun enabled(): List<FormatEntry> = loadRef().filter { it.enabled && it.content.isNotBlank() }
 
-    /** 注入用的提示词块：把启用的格式拼成一段「必须照此输出」的规则。 */
+    /** 注入用的提示词块：只给栏目参考，禁止把 LaTeX 指令回吐进气泡。 */
     fun promptBlock(): String {
         val actives = enabled()
         if (actives.isEmpty()) return ""
         val sb = StringBuilder()
-        sb.append("【格式库】以下是主人指定的**固定输出格式**，当剧情需要用到对应内容时，")
-        sb.append("必须严格按格式生成，不要自创排版、不要省略字段、不要解释格式本身：\n")
+        sb.append("【格式库】下面是主人启用的场景参考。剧情需要时，用能读的中文呈现对应栏目，")
+        sb.append("不要把参考原文、反斜杠命令、颜色码或版权行写进回复：\n")
         actives.forEachIndexed { i, e ->
-            sb.append("\n--- 格式 ").append(i + 1).append("：").append(e.title)
-            if (e.trigger.isNotBlank()) sb.append("（触发：").append(e.trigger).append("）")
+            sb.append("\n--- 场景 ").append(i + 1).append("：").append(e.title)
+            if (e.trigger.isNotBlank()) sb.append("（何时用：").append(e.trigger).append("）")
             sb.append(" ---\n")
-            sb.append(e.content.trim()).append("\n")
+            sb.append(readableGuide(e)).append("\n")
         }
+        sb.append(outputRule())
         return sb.toString()
     }
 
@@ -237,12 +238,43 @@ class FormatStore(private val context: Context) {
             ?: return ""
         if (e.content.isBlank()) return ""
         val sb = StringBuilder()
-        sb.append("【文游场景·本回合专用格式】主人刚刚点名要用「").append(e.title).append("」。\n")
-        sb.append("请**严格按下面这份固定格式**呈现本回合的内容，")
-        sb.append("不要自创排版、不要省略字段、不要解释格式本身、不要混用别的格式：\n")
-        sb.append(e.content.trim()).append("\n")
-        sb.append("\n注意：只输出这一份格式的内容，不要加额外说明。").append("\n")
+        sb.append("【文游场景】主人本回合要点开「").append(e.title).append("」。\n")
+        sb.append("请用能直接阅读的中文呈现这一页，像手机屏幕上能看见的内容，不要解释你在套格式。\n")
+        sb.append("这一页大致该有这些栏目：\n")
+        sb.append(readableGuide(e)).append("\n")
+        sb.append(outputRule())
         return sb.toString()
+    }
+
+    /** 从格式原文里抽出能读的栏目说明，不把整份 LaTeX 塞进提示词。 */
+    private fun readableGuide(e: FormatEntry): String {
+        val fields = readableFields(e.content)
+        val sb = StringBuilder()
+        if (e.trigger.isNotBlank()) sb.append("· 何时出现：").append(e.trigger.trim()).append("\n")
+        if (fields.isEmpty()) {
+            sb.append("· 用短句写出这一页上能看见的中文，每行一条。")
+        } else {
+            fields.take(12).forEach { sb.append("· ").append(it).append("\n") }
+        }
+        return sb.toString().trim()
+    }
+
+    private fun outputRule(): String {
+        return "\n输出要求：这一页必须用一行场景标记交给界面绘制，不要自己画符号。" +
+            "标记格式只有这一行：[[scene:类型|标题|第一行|第二行|第三行]]。" +
+            "类型只能是 player、moments、chat、profile、browser、contacts、note、system、danmaku、forum、plain。" +
+            "播放器：[[scene:player|正在听|梦哑|任然|00:08 / 03:54]]。" +
+            "朋友圈：[[scene:moments|朋友圈|小沫|刚刷到一首歌]]。" +
+            "聊天：[[scene:chat|聊天|主人|我在听]]。" +
+            "资料：[[scene:profile|资料|小沫|微信号|签名]]。" +
+            "浏览器：[[scene:browser|浏览器|最近搜索|第一条]]。" +
+            "通讯录：[[scene:contacts|通讯录|小沫|主人]]。" +
+            "便签：[[scene:note|便签|记下一句]]。" +
+            "系统：[[scene:system|系统|第一行|第二行]]。" +
+            "弹幕：[[scene:danmaku|弹幕|直播中|弹幕飘过]]。" +
+            "讨论：[[scene:forum|讨论|楼主说|回复]]。" +
+            "标记前后可以有一句能读的中文，但禁止输出 LaTeX，禁止输出反斜杠命令，" +
+            "禁止输出颜色码、.sy 文件名、「禁止二传」「清秋屿」这类版权行，也禁止把格式指令原文贴进回复。"
     }
 
     /**
@@ -345,6 +377,177 @@ class FormatStore(private val context: Context) {
     fun invalidate() { cache = null }
 
     companion object {
+
+        private val DROP_LINE = listOf(
+            "禁止二传", "禁止换头", "固定格式", "美化指令", "请用以下", "请使用以下",
+            "查看格式", "格式结构", "当玩家", "DeepSeek", "清秋屿", "状态栏", "导航栏",
+            "底部留白", "搜索记录查看", "填写说明", "格式规则", "示例", "不要在现格式",
+            "禁止出现", "改为剧情", "处写", "按剧情", "保持不变", "依次为", "可按剧情"
+        )
+
+        /** 回复里是不是整份文游格式指令被原样贴了出来。 */
+        fun looksLikeLatexDump(text: String): Boolean {
+            if (text.isBlank()) return false
+            val marks = listOf("\\textcolor", "\\begin", "\\fcolorbox", "\\hspace", "\\scalebox", "\\end{array}")
+            val hits = marks.count { text.contains(it) }
+            if (hits >= 2) return true
+            if (text.contains("禁止二传") && text.contains("\\")) return true
+            if (text.contains(".sy") && hits >= 1) return true
+            return false
+        }
+
+        /**
+         * 把模型回吐的 LaTeX / 格式指令收成能读的中文。
+         * 普通闲聊没有排版命令时原样返回。
+         */
+        fun sceneModel(raw: String): SceneCardView.Model? {
+            if (raw.isBlank()) return null
+            val marked = parseSceneMark(raw)
+            if (marked != null) return marked
+            if (!looksLikeLatexDump(raw) && !looksLikeScenePage(raw)) return null
+            val head = sceneHead(raw) ?: return null
+            return SceneCardView.Model(head.second, head.first, sceneLines(raw, head.first))
+        }
+
+        /** 气泡认得出的场景标记：[[scene:player|正在听|梦哑|任然]] */
+        fun parseSceneMark(raw: String): SceneCardView.Model? {
+            val m = Regex("\\[\\[scene:([a-z]+)\\|([^\\]]+)]]").find(raw) ?: return null
+            val kind = m.groupValues[1]
+            if (kind !in setOf("player", "moments", "chat", "profile", "browser", "contacts", "note", "system", "danmaku", "forum", "plain")) return null
+            val parts = m.groupValues[2].split("|").map { it.trim() }.filter { it.isNotEmpty() }
+            if (parts.isEmpty()) return null
+            return SceneCardView.Model(kind, parts.first(), parts.drop(1).take(6))
+        }
+
+        private fun sceneHead(raw: String): Pair<String, String>? = when {
+            raw.contains("音乐名") || raw.contains("演唱") || raw.contains("播放器") || raw.contains("正在听") ->
+                "正在听" to "player"
+            raw.contains("朋友圈") -> "朋友圈" to "moments"
+            raw.contains("通讯录") -> "通讯录" to "contacts"
+            raw.contains("搜索记录") || raw.contains("浏览器") -> "浏览器" to "browser"
+            raw.contains("便签") -> "便签" to "note"
+            raw.contains("控制台") || raw.contains("系统管理员") -> "系统" to "system"
+            raw.contains("弹幕") || raw.contains("直播") -> "弹幕" to "danmaku"
+            raw.contains("讨论") || raw.contains("帖子") || raw.contains("论坛") -> "讨论" to "forum"
+            raw.contains("个人资料") || raw.contains("资料页") || raw.contains("我的页面") -> "资料" to "profile"
+            raw.contains("微信") || raw.contains("聊天") || raw.contains("气泡") || raw.contains("群聊") -> "聊天" to "chat"
+            else -> null
+        }
+
+        private fun sceneLines(raw: String, title: String): List<String> {
+            val noise = listOf(
+                "音乐", "播放", "歌手", "关注", "格式", "禁止", "清秋", "示例", "填写", "顶部",
+                "右侧", "后面", "循环", "上一首", "下一首", "列表", "暂停", "唱片", "色值",
+                "银灰", "换行", "规则", "微信", "朋友圈", "通讯录", "搜索", "浏览器", "便签",
+                "控制台", "弹幕", "讨论", "资料", "聊天", "页面", "指令", "美化", "内容", "图标",
+                "正在听", "收藏", "评论", "分享", title
+            )
+            return plainBits(raw).filter { bit -> noise.none { bit.contains(it) } }.take(6)
+        }
+
+        /** 已经收成「正在听 / 歌名 / 歌手」这类短页时，也要能画，不只认 LaTeX。 */
+        private fun looksLikeScenePage(raw: String): Boolean {
+            val lines = raw.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.take(8).toList()
+            if (lines.size !in 2..8) return false
+            val head = lines.first()
+            if (head !in setOf("正在听", "朋友圈", "通讯录", "浏览器", "便签", "系统", "弹幕", "讨论", "资料", "聊天")) {
+                return false
+            }
+            return lines.drop(1).any { it.length in 2..16 }
+        }
+
+        fun readableScene(raw: String): String {
+            if (raw.isBlank() || !looksLikeLatexDump(raw)) return raw
+            val card = sceneCard(raw)
+            if (card.isNotBlank()) return card
+            val fields = readableFields(raw)
+            if (fields.isEmpty()) return "这一页我收成能读的内容了，不过刚才那份格式里没有可显示的中文。"
+            return fields.take(8).joinToString("\n")
+        }
+
+        /** 认出是哪一页后，画成能读的短卡片，不再贴指令。 */
+        private fun sceneCard(raw: String): String {
+            val bits = plainBits(raw)
+            val head = when {
+                raw.contains("音乐名") || raw.contains("演唱") || raw.contains("播放器") -> "正在听"
+                raw.contains("朋友圈") -> "朋友圈"
+                raw.contains("通讯录") -> "通讯录"
+                raw.contains("搜索记录") || raw.contains("浏览器") -> "浏览器"
+                raw.contains("便签") -> "便签"
+                raw.contains("控制台") || raw.contains("系统管理员") -> "系统"
+                raw.contains("弹幕") -> "弹幕"
+                raw.contains("讨论") || raw.contains("帖子") -> "讨论"
+                raw.contains("个人资料") || raw.contains("资料页") -> "资料"
+                raw.contains("微信") || raw.contains("聊天") -> "聊天"
+                else -> ""
+            }
+            if (head.isBlank()) return ""
+            val noise = listOf(
+                "音乐", "播放", "歌手", "关注", "格式", "禁止", "清秋", "示例", "填写", "顶部",
+                "右侧", "后面", "循环", "上一首", "下一首", "列表", "暂停", "唱片", "色值",
+                "银灰", "换行", "规则", "微信", "朋友圈", "通讯录", "搜索", "浏览器", "便签",
+                "控制台", "弹幕", "讨论", "资料", "聊天", "页面", "指令", "美化", "内容", "图标"
+            )
+            val named = bits.filter { bit -> noise.none { bit.contains(it) } && bit.length in 2..16 }
+            val sb = StringBuilder()
+            sb.append(head)
+            named.take(6).forEach { sb.append("\n").append(it) }
+            if (head == "正在听") {
+                sb.append("\n收藏    评论    分享")
+                sb.append("\n上一首    播放    下一首")
+            }
+            return sb.toString().trim()
+        }
+
+        /** 先剥掉排版命令，再抠出短中文。 */
+        private fun plainBits(raw: String): List<String> {
+            var t = raw.replace("\r\n", "\n")
+            t = t.replace(Regex("\\\\[A-Za-z]{1,24}\\*?"), " ")
+            t = t.replace(Regex("#[0-9A-Fa-f]{3,8}"), " ")
+            t = t.replace(Regex("\\d+(?:\\.\\d+)?\\s*(?:cm|mm|ex|pt|em)"), " ")
+            t = t.replace(Regex("[{}$%&^~_()\\[\\]\\\\]"), " ")
+            val chunks = t.split(Regex("[\\s,，。；;：:、|/]+"))
+            return chunks.map { it.trim() }.filter { bit ->
+                bit.length in 2..12 &&
+                    bit.count { ch -> ch.code in 0x4E00..0x9FFF } >= 2 &&
+                    DROP_LINE.none { bit.contains(it) } &&
+                    !bit.contains("格式") &&
+                    !bit.contains("美化") &&
+                    !bit.contains("禁止") &&
+                    !bit.contains("说明") &&
+                    !bit.contains("内容") &&
+                    !bit.contains("图标") &&
+                    !bit.contains("时间")
+            }.distinct().toList()
+        }
+
+        private fun readableFields(raw: String): List<String> {
+            if (raw.isBlank()) return emptyList()
+            var t = raw.replace("\r\n", "\n").replace("\r", "\n")
+            t = t.replace(Regex("\\\\[()\\[\\]]"), " ")
+            t = t.replace(
+                Regex("\\\\(?:textcolor|textsf|textbf|textit|texttt|textrm|text|colorbox|fcolorbox|scalebox|resizebox|raisebox|hspace|vspace|rule|scriptsize|tiny|small|large|Large|huge|Huge|bfseries|itshape|ttfamily|sffamily|rmfamily|begin|end|color|fontsize|selectfont|displaystyle|textstyle)\\*?"),
+                " "
+            )
+            t = t.replace(Regex("\\\\[A-Za-z]{1,24}\\*?"), " ")
+            t = t.replace(Regex("#[0-9A-Fa-f]{3,8}"), " ")
+            t = t.replace(Regex("\\d+(?:\\.\\d+)?\\s*(?:cm|mm|ex|pt|em)"), " ")
+            t = t.replace(Regex("[{}$%&^~_()]"), " ")
+            t = t.replace(Regex("(?i)\\b(?:array|ll|id名|文案内容|第二行文案|第三行文案|消息内容|时间戳|头像色|可选)\\b"), " ")
+            return t.lineSequence().map { line ->
+                line.replace(Regex("[\\\\|_]{2,}"), " ")
+                    .replace(Regex("\\s+"), " ")
+                    .trim(' ', '-', '·', '｜', '|', '>', '<', '，', ',', '。', ':', '：', '1', '2', '3', '4', '5', '.', '、')
+            }.filter { line ->
+                line.length in 2..24 &&
+                    DROP_LINE.none { line.contains(it) } &&
+                    line.count { ch -> ch.code in 0x4E00..0x9FFF } >= 2 &&
+                    !line.any { it.isDigit() && line.contains("cm") } &&
+                    !line.contains("美化") &&
+                    !line.contains("格式") &&
+                    !line.endsWith(".sy")
+            }.distinct().take(12).toList()
+        }
 
         /** 只保留多行、且不是「普通聊天」的文本才当格式指令。 */
         fun looksLikeFormat(text: String): Boolean {

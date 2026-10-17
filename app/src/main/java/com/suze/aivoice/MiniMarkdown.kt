@@ -47,25 +47,27 @@ object MiniMarkdown {
      */
     fun render(text: String, baseColor: Int = Color.BLACK, recallState: Boolean = false): CharSequence {
         if (text.isEmpty()) return text
+        // 文游格式被模型原样回吐时，先收成能读的中文，避免满屏反斜杠命令
+        val shown = FormatStore.readableScene(text)
         // 每渲染一条消息前重置「本回合是否已弹面板」标记
         PanelMemory.appearedThisMessage = false
         // 明显的非 Markdown 文本走快路径，省掉解析开销
-        if (!mayContainMarkdown(text)) {
+        if (!mayContainMarkdown(shown)) {
             // 快路径：原文里确实没有面板，但开启回填且历史有状态时，补上「当前状态」
             if (recallState && PanelMemory.has()) {
                 return try {
-                    renderInner(text, baseColor, recallState)
+                    renderInner(shown, baseColor, recallState)
                 } catch (e: Exception) {
-                    text
+                    shown
                 }
             }
-            return text
+            return shown
         }
         return try {
-            renderInner(text, baseColor, recallState)
+            renderInner(shown, baseColor, recallState)
         } catch (e: Exception) {
             // 解析永远不该让消息消失
-            text
+            shown
         }
     }
 
@@ -858,7 +860,11 @@ object MiniMarkdown {
      */
     fun stripForSpeech(text: String): String {
         if (text.isEmpty()) return text
-        var t = text
+        var t = FormatStore.readableScene(text)
+        val scene = FormatStore.parseSceneMark(text)
+        if (scene != null) {
+            t = (listOf(scene.title) + scene.lines).joinToString("，")
+        }
         // 面板块整块去掉（状态卡念出来是一串符号，没意义）
         t = t.replace(Regex("```(?:panel|status|系统面板|面板)[\\s\\S]*?```"), " ")
         // 代码块整块去掉（代码念出来没有意义）

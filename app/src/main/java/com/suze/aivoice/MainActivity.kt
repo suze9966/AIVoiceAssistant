@@ -1087,12 +1087,13 @@ class MainActivity : AppCompatActivity() {
                     if (delta.isEmpty()) return@chatStream
                     val snapshot = synchronized(rawBuffer) {
                         rawBuffer.append(delta)
-                        rawBuffer.toString()
+                        FormatStore.readableScene(rawBuffer.toString())
                     }
                     runOnUiThread { applyStreamSnapshot(session, snapshot) }
                 }.ifBlank { llmFailText() }
+                rawText = FormatStore.readableScene(rawText)
             } else {
-                val reply = llm.chat(requestHistory).ifBlank { llmFailText() }
+                val reply = FormatStore.readableScene(llm.chat(requestHistory).ifBlank { llmFailText() })
                 runOnUiThread {
                     if (session == speechSession && history.isNotEmpty()) {
                         history[history.size - 1] = history.last().copy(content = reply)
