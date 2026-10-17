@@ -32,7 +32,9 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Locale
 
@@ -51,6 +53,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var emotion: EmotionEngine
     private lateinit var mind: MindEngine
     private lateinit var memory: MemoryEngine
+    private var chatMusicBar: android.widget.LinearLayout? = null
+    private var chatMusicTitle: TextView? = null
     private lateinit var weather: WeatherClient
     private lateinit var proactive: ProactiveEngine
     private lateinit var panels: PanelStore
@@ -287,6 +291,11 @@ class MainActivity : AppCompatActivity() {
         adapter.chatFont = ChatFontStore.load(this)
         recycler.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
         recycler.adapter = adapter
+        adapter.onSceneClick = { model ->
+            if (model.kind == "player") playChatScene(model) else Unit
+        }
+        attachChatMusicBar()
+        ChatMusic.onChange = { now -> showChatMusic(now) }
         GlassKit.attach(
             findViewById(R.id.chatContent),
             recycler,
@@ -1001,6 +1010,10 @@ class MainActivity : AppCompatActivity() {
             requestWeather(wxCity)
             return
         }
+        if (handleChatMusic(userText)) {
+            isSending = false
+            return
+        }
         val command = VoiceCommandParser.parse(userText)
         if (command != null) {
             isSending = false
@@ -1454,6 +1467,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        ChatMusic.onChange = null
+        ChatMusic.stop()
         listeningEnabled = false
         runCatching { ListenKeepAliveService.stop(this) }
         tts.onSpeakDone = null
@@ -2169,6 +2184,113 @@ class MainActivity : AppCompatActivity() {
     private fun runWebSearch(userText: String, query: String) {
         sendToLlm(userText)
     }
+
+    private fun handleChatMusic(userText: String): Boolean {
+        val text = userText.trim()
+        if (text.isEmpty()) return false
+        val stopWords = listOf("停止播放", "别放了", "不要放了", "关掉音乐", "关闭音乐", "暂停播放", "暂停音乐")
+        if (stopWords.any { text == it || text.startsWith(it) }) {
+            ChatMusic.stop()
+            showChatMusic(null)
+            replyLocal(userText, "音乐停了。")
+            return true
+        }
+        val nextWords = listOf("下一首", "换一首", "切歌")
+        if (nextWords.any { text == it }) {
+            ChatMusic.next(this)
+            replyLocal(userText, "换下一首。")
+            return true
+        }
+        val playWords = listOf("放一首", "放首歌", "放歌", "播放", "来一首", "听一首", "我想听", "我想听歌", "放音乐", "播放音乐")
+        val hit = playWords.firstOrNull { text.contains(it) } ?: return false
+        val wish = text.replace(hit, " ").replace(Regex("[，。！？、]"), " ").trim()
+        showChatMusicLoading()
+        ChatMusic.play(this, wish) { now ->
+            if (isDestroyed) return@play
+            if (now == null) {
+                showChatMusic(null)
+                replyLocal(userText, getString(R.string.pocket_music_empty))
+            } else {
+                val kind = if (now.live) "电台" else "试听"
+                val card = "[[scene:player|正在听|" + now.title + "|" + now.artist + "|" + kind + "]]"
+                replyLocal(userText, card)
+                showChatMusic(now)
+            }
+        }
+        return true
+    }
+
+    private fun playChatScene(model: SceneCardView.Model) {
+        val wish = (model.lines.firstOrNull().orEmpty() + " " + model.lines.getOrNull(1).orEmpty()).trim()
+        showChatMusicLoading()
+        ChatMusic.toggle(this, wish.ifBlank { "piano" }) { now ->
+            if (now == null) showChatMusic(null) else showChatMusic(now)
+        }
+    }
+
+    private fun attachChatMusicBar() {
+        val parent = findViewById<android.widget.FrameLayout>(R.id.chatContent)
+        val bar = android.widget.LinearLayout(this)
+        bar.orientation = android.widget.LinearLayout.HORIZONTAL
+        bar.gravity = android.view.Gravity.CENTER_VERTICAL
+        bar.setPadding(dp(12), dp(8), dp(8), dp(8))
+        bar.background = android.graphics.drawable.GradientDrawable().apply {
+            cornerRadius = dp(18).toFloat()
+            setColor(0xF0FFFFFF.toInt())
+        }
+        bar.elevation = dp(6).toFloat()
+        val title = TextView(this)
+        title.textSize = 13f
+        title.setTextColor(0xFF0F3557.toInt())
+        title.maxLines = 1
+        val titleLp = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        bar.addView(title, titleLp)
+        bar.addView(musicButton("下一首") { ChatMusic.next(this) })
+        bar.addView(musicButton("停止") {
+            ChatMusic.stop()
+            showChatMusic(null)
+        })
+        val lp = android.widget.FrameLayout.LayoutParams(
+            android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+            android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
+        )
+        lp.gravity = android.view.Gravity.BOTTOM
+        lp.leftMargin = dp(12)
+        lp.rightMargin = dp(12)
+        lp.bottomMargin = dp(8)
+        bar.visibility = android.view.View.GONE
+        parent.addView(bar, lp)
+        chatMusicBar = bar
+        chatMusicTitle = title
+    }
+
+    private fun musicButton(label: String, click: () -> Unit): TextView {
+        val view = TextView(this)
+        view.text = label
+        view.textSize = 13f
+        view.setTextColor(0xFF2E8BD6.toInt())
+        view.setPadding(dp(10), dp(6), dp(10), dp(6))
+        view.setOnClickListener { click() }
+        return view
+    }
+
+    private fun showChatMusicLoading() {
+        chatMusicTitle?.text = getString(R.string.pocket_music_loading)
+        chatMusicBar?.visibility = android.view.View.VISIBLE
+    }
+
+    private fun showChatMusic(now: ChatMusic.Now?) {
+        val bar = chatMusicBar ?: return
+        if (now == null) {
+            bar.visibility = android.view.View.GONE
+            return
+        }
+        val state = if (ChatMusic.isPlaying()) "播放中" else "已暂停"
+        chatMusicTitle?.text = now.title + " · " + now.artist + " · " + state
+        bar.visibility = android.view.View.VISIBLE
+    }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private fun replyLocal(userText: String, reply: String) {
         adapter.add(ChatMessage("user", userText, isMe = true))

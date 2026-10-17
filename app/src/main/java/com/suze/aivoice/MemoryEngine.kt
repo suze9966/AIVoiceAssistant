@@ -210,7 +210,7 @@ class MemoryEngine(context: Context) {
     fun rememberPocket(content: String) {
         val c = content.trim()
         if (c.isBlank()) return
-        val idx = items.indexOfFirst { it.content.startsWith("我在虚拟小手机") }
+        val idx = items.indexOfFirst { it.content.startsWith("我在虚拟小手机") || it.content.startsWith("我在主聊天里正在听") }
         val text = SafeCut.takeUnitsSafe(c, 500)
         if (idx >= 0) {
             val old = items[idx]

@@ -22,6 +22,7 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
 
     /** 长按某条消息的回调：position 为条目下标 */
     var onItemLongClick: ((Int) -> Unit)? = null
+    var onSceneClick: ((SceneCardView.Model) -> Unit)? = null
     /** 角色聊天可覆盖 AI 头像；为空时沿用小沫全局头像。 */
     var bindAiAvatar: ((ImageView) -> Unit)? = null
     /** 群聊按发言人切换头像。 */
@@ -173,6 +174,9 @@ class ChatAdapter(private val items: MutableList<ChatMessage>) :
             val scene = if (holder.pureEmoji) null else FormatStore.sceneModel(holder.pendingRaw)
             if (scene != null) {
                 holder.sceneCard?.bind(scene)
+                holder.sceneCard?.setOnClickListener {
+                    if (scene.kind == "player") onSceneClick?.invoke(scene)
+                }
                 holder.tvMsg.visibility = View.GONE
                 holder.tvMsg.text = ""
             } else {
