@@ -1,0 +1,229 @@
+娱乐八卦讨论帖格式
+
+当玩家在文游过程中需要查看相关讨论帖时请用以下固定格式生成相应内容：
+
+一、讨论贴格式、
+
+\[
+
+\raisebox{-0.5cm}{
+
+\scalebox{0.85}{
+
+\hspace{-1.8cm}
+
+\begin{array}{l}
+
+\textcolor{#8E8E93}{\textsf{ \hspace{1.3cm}\scriptsize 娱乐八卦 \textcolor{#A0A0A0}{｜} 今日热帖 }} \\
+
+\textcolor{#F0F0F0}{\textsf{
+
+\hspace{1.3cm}------------------------------------------------------------------------------------
+
+}} \\
+
+\begin{array}{ll}
+
+\textcolor{#262626}{\textsf{ \hspace{1.3cm}【楼主】}} &
+
+\textcolor{#262626}{\textsf{
+
+\hspace{-0.5cm}\textbf{\textcolor{#262626}{楼主用户名}}\hspace{0.08cm}
+
+\textcolor{#AAAAAA}{\tiny 2小时前} }} \\
+
+& \textcolor{#262626}{\textsf{ \hspace{-1.7cm}（楼主内容，按32字符换行） }}
+
+\\ & \textcolor{#262626}{\textsf{ \hspace{-1.7cm}（第二行） }}
+
+\\ & \textcolor{#262626}{\textsf{ \hspace{-1.7cm}（第三行） }}
+
+\\
+
+\end{array} \\
+
+\textcolor{#F0F0F0}{\textsf{
+
+\hspace{1.3cm}------------------------------------------------------------------------------------
+
+}} \\
+
+\begin{array}{ll}
+
+\textcolor{#262626}{\textsf{ \hspace{1.3cm}\scriptsize 【1L】}} &
+
+\textcolor{#262626}{\textsf{
+
+\hspace{-0.5cm}\textbf{\textcolor{#262626}{\scriptsize 用户名}}\hspace{0.08cm} \textcolor{#AAAAAA}{\tiny 1小时前} }} \\
+
+& \textcolor{#B0B0B0}{\textsf{ \hspace{-0.7cm}\scriptsize ［图片］ }} \textcolor{#4ECDC4}{\textsf{\tiny 图片描述}} \\
+
+& \textcolor{#262626}{\textsf{ \hspace{-0.7cm}\scriptsize （评论内容，按80字符换行） }}
+
+\\ & \textcolor{#262626}{\textsf{ \hspace{-0.7cm}\scriptsize （第二行） }}
+
+\\ & \textcolor{#262626}{\textsf{ \hspace{-0.7cm}\scriptsize （第三行） }}
+
+\\
+
+\end{array} \\
+
+\textcolor{#F0F0F0}{\textsf{
+
+\hspace{1.3cm}------------------------------------------------------------------------------------
+
+}} \\
+
+\begin{array}{ll}
+
+\textcolor{#262626}{\textsf{ \hspace{1.3cm}\scriptsize 【2L】}} &
+
+\textcolor{#262626}{\textsf{
+
+\hspace{-0.5cm}\textbf{\textcolor{#262626}{\scriptsize 用户名}}\hspace{0.08cm} \textcolor{#AAAAAA}{\tiny 45分钟前} }} \\
+
+& \textcolor{#262626}{\textsf{ \hspace{-0.7cm}\scriptsize （评论内容，按80字符换行） }}
+
+\\ & \textcolor{#262626}{\textsf{ \hspace{-0.7cm}\scriptsize （第二行） }}
+
+\\
+
+\end{array} \\
+
+\textcolor{#F0F0F0}{\textsf{
+
+\hspace{1.3cm}------------------------------------------------------------------------------------
+
+}} \\
+
+\begin{array}{ll}
+
+\textcolor{#262626}{\textsf{ \hspace{1.3cm}\scriptsize 【3L】}} &
+
+\textcolor{#262626}{\textsf{
+
+\hspace{-0.5cm}\textbf{\textcolor{#262626}{\scriptsize 用户名}}\hspace{0.08cm} \textcolor{#AAAAAA}{\tiny 32分钟前} }} \\
+
+& \textcolor{#262626}{\textsf{ \hspace{-0.7cm}\scriptsize （评论内容，按80字符换行） }}
+
+\\ & \textcolor{#262626}{\textsf{ \hspace{-0.7cm}\scriptsize （第二行） }}
+
+\\
+
+\end{array} \\
+
+\textcolor{#F0F0F0}{\textsf{
+
+\hspace{1.3cm}------------------------------------------------------------------------------------
+
+}} \\
+
+\begin{array}{ll}
+
+\textcolor{#262626}{\textsf{ \hspace{1.3cm}\scriptsize 【4L】}} &
+
+\textcolor{#262626}{\textsf{
+
+\hspace{-0.5cm}\textbf{\textcolor{#262626}{\scriptsize 用户名}}\hspace{0.08cm} \textcolor{#AAAAAA}{\tiny 25分钟前} }} \\
+
+& \textcolor{#B0B0B0}{\textsf{ \hspace{-0.7cm}\scriptsize ［图片］ }} \textcolor{#4ECDC4}{\textsf{\tiny 图片描述}} \\
+
+& \textcolor{#262626}{\textsf{ \hspace{-0.7cm}\scriptsize （评论内容，按80字符换行） }}
+
+\\ & \textcolor{#262626}{\textsf{ \hspace{-0.7cm}\scriptsize （第二行） }}
+
+\\
+
+\end{array} \\
+
+\textcolor{#F0F0F0}{\textsf{
+
+\hspace{1.3cm}------------------------------------------------------------------------------------
+
+}} \\
+
+\begin{array}{ll}
+
+\textcolor{#262626}{\textsf{ \hspace{1.3cm}\scriptsize 【5L】}} &
+
+\textcolor{#262626}{\textsf{
+
+\hspace{-0.5cm}\textbf{\textcolor{#262626}{\scriptsize 用户名}}\hspace{0.08cm} \textcolor{#AAAAAA}{\tiny 18分钟前} }} \\
+
+& \textcolor{#262626}{\textsf{ \hspace{-0.7cm}\scriptsize （评论内容，按80字符换行） }}
+
+\\ & \textcolor{#262626}{\textsf{ \hspace{-0.7cm}\scriptsize （第二行） }}
+
+\\
+
+\end{array} \\
+
+\textcolor{#F0F0F0}{\textsf{
+
+\hspace{1.3cm}------------------------------------------------------------------------------------
+
+}} \\
+
+\begin{array}{ll}
+
+\textcolor{#262626}{\textsf{ \hspace{1.3cm}\scriptsize 【6L】}} &
+
+\textcolor{#262626}{\textsf{
+
+\hspace{-0.5cm}\textbf{\textcolor{#262626}{\scriptsize 用户名}}\hspace{0.08cm} \textcolor{#AAAAAA}{\tiny 12分钟前} }} \\
+
+& \textcolor{#262626}{\textsf{ \hspace{-0.7cm}\scriptsize （评论内容，按80字符换行） }}
+
+\\ & \textcolor{#262626}{\textsf{ \hspace{-0.7cm}\scriptsize （第二行） }}
+
+\\
+
+\end{array} \\
+
+\textcolor{#F0F0F0}{\textsf{
+
+\hspace{1.3cm}------------------------------------------------------------------------------------
+
+}} \\
+
+\begin{array}{ll}
+
+\textcolor{#262626}{\textsf{ \hspace{1.3cm}\scriptsize 【7L】}} &
+
+\textcolor{#262626}{\textsf{
+
+\hspace{-0.5cm}\textbf{\textcolor{#262626}{\scriptsize 用户名}}\hspace{0.08cm} \textcolor{#AAAAAA}{\tiny 8分钟前} }} \\
+
+& \textcolor{#B0B0B0}{\textsf{ \hspace{-0.7cm}\scriptsize ［图片］ }} \textcolor{#4ECDC4}{\textsf{\tiny 图片描述}} \\
+
+& \textcolor{#262626}{\textsf{ \hspace{-0.7cm}\scriptsize （评论内容，按80字符换行） }}
+
+\\ & \textcolor{#262626}{\textsf{ \hspace{-0.7cm}\scriptsize （第二行） }}
+
+\\
+
+\end{array} \\
+
+\textcolor{#F0F0F0}{\textsf{
+
+\hspace{1.3cm}------------------------------------------------------------------------------------
+
+}} \\
+
+\end{array}
+
+}
+
+}
+
+\]
+
+二、格式规则
+
+1. 楼层数量不限，按剧情需要增减；楼层序号依次为【1L】【2L】【3L】……，最新的一层时间最接近现在。
+2. 楼主内容按 32 字符换行，评论内容按 80 字符换行，换行处补一行「\\ & 」结构。
+3. 有配图的楼层才写「［图片］ 图片描述」，纯文字的楼层直接写评论内容。
+4. 内容里禁止出现半角符号（如 ()^~_ 等），禁止出现多余的空格、换行。
+5. 不要在格式指令代码中加入额外的转义符\。
+6. 帖子内容要像真实网友：有吃瓜、有站队、有阴阳、有理性分析、有玩梗，语言口语化，可带网络用语。
+7. 楼主用户名、回复用户名按剧情角色或路人昵称生成，不要用「用户名」这类占位符直接输出。

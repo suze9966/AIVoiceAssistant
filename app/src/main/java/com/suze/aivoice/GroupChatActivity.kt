@@ -1,5 +1,6 @@
 package com.suze.aivoice
 
+import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -28,6 +29,7 @@ class GroupChatActivity : AppCompatActivity() {
     private lateinit var plugins: TavernPluginStore
     private lateinit var tts: TtsHelper
     private val relationGraph by lazy { RoleRelationGraph(this) }
+    private val formats by lazy { FormatStore(this) }
     private val searcher = SearchClient()
     private lateinit var adapter: ChatAdapter
     private lateinit var recycler: RecyclerView
@@ -78,7 +80,6 @@ class GroupChatActivity : AppCompatActivity() {
             }
         }
         adapter = ChatAdapter(history)
-        adapter.frameless = prefs.bubbleFrameless
         adapter.chatFont = ChatFontStore.load(this)
         adapter.bindMessageAvatar = { view, msg -> bindBubbleAvatar(view, msg) }
         recycler.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
@@ -199,7 +200,8 @@ class GroupChatActivity : AppCompatActivity() {
             pop.menu.add(0, 5, 1, getString(R.string.role_regenerate))
         }
         pop.menu.add(0, 3, 2, getString(R.string.menu_connect_llm))
-        pop.menu.add(0, 2, 3, getString(R.string.menu_clear))
+        pop.menu.add(0, 26, 3, getString(R.string.menu_scene))
+        pop.menu.add(0, 2, 4, getString(R.string.menu_clear))
         pop.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 1 -> {
@@ -221,6 +223,10 @@ class GroupChatActivity : AppCompatActivity() {
                     startActivity(Intent(this, LlmConnectActivity::class.java))
                     true
                 }
+                26 -> {
+                    showSceneMenu()
+                    true
+                }
                 2 -> {
                     history.clear()
                     store.clearChat(r)
@@ -232,6 +238,33 @@ class GroupChatActivity : AppCompatActivity() {
             }
         }
         pop.show()
+    }
+
+    /** 文游功能菜单：点哪个场景，下一批群聊消息就只按那一份格式来。 */
+    private fun showSceneMenu() {
+        val list = formats.load().filter { it.content.isNotBlank() }
+        if (list.isEmpty()) {
+            Toast.makeText(this, R.string.toast_format_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val labels = list.map { e -> formats.iconFor(e.title) + "  " + e.title }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.menu_scene_title)
+            .setItems(labels) { _, which ->
+                val e = list.getOrNull(which) ?: return@setItems
+                formats.useOnce(e.id)
+                if (editInput.text.isNullOrBlank()) {
+                    editInput.setText(getString(R.string.scene_prompt_hint, e.title))
+                    editInput.setSelection(editInput.text?.length ?: 0)
+                }
+                Toast.makeText(
+                    this,
+                    getString(R.string.toast_scene_picked, e.title),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            .setNegativeButton(R.string.menu_scene_cancel, null)
+            .show()
     }
 
     private fun setupLongClick() {
@@ -336,6 +369,10 @@ class GroupChatActivity : AppCompatActivity() {
         llm.allowLocalFallback = false
         llm.toolsEnabled = true
         llm.extraSystemPrompt = null
+        // 一次性场景格式只在这里取一次（在循环外），让本轮所有发言者都带上同一份
+        val sceneOnce = formats.takeSceneOnce()
+        // 没点场景菜单时，回退到格式库里「启用」的那些
+        val fmtBlock = if (sceneOnce.isNotBlank()) sceneOnce else formats.promptBlock()
         sendJob?.cancel()
         sendJob = lifecycleScope.launch {
             try {
@@ -356,7 +393,10 @@ class GroupChatActivity : AppCompatActivity() {
                     val prompt = plugins.applyPrompt(
                         RolePrompt.buildGroup(
                             speaker, members, r.scene, history.dropLast(1),
-                            relationGraph.promptBlock(speaker.name, members.map { it.name })
+                            buildString {
+                                append(relationGraph.promptBlock(speaker.name, members.map { it.name }))
+                                if (fmtBlock.isNotBlank()) append("\n").append(fmtBlock)
+                            }
                         ),
                         user,
                         speaker.name

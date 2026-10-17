@@ -215,11 +215,43 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
         }
         val cleaned = out.toString()
             .replace(Regex("\\[\\s*sticker\\s*:[^\\]]{1,32}\\]", RegexOption.IGNORE_CASE), "")
+        // 文游格式库里的 LaTeX 排版指令朗读时要去掉，只留中文内容（否则会念出 textcolor/sf 之类）
+        val noTex = stripLatexNoise(cleaned)
         // 剥掉 Markdown 标记：标题井号、加粗星号、行内代码反引号、表格竖线、分隔线、列表符号等
         // 否则 TTS 会一字一句念出「星号星号」「反引号」这种噪音
-        return MiniMarkdown.stripForSpeech(cleaned)
-            .replace(Regex("[ \\t]{2,}"), " ")
+        return MiniMarkdown.stripForSpeech(noTex)
+            .replace(Regex("[ \t]{2,}"), " ")
             .trim()
+    }
+
+    /**
+     * 去掉 LaTeX 排版噪音，只保留能读的中文/英文内容。
+     *
+     * 文游格式指令里的 `\textcolor{#888888}{\textsf{｜内容}}` 这类，
+     * 朗读时只需要「｜内容」，不能把命令名也念出来。
+     */
+    private fun stripLatexNoise(text: String): String {
+        if (!text.contains('\\')) return text
+        var t = text
+        // 去掉定界符 \( \) \[ \]
+        t = t.replace(Regex("\\\\[()\\[\\]]"), "")
+        // 去掉常见排版命令（保留其后花括号里的内容）
+        t = t.replace(
+            Regex("\\\\(?:textcolor|textsf|textbf|textit|texttt|textrm|text|colorbox|fcolorbox|scalebox|resizebox|raisebox|hspace|vspace|rule|scriptsize|tiny|small|large|Large|huge|Huge|bfseries|itshape|ttfamily|sffamily|rmfamily|begin|end|color|fontsize|selectfont|displaystyle|textstyle)\\*?"),
+            ""
+        )
+        // \color{#RRGGBB} 这类带参数的
+        t = t.replace(Regex("\\\\(?:color|fontsize|textcolor)\\{[^}]{0,40}\\}"), "")
+        // 剩下其他反斜杠命令（\foo）
+        t = t.replace(Regex("\\\\[A-Za-z]{1,20}"), "")
+        // 颜色码与尺寸花括号里的残留：#RRGGBB、未知占位
+        t = t.replace(Regex("#[0-9A-Fa-f]{3,8}"), "")
+        // LaTeX 结构花括号
+        t = t.replace(Regex("[{}]"), "")
+        t = t.replace(Regex("\\$"), "")
+        // 连续空白压缩
+        t = t.replace(Regex("[ \\t]{2,}"), " ")
+        return t
     }
 
     fun speak(text: String, taiwan: Boolean = false) {

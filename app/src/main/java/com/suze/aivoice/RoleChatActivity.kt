@@ -31,6 +31,7 @@ class RoleChatActivity : AppCompatActivity() {
     private lateinit var tts: TtsHelper
     private val moodEngine by lazy { RoleMoodEngine(this) }
     private val branchStore by lazy { StoryBranchStore(this) }
+    private val formats by lazy { FormatStore(this) }
     private val searcher = SearchClient()
     private lateinit var adapter: ChatAdapter
     private lateinit var recycler: RecyclerView
@@ -82,7 +83,6 @@ class RoleChatActivity : AppCompatActivity() {
             }
         }
         adapter = ChatAdapter(history)
-        adapter.frameless = prefs.bubbleFrameless
         adapter.chatFont = ChatFontStore.load(this)
         adapter.bindAiAvatar = { view -> bindBubbleAvatar(view) }
         // 按角色区分气泡：该角色设过专属样式就用它，否则跟随全局
@@ -233,7 +233,8 @@ class RoleChatActivity : AppCompatActivity() {
         pop.menu.add(0, 10, 7, getString(R.string.role_mood_panel))
         pop.menu.add(0, 11, 8, getString(R.string.role_mark_anchor))
         pop.menu.add(0, 12, 9, getString(R.string.role_story_lines))
-        pop.menu.add(0, 2, 10, getString(R.string.menu_clear))
+        pop.menu.add(0, 26, 10, getString(R.string.menu_scene))
+        pop.menu.add(0, 2, 11, getString(R.string.menu_clear))
         pop.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 1 -> {
@@ -281,6 +282,10 @@ class RoleChatActivity : AppCompatActivity() {
                 }
                 12 -> {
                     showAnchors()
+                    true
+                }
+                26 -> {
+                    showSceneMenu()
                     true
                 }
                 2 -> {
@@ -611,8 +616,54 @@ class RoleChatActivity : AppCompatActivity() {
             val style = RoleActingTuner.promptBlock(history)
             if (style.isNotBlank()) sb.append(style).append("\n")
         }
+        // 文游功能菜单：优先用本回合点名的那一份格式（一次一份、用完即清）
+        var injected = false
+        runCatching {
+            val one = formats.takeSceneOnce()
+            if (one.isNotBlank()) {
+                sb.append(one).append("\n")
+                injected = true
+            }
+        }
+        // 没点场景菜单时，才走格式库里「启用」的那些
+        if (!injected) runCatching {
+            val fmt = formats.promptBlock()
+            if (fmt.isNotBlank()) sb.append(fmt).append("\n")
+        }
         return sb.toString()
     }
+    /**
+     * 文游功能菜单：列出格式库里的每一份格式，点哪个就只把那一份注入下一条消息。
+     *
+     * 文游主要在酒馆里玩，所以这里也放一份入口，不用回主界面去点。
+     */
+    private fun showSceneMenu() {
+        val list = formats.load().filter { it.content.isNotBlank() }
+        if (list.isEmpty()) {
+            Toast.makeText(this, R.string.toast_format_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val labels = list.map { e -> formats.iconFor(e.title) + "  " + e.title }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.menu_scene_title)
+            .setItems(labels) { _, which ->
+                val e = list.getOrNull(which) ?: return@setItems
+                formats.useOnce(e.id)
+                val box = editInput
+                if (box.text.isNullOrBlank()) {
+                    box.setText(getString(R.string.scene_prompt_hint, e.title))
+                    box.setSelection(box.text?.length ?: 0)
+                }
+                Toast.makeText(
+                    this,
+                    getString(R.string.toast_scene_picked, e.title),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            .setNegativeButton(R.string.menu_scene_cancel, null)
+            .show()
+    }
+
     private fun showMoodPanel(c: RoleCharacter) {
         val m = moodEngine.get(c.id)
         val msg = StringBuilder()

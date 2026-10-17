@@ -54,6 +54,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var weather: WeatherClient
     private lateinit var proactive: ProactiveEngine
     private lateinit var panels: PanelStore
+    private lateinit var formats: FormatStore
     private lateinit var adapter: ChatAdapter
     private lateinit var recycler: RecyclerView
     private lateinit var editInput: EditText
@@ -116,6 +117,30 @@ class MainActivity : AppCompatActivity() {
         if (ok && uri != null) askAboutImage(uri)
     }
     private var pendingCameraUri: Uri? = null
+    private var pendingFormatName: String? = null
+    private val pickFormatFile = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri == null) return@registerForActivityResult
+        val text = runCatching {
+            contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+        }.getOrNull()
+        if (text.isNullOrBlank()) {
+            Toast.makeText(this, R.string.toast_format_import_fail, Toast.LENGTH_LONG).show()
+            return@registerForActivityResult
+        }
+        // 若是格式库的 JSON 备份，按 JSON 导入；否则当原始格式指令入库
+        val n = if (text.trimStart().startsWith("[")) formats.importJson(text, false) else 0
+        val entry = if (n > 0) {
+            formats.load().lastOrNull { !it.builtin }
+        } else {
+            formats.importText(text, pendingFormatName.orEmpty())
+        }
+        pendingFormatName = null
+        if (entry == null) {
+            Toast.makeText(this, R.string.toast_format_import_fail, Toast.LENGTH_LONG).show()
+        } else {
+            Toast.makeText(this, getString(R.string.toast_format_imported, entry.title), Toast.LENGTH_LONG).show()
+        }
+    }
     private var pendingVisionPrompt: String = "请用中文简短说明这张图。"
     private var greetingBusy = false
     private var pendingCalendarUser: String? = null
@@ -156,6 +181,7 @@ class MainActivity : AppCompatActivity() {
 
         prefs = Prefs(this)
         panels = PanelStore(this)
+        formats = FormatStore(this)
         // 让渲染器认识主人自定义的面板模板（模板名 → 字段行）
         MiniMarkdown.externalTemplateResolver = { name ->
             panels.find(name)?.let { panels.toPanelBody(it) }
@@ -211,9 +237,10 @@ class MainActivity : AppCompatActivity() {
             pop.menu.add(0, 23, 13, getString(R.string.menu_memory))
             pop.menu.add(0, 24, 14, getString(R.string.menu_emotion))
             pop.menu.add(0, 25, 15, getString(R.string.menu_mind))
-            pop.menu.add(0, 2, 16, getString(R.string.menu_clear))
-            pop.menu.add(0, 4, 17, getString(R.string.menu_stop_speak))
-            pop.menu.add(0, 3, 18, getString(R.string.menu_wake))
+            pop.menu.add(0, 26, 16, getString(R.string.menu_scene))
+            pop.menu.add(0, 2, 17, getString(R.string.menu_clear))
+            pop.menu.add(0, 4, 18, getString(R.string.menu_stop_speak))
+            pop.menu.add(0, 3, 19, getString(R.string.menu_wake))
             pop.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     1 -> { openSettingsDrawer(); true }
@@ -232,6 +259,7 @@ class MainActivity : AppCompatActivity() {
                     23 -> { startActivity(Intent(this, MemoryActivity::class.java)); true }
                     24 -> { startActivity(Intent(this, EmotionActivity::class.java)); true }
                     25 -> { startActivity(Intent(this, MindActivity::class.java)); true }
+                    26 -> { showSceneMenu(); true }
                     2 -> {
                         history.clear()
                         adapter.notifyDataSetChanged()
@@ -253,8 +281,7 @@ class MainActivity : AppCompatActivity() {
         adapter = ChatAdapter(history)
         // 面板状态续接开关（主人可在设置里关）
         adapter.panelRecall = prefs.panelRecallEnabled
-        // 无框模式 + 字体设置：从偏好读一次，之后每次 onResume 再刷新
-        adapter.frameless = prefs.bubbleFrameless
+        // 字体设置：从偏好读一次，之后每次 onResume 再刷新
         adapter.chatFont = ChatFontStore.load(this)
         recycler.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
         recycler.adapter = adapter
@@ -622,11 +649,8 @@ class MainActivity : AppCompatActivity() {
         applyChatStyle()
         // 从设置页返回后，重读面板续接开关，保证改完立即生效（不用杀进程）
         if (::adapter.isInitialized) adapter.panelRecall = prefs.panelRecallEnabled
-        // 无框模式 / 字体设置也可能在设置页里改过，同样即时刷新
-        if (::adapter.isInitialized) {
-            adapter.frameless = prefs.bubbleFrameless
-            adapter.chatFont = ChatFontStore.load(this)
-        }
+        // 字体设置也可能在设置页里改过，同样即时刷新
+        if (::adapter.isInitialized) adapter.chatFont = ChatFontStore.load(this)
         if (::memory.isInitialized) memory.reload()
         reloadHistoryIfIdle()
         maybeGreetOnResume()
@@ -733,6 +757,8 @@ class MainActivity : AppCompatActivity() {
             )
             settingsBinder?.onBubbleExport = { exportBubbleStyle() }
             settingsBinder?.onBubbleImport = { pickBubbleStyleFile() }
+            settingsBinder?.onFormatList = { showFormatLibrary() }
+            settingsBinder?.onFormatImport = { pendingFormatName = null; pickFormatFile() }
             settingsBinder?.bind()
         } catch (t: Throwable) {
             Toast.makeText(this, "设置栏初始化失败：" + t.message, Toast.LENGTH_LONG).show()
@@ -979,6 +1005,11 @@ class MainActivity : AppCompatActivity() {
             handleVoiceCommand(userText, command)
             return
         }
+        // 直接粘贴一整段固定格式指令（LaTeX / 围栏）时自动入库，不当普通消息发给模型
+        if (appendUser && tryImportPastedFormat(userText)) {
+            isSending = false
+            return
+        }
 
         // ① 情感引擎：先根据主人的话更新情绪（心情/好感度/精力）
         if (prefs.emotionEnabled) {
@@ -1016,6 +1047,19 @@ class MainActivity : AppCompatActivity() {
         // 排版能力：告诉小沫可以用 Markdown 输出结构化内容（气泡里会真渲染，朗读时会自动剥符号）
         extra.append("\n\n")
         extra.append(LAYOUT_RULE)
+        // 文游功能菜单：本回合点名要用的那一份格式（优先级最高，且用完即清）
+        val one = formats.takeSceneOnce()
+        if (one.isNotBlank()) {
+            extra.append("\n\n")
+            extra.append(one)
+        } else {
+            // 没点菜单时，才走格式库里「启用」的那些
+            val fmtBlock = formats.promptBlock()
+            if (fmtBlock.isNotBlank()) {
+                extra.append("\n\n")
+                extra.append(fmtBlock)
+            }
+        }
         val baseExtra = extra.toString()
         if (appendUser) {
             adapter.add(ChatMessage("user", userText, isMe = true))
@@ -1567,6 +1611,7 @@ class MainActivity : AppCompatActivity() {
             VoiceCommand.DailyBrief -> speakDailyBrief(userText)
             is VoiceCommand.BubbleStyle -> handleBubbleStyle(userText, command)
             is VoiceCommand.PanelTemplateCmd -> handlePanelTemplate(userText, command)
+            is VoiceCommand.FormatCmd -> handleFormatCmd(userText, command)
         }
     }
 
@@ -1656,23 +1701,234 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * 处理「无框模式」与「字体设置」两类口令。
+     * 文游格式库：启用 / 停用 / 删除 / 列表 / 查看 / 导入 / 导出。
+     *
+     * 启用后会自动把格式原文注入系统提示词，小沫就会照着这个格式输出。
+     */
+    private fun handleFormatCmd(userText: String, cmd: VoiceCommand.FormatCmd) {
+        // 列表
+        if (cmd.listAll) {
+            val list = formats.load()
+            if (list.isEmpty()) {
+                replyLocal(userText, getString(R.string.toast_format_empty))
+                return
+            }
+            val body = list.joinToString("\n") { e ->
+                val mark = if (e.enabled) "✅" else "⬜"
+                val kind = if (e.builtin) "内置" else "自定义"
+                "$mark 「${e.title}」[$kind·${e.content.length} 字]"
+            }
+            replyLocal(userText, body)
+            return
+        }
+        // 导出
+        if (cmd.export) {
+            exportFormatLibrary()
+            replyLocal(userText, getString(R.string.toast_format_export_ok))
+            return
+        }
+        // 全部启用 / 停用
+        if (cmd.all && cmd.enable != null) {
+            val on = cmd.enable
+            formats.load().forEach { formats.setEnabled(it.id, on) }
+            replyLocal(
+                userText,
+                if (on) getString(R.string.toast_format_all_on) else getString(R.string.toast_format_all_off)
+            )
+            return
+        }
+        // 导入文件
+        if (cmd.importFile && cmd.name == null) {
+            pendingFormatName = null
+            pickFormatFile()
+            replyLocal(userText, getString(R.string.toast_format_import_pick))
+            return
+        }
+        // 删除
+        if (cmd.delete) {
+            val e = formats.find(cmd.name.orEmpty())
+            if (e == null) {
+                replyLocal(userText, getString(R.string.toast_format_missing, cmd.name.orEmpty()))
+                return
+            }
+            if (e.builtin) {
+                formats.setEnabled(e.id, false)
+                replyLocal(userText, getString(R.string.toast_format_builtin_off, e.title))
+                return
+            }
+            formats.remove(e.id)
+            replyLocal(userText, getString(R.string.toast_format_deleted, e.title))
+            return
+        }
+        // 查看
+        if (cmd.show) {
+            val e = formats.find(cmd.name.orEmpty())
+            if (e == null) {
+                replyLocal(userText, getString(R.string.toast_format_missing, cmd.name.orEmpty()))
+                return
+            }
+            replyLocal(userText, "「${e.title}」\n" + SafeCut.takeUnitsSafe(e.content, 600))
+            return
+        }
+        // 启用 / 停用
+        if (cmd.enable != null) {
+            val e = formats.find(cmd.name.orEmpty())
+            if (e == null) {
+                replyLocal(userText, getString(R.string.toast_format_missing, cmd.name.orEmpty()))
+                return
+            }
+            formats.setEnabled(e.id, cmd.enable)
+            replyLocal(
+                userText,
+                if (cmd.enable) getString(R.string.toast_format_on, e.title)
+                else getString(R.string.toast_format_off, e.title)
+            )
+            return
+        }
+        // 只给了名字：当作切换（启用）
+        if (!cmd.name.isNullOrBlank()) {
+            val e = formats.find(cmd.name)
+            if (e != null) {
+                formats.setEnabled(e.id, true)
+                replyLocal(userText, getString(R.string.toast_format_on, e.title))
+                return
+            }
+            // 没找到就当作「用这个名字导入」
+            pendingFormatName = cmd.name
+            pickFormatFile()
+            replyLocal(userText, getString(R.string.toast_format_import_pick))
+            return
+        }
+        replyLocal(userText, getString(R.string.toast_format_usage))
+    }
+
+    /** 导出格式库 JSON 到缓存目录并分享。 */
+    private fun exportFormatLibrary() {
+        try {
+            val dir = java.io.File(cacheDir, "format_export").apply { mkdirs() }
+            val name = "xiaomo-format-" +
+                java.text.SimpleDateFormat("MMdd-HHmm", java.util.Locale.CHINA).format(java.util.Date()) + ".json"
+            val file = java.io.File(dir, name)
+            file.writeText(formats.exportJson())
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                this, packageName + ".fileprovider", file
+            )
+            startActivity(
+                Intent.createChooser(
+                    Intent(Intent.ACTION_SEND).apply {
+                        type = "application/json"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    },
+                    getString(R.string.toast_format_export_ok)
+                )
+            )
+        } catch (e: Exception) {
+            Toast.makeText(this, getString(R.string.toast_format_export_fail, e.message.orEmpty()), Toast.LENGTH_LONG).show()
+        }
+    }
+
+    /** 选一个格式指令文件导入。 */
+    private fun pickFormatFile() {
+        runCatching { pickFormatFile.launch("text/*") }
+            .onFailure { runCatching { pickFormatFile.launch("*/*") } }
+    }
+
+    /**
+     * 文游功能菜单：一屏列出所有可用场景（格式库里的每一份格式算一个场景）。
+     *
+     * 点哪个就只把那**一份**格式注入下一条消息，用得精准、不互相干扰；
+     * 同时会把场景名填进输入框，主人可以接着补一句剧情（比如「放首歌」）再发送。
+     */
+    private fun showSceneMenu() {
+        val list = formats.load().filter { it.content.isNotBlank() }
+        if (list.isEmpty()) {
+            replyLocal("格式库列表", getString(R.string.toast_format_empty))
+            return
+        }
+        val labels = list.map { e -> "${formats.iconFor(e.title)}  ${e.title}" }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.menu_scene_title)
+            .setItems(labels) { _, which ->
+                val e = list.getOrNull(which) ?: return@setItems
+                formats.useOnce(e.id)
+                if (editInput.text.isNullOrBlank()) {
+                    editInput.setText(getString(R.string.scene_prompt_hint, e.title))
+                    editInput.setSelection(editInput.text?.length ?: 0)
+                }
+                Toast.makeText(
+                    this,
+                    getString(R.string.toast_scene_picked, e.title),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            .setNeutralButton(R.string.menu_scene_manage) { _, _ -> showFormatLibrary() }
+            .setNegativeButton(R.string.menu_scene_cancel, null)
+            .show()
+    }
+
+    /** 格式库面板：显示全部格式，点击可切换启用/停用。 */
+    private fun showFormatLibrary() {
+        val list = formats.load()
+        if (list.isEmpty()) {
+            replyLocal("格式库列表", getString(R.string.toast_format_empty))
+            return
+        }
+        val rows = list.map { e ->
+            val mark = if (e.enabled) "✅" else "⬜"
+            val kind = if (e.builtin) "内置" else "自定义"
+            "$mark ${e.title}  [$kind]"
+        }.toMutableList()
+        rows.add("（点击可启用 / 停用；长按删除自定义格式）")
+        AlertDialog.Builder(this)
+            .setTitle("格式库（${list.count { it.enabled }} / ${list.size} 已启用）")
+            .setItems(rows.toTypedArray()) { _, which ->
+                val entry = list.getOrNull(which) ?: return@setItems
+                formats.setEnabled(entry.id, !entry.enabled)
+                Toast.makeText(
+                    this,
+                    if (!entry.enabled) getString(R.string.toast_format_on, entry.title)
+                    else getString(R.string.toast_format_off, entry.title),
+                    Toast.LENGTH_SHORT
+                ).show()
+                showFormatLibrary()
+            }
+            .setNeutralButton("导入格式指令") { _, _ ->
+                pendingFormatName = null
+                pickFormatFile()
+            }
+            .setNegativeButton("关闭", null)
+            .show()
+    }
+
+    /**
+     * 直接粘贴一大段固定格式指令时，自动入库。
+     *
+     * 判定条件严格（LaTeX 特征词 / 多行围栏），避免把普通长消息当格式吞掉。
+     * @return true 表示已当格式处理（已回复），调用方应直接 return
+     */
+    private fun tryImportPastedFormat(userText: String): Boolean {
+        if (!FormatStore.looksLikeFormat(userText)) return false
+        val tex = listOf("\\begin{", "\\end{", "\\textcolor", "\\scalebox", "\\colorbox",
+            "\\fcolorbox", "\\hspace", "\\rule{", "\\textsf", "\\textbf")
+        val hasTex = tex.any { userText.contains(it) }
+        val hasFence = userText.contains("```")
+        if (!hasTex && !hasFence) return false
+        val entry = formats.importText(userText) ?: return false
+        replyLocal(userText, getString(R.string.toast_format_imported, entry.title))
+        return true
+    }
+
+    /**
+     * 处理「字体设置」口令。
      *
      * @return true 表示本句已被处理（已回复），调用方应直接 return
      */
-    private fun handleFramelessAndFont(userText: String): Boolean {
+    private fun handleChatFont(userText: String): Boolean {
         var handled = false
         val parts = mutableListOf<String>()
 
-        // 1) 无框模式：取消 / 恢复气泡文本框
-        ChatFontStore.framelessFromText(userText)?.let { on ->
-            prefs.bubbleFrameless = on
-            adapter.frameless = on
-            handled = true
-            parts.add(if (on) "已取消气泡文本框（无框模式）" else "已恢复气泡文本框")
-        }
-
-        // 2) 字体：字号 / 字形 / 行距，可一句里同时改多项
+        // 字体：字号 / 字形 / 行距，可一句里同时改多项
         val old = ChatFontStore.load(this)
         var next = old
         ChatFontStore.sizeFromText(userText)?.let {
@@ -1712,8 +1968,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleBubbleStyle(userText: String, command: VoiceCommand.BubbleStyle) {
-        // ---- 无框模式 / 字体设置：先于气泡样式处理，命中了就直接返回 ----
-        if (handleFramelessAndFont(userText)) return
+        // ---- 字体设置：先于气泡样式处理，命中了就直接返回 ----
+        if (handleChatFont(userText)) return
         // 收藏夹：列表
         if (command.listFavorites) {
             val list = BubbleStyleStore.favorites(this)

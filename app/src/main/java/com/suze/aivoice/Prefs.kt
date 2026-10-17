@@ -61,6 +61,15 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("taiwanVoice", false)
         set(v) = sp.edit().putBoolean("taiwanVoice", v).apply()
 
+    /**
+     * 文游功能菜单点选的「本回合专用格式」id。
+     *
+     * 一次性：注入完这一条消息后立刻清空，避免整段对话都被同一份 LaTeX 格式占住上下文。
+     */
+    var sceneFormatId: String
+        get() = sp.getString("sceneFormatId", "") ?: ""
+        set(v) = sp.edit().putString("sceneFormatId", v).apply()
+
     /** 台湾腔人设提示词（预设，可编辑） */
     var taiwanPrompt: String
         get() = sp.getString("taiwanPrompt", DEFAULT_TAIWAN_PROMPT) ?: DEFAULT_TAIWAN_PROMPT
@@ -363,11 +372,6 @@ class Prefs(context: Context) {
     var panelRecallEnabled: Boolean
         get() = sp.getBoolean("panelRecallEnabled", true)
         set(v) = sp.edit().putBoolean("panelRecallEnabled", v).apply()
-
-    /** 无框模式：去掉气泡背景/描边，文字直接铺在聊天区，显示区域更大。 */
-    var bubbleFrameless: Boolean
-        get() = sp.getBoolean("bubbleFrameless", false)
-        set(v) = sp.edit().putBoolean("bubbleFrameless", v).apply()
 
     /** 主聊天精选立绘 id，对应 PortraitLibrary。 */
     var portraitId: String

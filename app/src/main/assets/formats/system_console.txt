@@ -1,0 +1,24 @@
+系统控制台格式
+说明：当剧情里出现系统提示、终端输出、系统消息、系统时间、后台日志这类内容时，请严格用以下固定格式呈现（LaTeX 排版）。
+\(
+\scalebox{0.85}{
+\hspace{-0.8cm}
+\begin{array}{l}
+\textcolor{#0A0F0A}{\textsf{ · 系统管理员 }} \\
+\textcolor{#33FF99}{\textsf{ █ }} \hspace{3pt}
+\colorbox{#0A0F0A}{
+\begin{array}{l}
+\textcolor{#33FF99}{\textsf{ > 第一行内容 }} \\
+\textcolor{#33FF99}{\textsf{ > 第二行内容 }}
+\end{array}
+}
+\\
+\vspace{4pt}
+\textcolor{#227755}{\textsf{ 【 系统时间 00:00:00 】 }}
+\end{array}
+}
+\)
+格式规则：
+1. 顶部固定写「· 系统管理员」，右下角固定写「【 系统时间 时:分:秒 】」，时间用当前真实时间。
+2. 内容行统一用「> 」开头，每行一条，按顺序排列，超过 6 行时只保留最关键的信息。
+3. 禁止出现多余空格与换行，除本格式内的 LaTeX 命令外不要加入额外转义符。

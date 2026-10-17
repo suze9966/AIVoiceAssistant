@@ -1,0 +1,329 @@
+角色浏览器搜索记录查看美化
+
+当玩家在文游过程中需要查看某角色的手机浏览器搜索记录时请用以下固定格式生成相应内容：
+
+一、角色浏览器搜索记录查看格式、
+
+\[
+
+\fcolorbox{#D0D0D0}{#FFFFFF}{
+
+\scalebox{0.85}{
+
+\begin{array}{l}
+
+\textcolor{#181818}{\textbf{\small 05:21}} \hspace{8.8cm}
+
+\scalebox{0.7}{
+
+\raisebox{-0.1ex}{\scalebox{0.3}[1.0]{\textcolor{#181818}{\textsf{\large ▄\hspace{0.04cm}▅\hspace{0.04cm}▆\hspace{0.04cm}▇}}}}
+
+\!\!\!
+
+\textcolor{#181818}{\textsf{\large \textbf{\large ᯤ}}}
+
+\hspace{0.2cm}
+
+\raisebox{0.8ex}{
+
+\scalebox{0.9}[0.8]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+
+\hspace{0.02cm}
+
+\scalebox{0.08}[0.22]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+
+}
+
+} \\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\fcolorbox{#EDEDED}{#EDEDED}{
+
+\begin{array}{l}
+
+\textcolor{#EDEDED}{\rule{9.2cm}{0.28cm}}
+
+\end{array}
+
+}
+
+\hspace{-10.2cm}\raisebox{0.43cm}{\textcolor{#8E8E93}{\textsf{\large \rotatebox{-100}{☌}}}}
+
+\hspace{-0.3cm}\raisebox{-0.09cm}{\textcolor{#8E8E93}{\textsf{\large 搜索或输入网站名称}}}
+
+\hspace{3.05cm}\fcolorbox{#0084FF}{#0084FF}{
+
+\begin{array}{l}
+
+\textcolor{#0084FF}{\rule{0.5cm}{0.28cm}}
+
+\end{array}
+
+}
+
+\hspace{-1.55cm}\raisebox{-0.02cm}{\textcolor{#FFFFFF}{\textsf{\small 搜索}}} \\
+
+\\
+
+\\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#262626}{\textsf{\small \textbf{\hspace{-0.5cm} 搜索历史 }}} & \textcolor{#8E8E93}{\textsf{\small \hspace{-0.65cm}清空}} \\
+
+\textcolor{#FFFFFF}{\textsf{ \hspace{-0.5cm} \rule{12.5cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#C0C0C0}{\Large ◷} \hspace{-0.2cm} \textcolor{#181818}{\textsf{\large 搜索词条1 }} & \textcolor{#8E8E93}{\textsf{\hspace{-0.06cm}×}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.5cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#C0C0C0}{\Large ◷} \hspace{-0.2cm} \textcolor{#181818}{\textsf{\large 搜索词条2 }} & \textcolor{#8E8E93}{\textsf{\hspace{-0.06cm}×}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.5cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#C0C0C0}{\Large ◷} \hspace{-0.2cm} \textcolor{#181818}{\textsf{\large 搜索词条3 }} & \textcolor{#8E8E93}{\textsf{\hspace{-0.06cm}×}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.5cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#C0C0C0}{\Large ◷} \hspace{-0.2cm} \textcolor{#181818}{\textsf{\large 搜索词条4 }} & \textcolor{#8E8E93}{\textsf{\hspace{-0.06cm}×}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.5cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#C0C0C0}{\Large ◷} \hspace{-0.2cm} \textcolor{#181818}{\textsf{\large 搜索词条5 }} & \textcolor{#8E8E93}{\textsf{\hspace{-0.06cm}×}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.5cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#C0C0C0}{\Large ◷} \hspace{-0.2cm} \textcolor{#181818}{\textsf{\large 搜索词条6 }} & \textcolor{#8E8E93}{\textsf{\hspace{-0.06cm}×}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.5cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#C0C0C0}{\Large ◷} \hspace{-0.2cm} \textcolor{#181818}{\textsf{\large 搜索词条7 }} & \textcolor{#8E8E93}{\textsf{\hspace{-0.06cm}×}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.5cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#C0C0C0}{\Large ◷} \hspace{-0.2cm} \textcolor{#181818}{\textsf{\large 搜索词条8 }} & \textcolor{#8E8E93}{\textsf{\hspace{-0.06cm}×}} \\
+
+\textcolor{#FFFFFF}{\textsf{ \hspace{-0.5cm} \rule{12.5cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\end{array}
+
+}
+
+}
+
+\]
+
+二、格式规则
+
+1. 内容里禁止出现半角符号（如 ()^~_ 等），禁止出现多余的空格、换行。
+2. 不要在格式指令代码中加入额外的转义符\。
+3. 单条搜索词条不允许超过 12 个字符。
+4. 顶部时间改为剧情当前时间。
+
+三、生成规则
+
+请严格按照以下规则，为角色生成一段搜索历史。
+
+1. 共生成 5-8 条搜索记录，一条一行。
+2. 每条必须是口语化的完整问题，像真人在输入框里打的字，禁止学术化、书面化用词。
+3. 每条必须具体：带年龄、带场景、带具体痛点或对象。禁止宽泛大词（如「育儿方法」「职场技巧」）。
+4. 每条都要带情绪痕迹（焦虑、好奇、期待、不安、慌张等），体现角色当下的心理状态。
+5. 搜的是「正在困扰的问题」，不是「想学的知识」。
+6. 记录之间要有潜台词和剧情逻辑，能拼成一条角色最近几天的心路线索。
+7. 符合角色身份与时代背景的口吻，不得出现身份之外的用词习惯。
+8. 禁用词：百科、大全、技巧、攻略、方法、资料、教程、注意事项（这些词太「教科书」）。如确实需要，请自然口语化改写。
+
+硬性规则：
+
+1. 除非对方是公众人物或者明星，否则搜索词条中禁止出现具体人名加私人信息的组合（如「某某喜欢喝什么」「某某的考试成绩」）。
+2. 搜索的问题是角色自己正在面对的问题，不是「关于某个人的信息查询」。
+3. 口语化、完整问题句式，像对着手机说话。禁用「百科」「大全」「技巧」「攻略」「教程」。
+
+四、示例
+
+\[
+
+\fcolorbox{#D0D0D0}{#FFFFFF}{
+
+\scalebox{0.85}{
+
+\begin{array}{l}
+
+\textcolor{#181818}{\textbf{\small 05:21}} \hspace{8.8cm}
+
+\scalebox{0.7}{
+
+\raisebox{-0.1ex}{\scalebox{0.3}[1.0]{\textcolor{#181818}{\textsf{\large ▄\hspace{0.04cm}▅\hspace{0.04cm}▆\hspace{0.04cm}▇}}}}
+
+\!\!\!
+
+\textcolor{#181818}{\textsf{\large \textbf{\large ᯤ}}}
+
+\hspace{0.2cm}
+
+\raisebox{0.8ex}{
+
+\scalebox{0.9}[0.8]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+
+\hspace{0.02cm}
+
+\scalebox{0.08}[0.22]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+
+}
+
+} \\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\fcolorbox{#EDEDED}{#EDEDED}{
+
+\begin{array}{l}
+
+\textcolor{#EDEDED}{\rule{9.2cm}{0.28cm}}
+
+\end{array}
+
+}
+
+\hspace{-10.2cm}\raisebox{0.43cm}{\textcolor{#8E8E93}{\textsf{\large \rotatebox{-100}{☌}}}}
+
+\hspace{-0.3cm}\raisebox{-0.09cm}{\textcolor{#8E8E93}{\textsf{\large 搜索或输入网站名称}}}
+
+\hspace{3.05cm}\fcolorbox{#0084FF}{#0084FF}{
+
+\begin{array}{l}
+
+\textcolor{#0084FF}{\rule{0.5cm}{0.28cm}}
+
+\end{array}
+
+}
+
+\hspace{-1.55cm}\raisebox{-0.02cm}{\textcolor{#FFFFFF}{\textsf{\small 搜索}}} \\
+
+\\
+
+\\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#262626}{\textsf{\small \textbf{\hspace{-0.5cm} 搜索历史 }}} & \textcolor{#8E8E93}{\textsf{\small \hspace{-0.65cm}清空}} \\
+
+\textcolor{#FFFFFF}{\textsf{ \hspace{-0.5cm} \rule{12.5cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#C0C0C0}{\Large ◷} \hspace{-0.2cm} \textcolor{#181818}{\textsf{\large 他是不是讨厌我 }} & \textcolor{#8E8E93}{\textsf{\hspace{-0.06cm}×}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.5cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#C0C0C0}{\Large ◷} \hspace{-0.2cm} \textcolor{#181818}{\textsf{\large 22岁还哭正常吗 }} & \textcolor{#8E8E93}{\textsf{\hspace{-0.06cm}×}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.5cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#C0C0C0}{\Large ◷} \hspace{-0.2cm} \textcolor{#181818}{\textsf{\large 怎么假装没等过消息 }} & \textcolor{#8E8E93}{\textsf{\hspace{-0.06cm}×}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.5cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#C0C0C0}{\Large ◷} \hspace{-0.2cm} \textcolor{#181818}{\textsf{\large 深夜睡不着怎么办 }} & \textcolor{#8E8E93}{\textsf{\hspace{-0.06cm}×}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.5cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#C0C0C0}{\Large ◷} \hspace{-0.2cm} \textcolor{#181818}{\textsf{\large 发完消息后悔了 }} & \textcolor{#8E8E93}{\textsf{\hspace{-0.06cm}×}} \\
+
+\textcolor{#FFFFFF}{\textsf{ \hspace{-0.5cm} \rule{12.5cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\end{array}
+
+}
+
+}
+
+\]

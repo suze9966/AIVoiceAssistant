@@ -160,7 +160,7 @@ class RoleLoungeActivity : AppCompatActivity() {
         }
         val fixable = issues.count { it.fixable }
         val builder = AlertDialog.Builder(this)
-            .setTitle(getString(R.string.role_lint_card, character.name))
+            .setTitle(getString(R.string.role_lint_card_title, character.name))
             .setMessage(sb.toString().trim())
             .setNegativeButton(R.string.role_cancel, null)
         if (fixable > 0) {

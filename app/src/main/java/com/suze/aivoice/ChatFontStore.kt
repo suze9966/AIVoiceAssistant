@@ -10,7 +10,7 @@ import android.graphics.Typeface
  *  - 气泡样式管「框」：颜色、圆角、描边
  *  - 这里管「字」：多大、什么体、行多疏
  *
- * 主人调字号/字形时，无论是否用无框模式都生效。
+ * 主人调字号/字形时立刻生效，与气泡样式互不干扰。
  */
 object ChatFontStore {
 
@@ -138,13 +138,6 @@ object ChatFontStore {
     fun italicFromText(text: String): Boolean? = when {
         containsAny(text, "取消斜体", "正体", "不要斜体") -> false
         containsAny(text, "斜体", "倾斜", "italic") -> true
-        else -> null
-    }
-
-    /** 无框模式口令：开 / 关。 */
-    fun framelessFromText(text: String): Boolean? = when {
-        containsAny(text, "取消无框", "关闭无框", "恢复气泡", "要气泡", "加回气泡") -> false
-        containsAny(text, "无框", "去掉气泡", "取消气泡", "不要气泡", "去掉文本框", "取消文本框") -> true
         else -> null
     }
 

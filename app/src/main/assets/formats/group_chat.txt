@@ -1,0 +1,445 @@
+群聊查看格式
+
+当玩家在文游过程中需要查看相关群聊时请用以下固定格式生成相应内容：
+
+一、群聊查看格式、
+
+\[
+
+\fcolorbox{#9AB8C8}{#9AB8C8}{
+
+\scalebox{0.55}{
+
+\begin{array}{l c r}
+
+\textcolor{#444444}{\textbf{\large $\leftarrow$}} & \hspace{-5.5cm}\textcolor{#444444}{\textbf{\large 群聊名}} \textcolor{#444444}{\tiny (0)} & \quad\textcolor{#444444}{\textbf{\large \raisebox{0.15cm}{\rotatebox{90}{\large \textsf{|||}}}}} \\
+
+\textcolor{#D0D8E0}{\rule{3.5}{0.5}} & & \\
+
+\\
+
+\begin{array}{l}
+
+\textcolor{#444444}{\textbf{ID}} \\
+
+\textcolor{#FFFFFF}{\blacktriangleleft} \colorbox{#FFFFFF}{
+
+\begin{array}{l}
+
+\quad \textcolor{#333333}{\textsf{ 消息内容 }} \quad
+
+\end{array}
+
+} \textcolor{#555555}{\scriptsize 00:00}
+
+\end{array} & & \\
+
+\\
+
+& & \hspace{-5.5cm}
+
+\begin{array}{r}
+
+\textcolor{#555555}{\scriptsize 00:00} \colorbox{#FEE500}{
+
+\begin{array}{l}
+
+\quad \textcolor{#333333}{\textsf{ 消息内容 }} \quad
+
+\end{array}
+
+} \textcolor{#FEE500}{\blacktriangleright}
+
+\end{array} \\
+
+\\
+
+\begin{array}{l}
+
+\textcolor{#444444}{\textbf{ID}} \\
+
+\textcolor{#FFFFFF}{\blacktriangleleft} \colorbox{#FFFFFF}{
+
+\begin{array}{l}
+
+\quad \textcolor{#333333}{\textsf{ 消息内容 }} \quad
+
+\end{array}
+
+} \textcolor{#555555}{\scriptsize 00:00}
+
+\end{array} & & \\
+
+\\
+
+& & \hspace{-5.5cm}
+
+\begin{array}{r}
+
+\textcolor{#555555}{\scriptsize 00:00} \colorbox{#FEE500}{
+
+\begin{array}{l}
+
+\quad \textcolor{#333333}{\textsf{ 消息内容 }} \quad
+
+\end{array}
+
+} \textcolor{#FEE500}{\blacktriangleright}
+
+\end{array} \\
+
+\\
+
+\begin{array}{l}
+
+\textcolor{#444444}{\textbf{ID}} \\
+
+\textcolor{#FFFFFF}{\blacktriangleleft} \colorbox{#FFFFFF}{
+
+\begin{array}{l}
+
+\quad \textcolor{#333333}{\textsf{ 消息内容 }} \quad
+
+\end{array}
+
+} \textcolor{#555555}{\scriptsize 00:00}
+
+\end{array} & & \\
+
+\\
+
+& & \hspace{-5.5cm}
+
+\begin{array}{r}
+
+\textcolor{#555555}{\scriptsize 00:00} \colorbox{#FEE500}{
+
+\begin{array}{l}
+
+\quad \textcolor{#333333}{\textsf{ 消息内容 }} \quad
+
+\end{array}
+
+} \textcolor{#FEE500}{\blacktriangleright}
+
+\end{array} \\
+
+\\
+
+\begin{array}{l}
+
+\textcolor{#444444}{\textbf{ID}} \\
+
+\textcolor{#FFFFFF}{\blacktriangleleft} \colorbox{#FFFFFF}{
+
+\begin{array}{l}
+
+\quad \textcolor{#333333}{\textsf{ 消息内容 }} \quad
+
+\end{array}
+
+} \textcolor{#555555}{\scriptsize 00:00}
+
+\end{array} & & \\
+
+\\
+
+& & \hspace{-5.5cm}
+
+\begin{array}{r}
+
+\textcolor{#555555}{\scriptsize 00:00} \colorbox{#FEE500}{
+
+\begin{array}{l}
+
+\quad \textcolor{#333333}{\textsf{ 消息内容 }} \quad
+
+\end{array}
+
+} \textcolor{#FEE500}{\blacktriangleright}
+
+\end{array} \\
+
+\\
+
+\textcolor{#D0D8E0}{\rule{3.5}{0.5}} & & \\
+
+\\
+
+\multicolumn{3}{c}{
+
+\large
+
+\begin{array}{l}
+
+\hspace{-1cm}
+
+\scalebox{2.3}{
+
+\begin{array}{c}
+
+\textcolor{#F0F0F0}{\textsf{\Large ●}} \hspace{-0.71cm} \raisebox{-0.04cm}{\textcolor{#262626}{\textsf{\textbf{\footnotesize \rotatebox[origin=c]{-90}{ᯤ}}}}}
+
+\end{array}
+
+}
+
+\hspace{0.08em}
+
+\textcolor{#9AB8C8}{\bullet} \hspace{0.3em}
+
+\hspace{-0.65em}\raisebox{-0.55em}{\scalebox{4.21}{\textcolor{#E8EBED}{◖}}}\hspace{-0.9em}\colorbox{#E8EBED}{\textcolor{#5A5E63}{\text{ 输入消息⋯⋯                         }}}
+
+\hspace{-0.65em}\raisebox{-0.55em}{\scalebox{4.21}{\textcolor{#E8EBED}{◗}}}
+
+\hspace{-0.1em}
+
+\scalebox{2.3}{
+
+\begin{array}{c}
+
+\textcolor{#F0F0F0}{\textsf{\Large ●}} \hspace{-0.71cm} \raisebox{0.06cm}{\textcolor{#262626}{\textsf{\textbf{\small +}}}}
+
+\end{array}
+
+}
+
+\end{array}
+
+}
+
+\end{array}
+
+}
+
+}
+
+\]
+
+二、格式规则
+
+1. 固定使用提供的 LaTeX 群聊框格式。
+2. 群聊名及群聊人数动态生成，不使用占位符（如「0」）。
+3. 消息数量不限制，根据每次情况调整。
+4. 内容里禁止出现半角符号（如 ()^~_ 等）。
+5. 单条消息限制：每个聊天气泡内，消息内容（含标点符号）不超过 15 字。
+6. 气泡可多行：每人单次可发多条消息，数量不限，视情况动态调整，但每行仍需遵守 15 字限制。
+7. 消息不聚集：不要全部消息聚集在一个聊天气泡里，根据情况拆分。
+8. 对话框要左右交替、有对话感：左侧消息数量应多于右侧，群聊共 X 人，左侧 X-1 人，右侧 1 人，右侧是除左侧 X-1 人外的另一位群成员，形成对话轮换。
+9. 消息数量：每页固定 10 条消息，超过 10 条则另起一页。
+10. 不标注页码：换页时不显示「第X页」等标识。
+11. 同一 ID 在同侧位置连续发送时，省略第二条及之后的 ID；如果中间有其他 ID 的消息（无论左侧还是右侧），再次出现时需重新标注 ID。
+12. 符合人设：角色发的消息要符合该成员的性格习惯，不 OOC，每个群成员的聊天信息风格要差异化，风格各异：有人习惯使用标点符号断句、有人习惯只用空格断句、有人习惯纯文字、有人习惯加颜文字或 emoji 表情，颜文字需结合语境选用（如着急用哭脸、心疼用流泪、好笑用动物表情、无奈用叹气）、有人习惯单次发多条信息、有人习惯所有内容只发一条。
+13. 「输入消息⋯⋯」后面的空格数量调整为 25 个（用键盘空格键输入），输出时空格不可省略。
+
+三、参考示例
+
+\[
+
+\fcolorbox{#9AB8C8}{#9AB8C8}{
+
+\scalebox{0.47}{
+
+\begin{array}{l c r}
+
+\textcolor{#444444}{\textbf{\large $\leftarrow$}} & \hspace{-5.5cm}\textcolor{#444444}{\textbf{\large 蘑菇屋预备役}} \textcolor{#444444}{\tiny (7)} & \quad\textcolor{#444444}{\textbf{\large \raisebox{0.15cm}{\rotatebox{90}{\large \textsf{|||}}}}} \\
+
+\textcolor{#D0D8E0}{\rule{3.5}{0.5}} & & \\
+
+\\
+
+\begin{array}{l}
+
+\textcolor{#444444}{\textbf{金南俊}} \\
+
+\textcolor{#FFFFFF}{\blacktriangleleft} \colorbox{#FFFFFF}{
+
+\begin{array}{l}
+
+\quad \textcolor{#333333}{\textsf{ 我刚看到一条新闻 }} \quad
+
+\end{array}
+
+} \textcolor{#555555}{\scriptsize 20:11}
+
+\end{array} & & \\
+
+\\
+
+& & \hspace{-5.5cm}
+
+\begin{array}{r}
+
+\textcolor{#555555}{\scriptsize 20:11} \colorbox{#FEE500}{
+
+\begin{array}{l}
+
+\quad \textcolor{#333333}{\textsf{ 什么新闻 }} \quad
+
+\end{array}
+
+} \textcolor{#FEE500}{\blacktriangleright}
+
+\end{array} \\
+
+\\
+
+\begin{array}{l}
+
+\textcolor{#444444}{\textbf{金南俊}} \\
+
+\textcolor{#FFFFFF}{\blacktriangleleft} \colorbox{#FFFFFF}{
+
+\begin{array}{l}
+
+\quad \textcolor{#333333}{\textsf{ 说下周要降温了 }} \quad
+
+\end{array}
+
+} \textcolor{#555555}{\scriptsize 20:12}
+
+\end{array} & & \\
+
+\\
+
+\begin{array}{l}
+
+\textcolor{#444444}{\textbf{}} \\
+
+\textcolor{#FFFFFF}{\blacktriangleleft} \colorbox{#FFFFFF}{
+
+\begin{array}{l}
+
+\quad \textcolor{#333333}{\textsf{ 你们记得加衣服 }} \quad
+
+\end{array}
+
+} \textcolor{#555555}{\scriptsize 20:12}
+
+\end{array} & & \\
+
+\\
+
+& & \hspace{-5.5cm}
+
+\begin{array}{r}
+
+\textcolor{#555555}{\scriptsize 20:13} \colorbox{#FEE500}{
+
+\begin{array}{l}
+
+\quad \textcolor{#333333}{\textsf{ 我早穿上了 }} \quad
+
+\end{array}
+
+} \textcolor{#FEE500}{\blacktriangleright}
+
+\end{array} \\
+
+\\
+
+\begin{array}{l}
+
+\textcolor{#444444}{\textbf{朴智旻}} \\
+
+\textcolor{#FFFFFF}{\blacktriangleleft} \colorbox{#FFFFFF}{
+
+\begin{array}{l}
+
+\quad \textcolor{#333333}{\textsf{ 我还在穿短袖 呜呜 }} \quad
+
+\end{array}
+
+} \textcolor{#555555}{\scriptsize 20:14}
+
+\end{array} & & \\
+
+\\
+
+\begin{array}{l}
+
+\textcolor{#444444}{\textbf{}} \\
+
+\textcolor{#FFFFFF}{\blacktriangleleft} \colorbox{#FFFFFF}{
+
+\begin{array}{l}
+
+\quad \textcolor{#333333}{\textsf{ 谁借我件外套 }} \quad
+
+\end{array}
+
+} \textcolor{#555555}{\scriptsize 20:14}
+
+\end{array} & & \\
+
+\\
+
+& & \hspace{-5.5cm}
+
+\begin{array}{r}
+
+\textcolor{#555555}{\scriptsize 20:15} \colorbox{#FEE500}{
+
+\begin{array}{l}
+
+\quad \textcolor{#333333}{\textsf{ 我柜子里有 }} \quad
+
+\end{array}
+
+} \textcolor{#FEE500}{\blacktriangleright}
+
+\end{array} \\
+
+\\
+
+\textcolor{#D0D8E0}{\rule{3.5}{0.5}} & & \\
+
+\\
+
+\multicolumn{3}{c}{
+
+\large
+
+\begin{array}{l}
+
+\hspace{-1cm}
+
+\scalebox{2.3}{
+
+\begin{array}{c}
+
+\textcolor{#F0F0F0}{\textsf{\Large ●}} \hspace{-0.71cm} \raisebox{-0.04cm}{\textcolor{#262626}{\textsf{\textbf{\footnotesize \rotatebox[origin=c]{-90}{ᯤ}}}}}
+
+\end{array}
+
+}
+
+\hspace{0.08em}
+
+\textcolor{#9AB8C8}{\bullet} \hspace{0.3em}
+
+\hspace{-0.65em}\raisebox{-0.55em}{\scalebox{4.21}{\textcolor{#E8EBED}{◖}}}\hspace{-0.9em}\colorbox{#E8EBED}{\textcolor{#5A5E63}{\text{ 输入消息⋯⋯                         }}}
+
+\hspace{-0.65em}\raisebox{-0.55em}{\scalebox{4.21}{\textcolor{#E8EBED}{◗}}}
+
+\hspace{-0.1em}
+
+\scalebox{2.3}{
+
+\begin{array}{c}
+
+\textcolor{#F0F0F0}{\textsf{\Large ●}} \hspace{-0.71cm} \raisebox{0.06cm}{\textcolor{#262626}{\textsf{\textbf{\small +}}}}
+
+\end{array}
+
+}
+
+\end{array}
+
+}
+
+\end{array}
+
+}
+
+}

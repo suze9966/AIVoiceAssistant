@@ -36,6 +36,25 @@ sealed class VoiceCommand {
         /** 新建时附带的字段（逗号/空格分隔）。 */
         val fields: List<String> = emptyList()
     ) : VoiceCommand()
+    /** 文游格式库：启用 / 停用 / 删除 / 列表 / 查看 / 导入。 */
+    data class FormatCmd(
+        /** 目标格式名（可空 = 列表/全部）。 */
+        val name: String? = null,
+        /** 列表。 */
+        val listAll: Boolean = false,
+        /** 启用 / 停用（true=启用）。 */
+        val enable: Boolean? = null,
+        /** 删除。 */
+        val delete: Boolean = false,
+        /** 查看内容。 */
+        val show: Boolean = false,
+        /** 从文件导入。 */
+        val importFile: Boolean = false,
+        /** 启用全部 / 停用全部。 */
+        val all: Boolean = false,
+        /** 导出全部。 */
+        val export: Boolean = false
+    ) : VoiceCommand()
     /** 改气泡样式：null 表示不改这一项。 */
     data class BubbleStyle(
         val shape: String? = null,
@@ -78,6 +97,7 @@ object VoiceCommandParser {
         if (text.isEmpty()) return null
         parseBubbleStyle(text)?.let { return it }
         parsePanelTemplate(text)?.let { return it }
+        parseFormat(text)?.let { return it }
         parseNews(text)?.let { return it }
         parseBrief(text)?.let { return it }
         parseWorldClock(text)?.let { return it }
@@ -157,6 +177,73 @@ object VoiceCommandParser {
             Regex("存(?:个|一下|下)?面板").containsMatchIn(text)) {
             PanelStore.nameFromText(text)?.let {
                 return VoiceCommand.PanelTemplateCmd(saveName = it)
+            }
+        }
+        return null
+    }
+
+    /**
+     * 文游格式库口令。
+     *
+     * 支持：
+     *   - 列表：格式库列表 / 有哪些格式 / 我的格式库
+     *   - 启用：启用格式 微信资料页 / 开启格式库
+     *   - 停用：停用格式 微信 / 关闭格式库
+     *   - 删除：删除格式 微信
+     *   - 查看：查看格式 微信
+     *   - 导入：导入格式 / 上传格式指令（弹文件选择）
+     *   - 全部：启用全部格式 / 停用全部格式 / 导出格式库
+     */
+    private fun parseFormat(text: String): VoiceCommand.FormatCmd? {
+        val hasWord = text.contains("格式") || text.contains("格式库")
+        if (!hasWord) return null
+        // 普通闲聊别误判
+        if (hit(text, "格式是什么", "什么是格式", "格式怎么用", "什么格式")) return null
+        // 注意：气泡的「导出气泡」等不含「格式」二字，不会冲突
+
+        // 列表
+        if (hit(text, "格式库列表", "格式列表", "有哪些格式", "我的格式", "列出格式",
+                "看看格式", "格式库有什么", "我的格式库", "格式有哪些")) {
+            return VoiceCommand.FormatCmd(listAll = true)
+        }
+        // 导出
+        if (hit(text, "导出格式库", "备份格式库", "导出格式")) {
+            return VoiceCommand.FormatCmd(export = true)
+        }
+        // 导入
+        if (hit(text, "导入格式", "上传格式", "添加格式", "导入格式指令")) {
+            val n = FormatStore.nameFromText(text)
+            return VoiceCommand.FormatCmd(name = n, importFile = true)
+        }
+        // 全部启用 / 停用
+        if (hit(text, "启用全部格式", "开启全部格式", "全部启用格式", "所有格式都启用")) {
+            return VoiceCommand.FormatCmd(all = true, enable = true)
+        }
+        if (hit(text, "停用全部格式", "关闭全部格式", "全部停用格式", "所有格式都停用", "关掉全部格式")) {
+            return VoiceCommand.FormatCmd(all = true, enable = false)
+        }
+        // 删除
+        if (hit(text, "删除格式", "删掉格式", "移除格式")) {
+            FormatStore.nameFromText(text)?.let {
+                return VoiceCommand.FormatCmd(name = it, delete = true)
+            }
+        }
+        // 查看
+        if (hit(text, "查看格式", "预览格式", "看看格式内容", "格式内容是")) {
+            FormatStore.nameFromText(text)?.let {
+                return VoiceCommand.FormatCmd(name = it, show = true)
+            }
+        }
+        // 停用（先判停用，避免「停用」被「启用」的子串逻辑吃掉）
+        if (hit(text, "停用格式", "关闭格式", "关掉格式", "不用格式", "别用格式")) {
+            FormatStore.nameFromText(text)?.let {
+                return VoiceCommand.FormatCmd(name = it, enable = false)
+            }
+        }
+        // 启用
+        if (hit(text, "启用格式", "开启格式", "打开格式", "用格式", "套用格式", "应用格式", "加载格式")) {
+            FormatStore.nameFromText(text)?.let {
+                return VoiceCommand.FormatCmd(name = it, enable = true)
             }
         }
         return null

@@ -132,6 +132,12 @@ class SettingsBinder(
             Toast.makeText(activity, R.string.toast_backup_ok, Toast.LENGTH_SHORT).show()
         }
         activity.findViewById<Button>(R.id.btnBackupImport).setOnClickListener { pickBackup() }
+        activity.findViewById<Button>(R.id.btnFormatList).setOnClickListener {
+            onFormatList?.invoke()
+        }
+        activity.findViewById<Button>(R.id.btnFormatImport).setOnClickListener {
+            onFormatImport?.invoke()
+        }
         switchTaiwan.isChecked = prefs.taiwanVoice
         editTaiwanPrompt.setText(prefs.taiwanPrompt)
         seekRate.progress = (((prefs.ttsRate - 0.5f) / 1.1f) * 110f).toInt().coerceIn(0, 110)
@@ -340,8 +346,8 @@ class SettingsBinder(
             refreshAppearancePreview()
             Toast.makeText(activity, R.string.toast_background_reset, Toast.LENGTH_SHORT).show()
         }
-        // ---- 无框模式 + 字体设置 ----------------
-        bindFramelessAndFont()
+        // ---- 字体设置 ----------------
+        bindChatFont()
         // 气泡样式：预设 Spinner + 重置
         val spinnerBubble = activity.findViewById<Spinner>(R.id.spinnerBubblePreset)
         val bubbleIds = listOf("", BubbleStyleStore.PRESET_GIRL, BubbleStyleStore.PRESET_WECHAT,
@@ -394,14 +400,8 @@ class SettingsBinder(
         refreshAppearancePreview()
     }
 
-    /** 无框模式开关 + 字体（字号 / 字形 / 行距）绑定。 */
-    private fun bindFramelessAndFont() {
-        val switchFrameless = activity.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.switchBubbleFrameless)
-        switchFrameless.isChecked = prefs.bubbleFrameless
-        switchFrameless.setOnCheckedChangeListener { _, on ->
-            prefs.bubbleFrameless = on
-        }
-
+    /** 字体（字号 / 字形 / 行距）绑定。 */
+    private fun bindChatFont() {
         val seekSize = activity.findViewById<SeekBar>(R.id.seekFontSize)
         val seekLine = activity.findViewById<SeekBar>(R.id.seekFontLine)
         val tvSizeLabel = activity.findViewById<TextView>(R.id.tvFontSizeLabel)
@@ -556,6 +556,10 @@ class SettingsBinder(
 
     /** 气泡导出回调（由 Activity 负责写文件与分享）。 */
     var onBubbleExport: (() -> Unit)? = null
+    /** 格式库列表回调（由 Activity 负责展示）。 */
+    var onFormatList: (() -> Unit)? = null
+    /** 格式指令导入回调（由 Activity 负责选文件）。 */
+    var onFormatImport: (() -> Unit)? = null
     /** 气泡导入回调（由 Activity 负责选文件与读取）。 */
     var onBubbleImport: (() -> Unit)? = null
 

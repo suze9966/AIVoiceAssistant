@@ -1,0 +1,294 @@
+DeepSeek仿音乐播放器美化.sy
+
+清秋屿sy（sy_020723）禁止二传二改 禁止换头倒卖
+
+当玩家在文游过程中需要使用音乐播放器时请用以下固定格式生成相应内容：
+
+ 
+
+一、音乐播放器查看格式、
+
+\[
+
+\fcolorbox{#323232}{#323232}{
+
+\scalebox{0.85}{
+
+\begin{array}{l}
+
+\textcolor{#EBEBEB}{\textbf{\small 05:21}} \hspace{9.0cm}
+
+\scalebox{0.7}{
+
+\raisebox{-0.1ex}{\scalebox{0.3}[1.0]{\textcolor{#EBEBEB}{\textsf{\large ▄\hspace{0.04cm}▅\hspace{0.04cm}▆\hspace{0.04cm}▇}}}}
+
+\!\!\!
+
+\textcolor{#EBEBEB}{\textsf{\large \textbf{\large ᯤ}}}
+
+\hspace{0.2cm}
+
+\raisebox{0.8ex}{
+
+\scalebox{0.9}[0.8]{\fcolorbox{#EBEBEB}{#EBEBEB}{\textcolor{#323232}{\textsf{\large \textbf{}}}}}
+
+\hspace{0.02cm}
+
+\scalebox{0.08}[0.22]{\fcolorbox{#EBEBEB}{#EBEBEB}{\textcolor{#323232}{\textsf{\large \textbf{}}}}}
+
+}
+
+} \\
+
+\\
+
+\\
+
+\raisebox{0.06cm}{\textcolor{#EBEBEB}{\textsf{\normalsize \scalebox{1.0}[0.75]{\rotatebox{90}{<}}}}} \hspace{11.4cm} \textcolor{#EBEBEB}{\textsf{\normalsize ：}} \\
+
+\\
+
+\hspace{2.35cm}\raisebox{5.85cm}{\scalebox{6.0}{\textcolor{#E8E8E8}{\Huge ·}}} \hspace{-5.95cm}\raisebox{3.2cm}{\scalebox{2.8}{\textcolor{#E8E8E8}{\Huge \rotatebox{60}{〈}}}} \\
+
+\hspace{-3.25cm}\raisebox{-4.6cm}[0pt][0pt]{\scalebox{8.0}{\textcolor{#C0C0C0}{\Huge ◉}}} \\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\hspace{-0.1cm}\textcolor{#EBEBEB}{\textsf{\large 音乐名}} \hspace{5.4cm} \textcolor{#EBEBEB}{\textsf{\small \textcolor{#FF4D4D}{\Large ♥}\hspace{-0.25cm}\raisebox{0.34cm}{\tiny 999w+}\textsf{\tiny \rotatebox{20}{◅}}\hspace{-0.39cm}\raisebox{0.02cm}{\textsf{\Large ⊜}}\hspace{-0.25cm}\raisebox{0.34cm}{\tiny 999w+}\raisebox{-0.03cm}{\Large ➦}\hspace{-0.25cm}\raisebox{0.34cm}{\scalebox{1.0}{\tiny 999w+}}}} \\
+
+\textcolor{#EBEBEB}{\textsf{\footnotesize 演唱歌手名}} \hspace{0.2cm} \textcolor{#EBEBEB}{\textsf{\tiny 关注}} \\
+
+\\
+
+\\
+
+\hspace{0.2cm}\textcolor{#808080}{\rule{12.6cm}{0.9mm}} \hspace{-12.4cm} \raisebox{-0.30cm}{\scalebox{2.4}{\textcolor{#FFFFFF}{\textsf{\textbf{·}}}}} \hspace{0.1cm} \raisebox{-0.30cm}{\scalebox{2.4}{\textcolor{#FFFFFF}{\textsf{\textbf{·}}}}} \\
+
+\textcolor{#EBEBEB}{\textsf{\small 00:00}} \hspace{10.0cm} \textcolor{#EBEBEB}{\textsf{\small 00:00}} \\
+
+\\
+
+\\
+
+\hspace{1.3cm}\textcolor{#EBEBEB}{\textsf{\Large ↻}} \hspace{1.35cm} \raisebox{0.06cm}{\textcolor{#EBEBEB}{\scalebox{1.0}[0.75]{\textsf{\textbf{\Large |}}}}} \hspace{-0.45cm} \textcolor{#EBEBEB}{\textsf{\Large ◀}} \hspace{1.45cm} \textcolor{#EBEBEB}{\scalebox{1.4}{\textsf{\Large ▶}}} \hspace{1.15cm} \textcolor{#EBEBEB}{\textsf{\Large ▶}} \hspace{-0.40cm} \raisebox{0.06cm}{\textcolor{#EBEBEB}{\scalebox{1.0}[0.75]{\textsf{\textbf{\Large |}}}}} \hspace{0.75cm} \textcolor{#EBEBEB}{\textsf{\Large □}} \hspace{-0.62cm} \raisebox{0.02cm}{\textcolor{#323232}{\textsf{\textbf{\footnotesize \rotatebox{90}{ııı}}}}} \\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\end{array}
+
+}
+
+}
+
+\]
+
+二、格式规则
+
+ 
+
+1.内容里禁止出现半角符号（如 ()^~_ 等），禁止出现多余的空格、换行
+2.不要在现格式指令代码中加入额外的转义符\
+
+三、示例
+
+\[
+
+\fcolorbox{#323232}{#323232}{
+
+\scalebox{0.85}{
+
+\begin{array}{l}
+
+\textcolor{#EBEBEB}{\textbf{\small 05:21}} \hspace{9.0cm}
+
+\scalebox{0.7}{
+
+\raisebox{-0.1ex}{\scalebox{0.3}[1.0]{\textcolor{#EBEBEB}{\textsf{\large ▄\hspace{0.04cm}▅\hspace{0.04cm}▆\hspace{0.04cm}▇}}}}
+
+\!\!\!
+
+\textcolor{#EBEBEB}{\textsf{\large \textbf{\large ᯤ}}}
+
+\hspace{0.2cm}
+
+\raisebox{0.8ex}{
+
+\scalebox{0.9}[0.8]{\fcolorbox{#EBEBEB}{#EBEBEB}{\textcolor{#323232}{\textsf{\large \textbf{}}}}}
+
+\hspace{0.02cm}
+
+\scalebox{0.08}[0.22]{\fcolorbox{#EBEBEB}{#EBEBEB}{\textcolor{#323232}{\textsf{\large \textbf{}}}}}
+
+}
+
+} \\
+
+\\
+
+\\
+
+\raisebox{0.06cm}{\textcolor{#EBEBEB}{\textsf{\normalsize \scalebox{1.0}[0.75]{\rotatebox{90}{<}}}}} \hspace{11.4cm} \textcolor{#EBEBEB}{\textsf{\normalsize ：}} \\
+
+\\
+
+\hspace{2.35cm}\raisebox{5.85cm}{\scalebox{6.0}{\textcolor{#E8E8E8}{\Huge ·}}} \hspace{-5.95cm}\raisebox{3.2cm}{\scalebox{2.8}{\textcolor{#E8E8E8}{\Huge \rotatebox{60}{〈}}}} \\
+
+\hspace{-3.25cm}\raisebox{-4.6cm}[0pt][0pt]{\scalebox{8.0}{\textcolor{#3A5A8C}{\Huge ◉}}} \\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\hspace{-0.1cm}\textcolor{#EBEBEB}{\textsf{\large 梦哑}} \hspace{6.5cm} \textcolor{#EBEBEB}{\textsf{\small \textcolor{#FF4D4D}{\Large ♥}\hspace{-0.25cm}\raisebox{0.34cm}{\tiny 350w+}\textsf{\tiny \rotatebox{20}{◅}}\hspace{-0.39cm}\raisebox{0.02cm}{\textsf{\Large ⊜}}\hspace{-0.25cm}\raisebox{0.34cm}{\tiny 4w+}\raisebox{-0.03cm}{\Large ➦}\hspace{-0.25cm}\raisebox{0.34cm}{\scalebox{1.0}{\tiny 29w+}}}} \\
+
+\textcolor{#EBEBEB}{\textsf{\footnotesize 任然}} \hspace{0.2cm} \textcolor{#EBEBEB}{\textsf{\tiny 关注}} \\
+
+\\
+
+\\
+
+\hspace{0.2cm}\textcolor{#808080}{\rule{12.6cm}{0.9mm}} \hspace{-12.4cm} \raisebox{-0.30cm}{\scalebox{2.4}{\textcolor{#FFFFFF}{\textsf{\textbf{·}}}}} \hspace{0.1cm} \raisebox{-0.30cm}{\scalebox{2.4}{\textcolor{#FFFFFF}{\textsf{\textbf{·}}}}} \\
+
+\textcolor{#EBEBEB}{\textsf{\small 00:08}} \hspace{10.0cm} \textcolor{#EBEBEB}{\textsf{\small 03:54}} \\
+
+\\
+
+\\
+
+\hspace{1.3cm}\textcolor{#EBEBEB}{\textsf{\Large ↻}} \hspace{1.35cm} \raisebox{0.06cm}{\textcolor{#EBEBEB}{\scalebox{1.0}[0.75]{\textsf{\textbf{\Large |}}}}} \hspace{-0.45cm} \textcolor{#EBEBEB}{\textsf{\Large ◀}} \hspace{1.45cm} \textcolor{#EBEBEB}{\scalebox{1.4}{\textsf{\Large ▶}}} \hspace{1.15cm} \textcolor{#EBEBEB}{\textsf{\Large ▶}} \hspace{-0.40cm} \raisebox{0.06cm}{\textcolor{#EBEBEB}{\scalebox{1.0}[0.75]{\textsf{\textbf{\Large |}}}}} \hspace{0.75cm} \textcolor{#EBEBEB}{\textsf{\Large □}} \hspace{-0.62cm} \raisebox{0.02cm}{\textcolor{#323232}{\textsf{\textbf{\footnotesize \rotatebox{90}{ııı}}}}} \\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\end{array}
+
+}
+
+}
+
+\]
+
+四、填写说明
+
+1. 顶部时间「05:21」改为剧情当前时间，电量图标与信号图标保持不变。
+2. 「音乐名」处写当前播放的歌曲名，「演唱歌手名」处写歌手；右侧 ♥ 后面的数字是收藏量，◅ 后面是评论数，➦ 后面是分享数，按剧情需要填写。
+3. 进度条左右两个时间分别是当前播放时间与歌曲总时长。
+4. 播放控制行从左到右依次为：循环、上一首、播放/暂停、下一首、列表。
+5. 唱片图颜色可按剧情改 \textcolor{#3A5A8C} 里的色值（默认 #C0C0C0 银灰，示例为 #3A5A8C 蓝）。

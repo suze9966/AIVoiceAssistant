@@ -1,0 +1,179 @@
+DeepSeek仿微信个人资料页面美化.sy
+
+清秋屿sy（sy_020723）禁止二传二改 禁止换头倒卖
+
+当玩家在文游过程中需要查看微信个人资料页面时请用以下固定格式生成相应内容：
+
+ 
+
+一、微信个人资料页面查看格式、
+
+\[
+
+\fcolorbox{#EDEDED}{#EDEDED}{
+
+\scalebox{0.85}{
+
+\begin{array}{l}
+
+\textcolor{#181818}{\textbf{\small 05:21}} \hspace{9.4cm}
+
+\scalebox{0.7}{
+
+\raisebox{-0.1ex}{\scalebox{0.3}[1.0]{\textcolor{#181818}{\textsf{\large ▄\hspace{0.04cm}▅\hspace{0.04cm}▆\hspace{0.04cm}▇}}}}
+
+\!\!\!
+
+\textcolor{#181818}{\textsf{\large \textbf{\large ᯤ}}}
+
+\hspace{0.2cm}
+
+\raisebox{0.8ex}{
+
+\scalebox{0.9}[0.8]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+
+\hspace{0.02cm}
+
+\scalebox{0.08}[0.22]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+
+}
+
+} \\
+
+\textcolor{#181818}{\textsf{\large <}} \hspace{4.15cm}
+
+\textcolor{#181818}{\textsf{\large 个人资料}} \hspace{4.8cm}
+
+\\
+
+\textcolor{#C0C0C0}{\rule{13cm}{0.1mm}} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 头像 \hspace{9.5cm} \textcolor{#8E8E93}{◻️} }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 名字 \hspace{9.0cm} \textcolor{#8E8E93}{肆野} }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 性别 \hspace{9.5cm} \textcolor{#8E8E93}{女} }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 地区 \hspace{7.5cm} \textcolor{#8E8E93}{韩国 首尔} }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 手机号 \hspace{6.2cm} \textcolor{#8E8E93}{123******90} }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 微信号 \hspace{7.0cm} \textcolor{#8E8E93}{sy\_020723} }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 我的二维码 \hspace{7.62cm} \textcolor{#8E8E93}{◼️} }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 拍一拍 \hspace{5.7cm} \textcolor{#8E8E93}{的存款 +𝟭𝘸⁺¹ʷ} }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 签名 \hspace{7.66cm} \textcolor{#8E8E93}{祝我热烈} }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.5mm} }} \\
+
+\end{array} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 来电铃声 \hspace{6.46cm} \textcolor{#8E8E93}{背景声音} }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.5mm} }} \\
+
+\end{array} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 我的地址 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 我的发票抬头 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.5mm} }} \\
+
+\end{array} \\
+
+\begin{array}{l@{\hspace{-1.2cm}}l}
+
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 微信豆 \hspace{9.0cm} }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+
+\end{array} \\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\\
+
+\end{array}
+
+}
+
+}
+
+\]
+
+二、格式规则
+
+ 
+
+1.内容里禁止出现半角符号（如 ()^~_ 等），禁止出现多余的空格、换行
+
+2.不要在现格式指令代码中加入额外的转义符\

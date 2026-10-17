@@ -28,7 +28,16 @@ object RolePrompt {
     fun build(character: RoleCharacter, history: List<ChatMessage>, extras: String = ""): String {
         val user = character.userName.ifBlank { "主人" }
         val body = StringBuilder()
-        val identity = character.systemPrompt.trim().ifBlank { character.persona.trim() }
+        // persona（人设）与 systemPrompt（规则/格式）都要保留：以前 systemPrompt 非空会顶掉人设
+        val identity = buildString {
+            val ps = character.persona.trim()
+            val sp = character.systemPrompt.trim()
+            if (ps.isNotEmpty()) append(ps)
+            if (sp.isNotEmpty()) {
+                if (isNotEmpty()) append("\n")
+                append(sp)
+            }
+        }
         if (identity.isNotBlank()) body.append(identity).append("\n")
         else body.append("你是名为").append(character.name).append("的角色，请完全代入这个身份和用户聊天。\n")
         body.append("用户的称呼是「").append(user).append("」。请用这个称呼，不要改口。\n")

@@ -1,0 +1,50 @@
+综艺实时弹幕格式
+
+当综艺类文游过程中需要生成弹幕时请用以下固定弹幕格式：
+
+\[
+
+\raisebox{-1.8cm}{
+
+\scalebox{0.85}{
+
+\hspace{-2.8cm}
+
+\begin{array}{l}
+
+\textcolor{#8E8E93}{\textsf{ \hspace{2.3cm}\scriptsize ● 正在观看 \textcolor{#262626}{\textbf{《综艺名》}} \textcolor{#A0A0A0}{｜} 000000人同时在看 }} \\
+
+\textcolor{#F0F0F0}{\textsf{ \hspace{0.3cm}———————————————————————————— }} \\
+
+\textcolor{#FF6B6B}{\textsf{ \hspace{2.5cm} \small 弹幕内容一 }} \hspace{2.5cm} \textcolor{#4ECDC4}{\textsf{ \small 弹幕内容二 }} \hspace{1.2cm} \textcolor{#FFB347}{\textsf{ \small 弹幕内容三 }} \hspace{1.5cm} \textcolor{#A29BFE}{\textsf{ \small 弹幕内容四 }} \hspace{0.8cm} \textcolor{#55C8D6}{\textsf{ \small 弹幕内容五}} \\
+
+\textcolor{#E8A87C}{\textsf{ \hspace{4.5cm} \small 弹幕内容六 }} \hspace{1.6cm} \textcolor{#85CDCA}{\textsf{ \small 弹幕内容七 }} \hspace{4.2cm} \textcolor{#F4A261}{\textsf{ \small 弹幕内容八 }} \\
+
+\textcolor{#B5838D}{\textsf{ \hspace{2.0cm} \small 弹幕内容九 }} \hspace{4.8cm} \textcolor{#6D6875}{\textsf{ \small 弹幕内容十 }} \hspace{2.5cm} \textcolor{#FF6B6B}{\textsf{ \small 弹幕内容十一 }} \hspace{2.2cm} \textcolor{#E5989B}{\textsf{ \small 弹幕内容十二 }} \\
+
+\textcolor{#4ECDC4}{\textsf{ \hspace{2.8cm} \small 弹幕内容十三 }} \hspace{3.2cm} \textcolor{#A29BFE}{\textsf{ \small 弹幕内容十四 }} \hspace{4.5cm} \textcolor{#55C8D6}{\textsf{ \small 弹幕内容十五 }} \\
+
+\textcolor{#FFB347}{\textsf{ \hspace{1.7cm} \small 弹幕内容十六 }} \hspace{1.8cm} \textcolor{#E8A87C}{\textsf{ \small 弹幕内容十七 }} \hspace{2.5cm} \textcolor{#85CDCA}{\textsf{ \hspace{1.5cm} \small 弹幕内容十八 }} \\
+
+\textcolor{#F4A261}{\textsf{ \hspace{3.0cm} \small 弹幕内容十九 }} \hspace{5.2cm} \textcolor{#B5838D}{\textsf{ \small 弹幕内容二十 }} \hspace{3.8cm} \textcolor{#6D6875}{\textsf{ \small 弹幕内容二十一 }} \\
+
+\textcolor{#F0F0F0}{\textsf{ \hspace{0.3cm}———————————————————————————— }} \\
+
+\textcolor{#8E8E93}{\textsf{ \hspace{2.3cm}\scriptsize 弹幕 · 实时互动 · 发送你的弹幕吧 }}
+
+\end{array}
+
+}
+
+}
+
+\]
+
+二、格式规则
+
+1. 「《综艺名》」替换为剧情中正在播出的综艺名称，「000000人同时在看」按剧情改为真实观看人数。
+2. 弹幕内容按剧情生成，颜色沿用格式内已有的色值循环使用，不要自造色号。
+3. 弹幕条数不限，按剧情需要增减行数；每行 2~5 条，行内用 \hspace 调整间距，观感应像真实弹幕一样疏密不均。
+4. 弹幕要像真人发的：短、口语、带情绪（吐槽、嗑糖、尖叫、心梗、接梗），可以有重复刷屏感。
+5. 内容里禁止出现半角符号（如 ()^~_ 等），禁止出现多余的空格、换行。
+6. 不要在格式指令代码中加入额外的转义符\。
