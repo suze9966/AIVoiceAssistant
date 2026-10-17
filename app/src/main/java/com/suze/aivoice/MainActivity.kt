@@ -2235,7 +2235,7 @@ class MainActivity : AppCompatActivity() {
             editInput.setText(hint)
             editInput.setSelection(editInput.text?.length ?: 0)
         }
-        val card = formats.previewCard(entry)
+        val card = FormatStore.previewCard(entry)
         if (card != null) {
             replyLocal(hint, card)
             Toast.makeText(this, "「" + entry.title + "」已经画出来了，右下角可以拖大小", Toast.LENGTH_SHORT).show()
