@@ -1,4 +1,11 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.PocketFloat" parent="Theme.AIVoice">
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowCloseOnTouchOutside">false</item>
+        <item name="android:windowBackground">@color/input_bg</item>
+    </style>
     <style name="Theme.AIVoice" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/purple_700</item>

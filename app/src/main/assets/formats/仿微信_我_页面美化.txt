@@ -1,0 +1,188 @@
+DeepSeek仿微信“我”页面美化.sy
+
+清秋屿sy（sy_020723）禁止二传二改 禁止换头倒卖
+
+当玩家在文游过程中需要查看微信“我”页面时请用以下固定格式生成相应内容：
+ 
+一、微信“我”页面查看格式、
+
+\[
+\fcolorbox{#EDEDED}{#EDEDED}{
+\scalebox{0.85}{
+\begin{array}{l}
+\textcolor{#181818}{\textbf{\small 15:47}} \hspace{9.4cm}
+\scalebox{0.7}{
+\raisebox{-0.1ex}{\scalebox{0.3}[1.0]{\textcolor{#181818}{\textsf{\large ▄\hspace{0.04cm}▅\hspace{0.04cm}▆\hspace{0.04cm}▇}}}}
+\!\!\!
+\textcolor{#181818}{\textsf{\large \textbf{\large ᯤ}}}
+\hspace{0.2cm}
+\raisebox{0.8ex}{
+\scalebox{0.9}[0.8]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+\hspace{0.02cm}
+\scalebox{0.08}[0.22]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+}
+} \\
+\\
+\\
+\\
+\\
+\\
+\raisebox{-0.5cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.85cm}{\fcolorbox{#FFFFFF}{#FFFFFF}{\textcolor{#FFFFFF}{\rule{1.0cm}{1.0cm}}}} \hspace{0.1cm}
+& \hspace{-0.3cm}\textcolor{#181818}{\textsf{\normalsize ID}} \hspace{6.5cm} \textcolor{#4A7BA7}{\textsf{\hspace{2.25cm}\normalsize ⊡}} \raisebox{-1.0cm}{\hspace{-10.38cm}\textcolor{#8E8E93}{\textsf{\normalsize 微信号：微信号}} \hspace{5.3cm} \textcolor{#8E8E93}{\textsf{\normalsize >}}}
+\end{array} \\
+\end{array}
+} \\
+\raisebox{-0.08cm}{\textcolor{#8E8E93}{\hspace{2.3cm}\textsf{\normalsize +状态}}} \\
+\\
+\\
+\textcolor{#E8E8E8}{\rule{13cm}{0.1cm}} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.2cm} \textcolor{#07C160}{\scalebox{0.6}{✓}⃞} \hspace{0.6cm} 服务 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#E8E8E8}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1cm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.7cm} \textcolor{#0084FF}{\Large ❒} \hspace{0.5cm} 收藏 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.2cm} \textcolor{#0084FF}{\scalebox{0.6}{Λʌ}\hspace{-0.1cm}⃞} \hspace{0.6cm} 朋友圈 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.7cm} \textcolor{#5BB8F5}{\Large ❐} \hspace{0.5cm} 作品 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.7cm} \textcolor{#F56A56}{\Large 𖠿} \hspace{0.5cm} 小店与卡包 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.7cm} \textcolor{#FFCC00}{\Large ☻} \hspace{0.5cm} 表情 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#E8E8E8}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1cm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.7cm} \textcolor{#0084FF}{\Large ⎔} \hspace{0.5cm} 设置 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\textcolor{#D0D0D0}{\rule{13cm}{0.3mm}} \\
+\textcolor{#181818}{\hspace{0.8cm}\textsf{\normalsize 微信}} \hspace{1.75cm}
+\textcolor{#181818}{\textsf{\normalsize 通讯录}} \hspace{1.75cm}
+\textcolor{#181818}{\textsf{\normalsize 发现}} \hspace{1.75cm}
+\textcolor{#07C160}{\textsf{\normalsize 我}}
+\end{array}
+}
+}
+\]
+
+二、格式规则
+ 
+1.内容里禁止出现半角符号（如 ()^~_ 等），禁止出现多余的空格、换行
+2.ID行⊡的位置动态调整：当玩家自定义的ID字符在格式基础上增加n个字符时，⊡向左移动0.1*n的距离
+3.微信号行>的位置动态调整：（该行中前方的“微信号：”为固定格式，后面的“微信号”为格式中的占位，即玩家自定义微信号的替换位置）为当玩家自定义的微信号字符在格式基础上增加n个字符时，该行的>向左移动0.1*n的距离（如玩家自定义的微信号为sy_020723，则在该行显示为“微信号：sy_020723”，此时字符比格式中增加了6个字符，则该行的>向左移0.6）
+4.不要在现格式指令代码中加入额外的转义符\，若玩家自定义内容中含特殊符号时可在特殊符号前加转义符\
+
+三、示例
+
+\[
+\fcolorbox{#EDEDED}{#EDEDED}{
+\scalebox{0.85}{
+\begin{array}{l}
+\textcolor{#181818}{\textbf{\small 15:47}} \hspace{9.4cm}
+\scalebox{0.7}{
+\raisebox{-0.1ex}{\scalebox{0.3}[1.0]{\textcolor{#181818}{\textsf{\large ▄\hspace{0.04cm}▅\hspace{0.04cm}▆\hspace{0.04cm}▇}}}}
+\!\!\!
+\textcolor{#181818}{\textsf{\large \textbf{\large ᯤ}}}
+\hspace{0.2cm}
+\raisebox{0.8ex}{
+\scalebox{0.9}[0.8]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+\hspace{0.02cm}
+\scalebox{0.08}[0.22]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+}
+} \\
+\\
+\\
+\\
+\\
+\\
+\raisebox{-0.5cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.85cm}{\fcolorbox{#FFFFFF}{#FFFFFF}{\textcolor{#FFFFFF}{\rule{1.0cm}{1.0cm}}}} \hspace{0.1cm}
+& \hspace{-0.3cm}\textcolor{#181818}{\textsf{\normalsize 肆野}} \hspace{6.5cm} \textcolor{#4A7BA7}{\textsf{\hspace{1.75cm}\normalsize ⊡}} \raisebox{-1.0cm}{\hspace{-10.28cm}\textcolor{#8E8E93}{\textsf{\normalsize 微信号：sy\_020723}} \hspace{4.5cm} \textcolor{#8E8E93}{\textsf{\normalsize >}}}
+\end{array} \\
+\end{array}
+} \\
+\raisebox{-0.08cm}{\textcolor{#8E8E93}{\hspace{2.3cm}\textsf{\normalsize +状态}}} \\
+\\
+\\
+\textcolor{#E8E8E8}{\rule{13cm}{0.1cm}} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.2cm} \textcolor{#07C160}{\scalebox{0.6}{✓}⃞} \hspace{0.6cm} 服务 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#E8E8E8}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1cm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.7cm} \textcolor{#0084FF}{\Large ❒} \hspace{0.5cm} 收藏 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.2cm} \textcolor{#0084FF}{\scalebox{0.6}{Λʌ}\hspace{-0.1cm}⃞} \hspace{0.6cm} 朋友圈 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.7cm} \textcolor{#5BB8F5}{\Large ❐} \hspace{0.5cm} 作品 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.7cm} \textcolor{#F56A56}{\Large 𖠿} \hspace{0.5cm} 小店与卡包 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.7cm} \textcolor{#FFCC00}{\Large ☻} \hspace{0.5cm} 表情 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#E8E8E8}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1cm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.7cm} \textcolor{#0084FF}{\Large ⎔} \hspace{0.5cm} 设置 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\textcolor{#D0D0D0}{\rule{13cm}{0.3mm}} \\
+\textcolor{#181818}{\hspace{0.8cm}\textsf{\normalsize 微信}} \hspace{1.75cm}
+\textcolor{#181818}{\textsf{\normalsize 通讯录}} \hspace{1.75cm}
+\textcolor{#181818}{\textsf{\normalsize 发现}} \hspace{1.75cm}
+\textcolor{#07C160}{\textsf{\normalsize 我}}
+\end{array}
+}
+}
+\]

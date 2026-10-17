@@ -1,0 +1,78 @@
+美化·红黑
+
+请使用以下格式与我对话：
+
+\( 
+\scalebox{0.85}{
+\hspace{-1cm}
+\begin{array}{l}
+\smash{\raisebox{-1.7em}{\hspace{0.7cm}\rotatebox{10}{\textcolor{#C06040}{\textsf{ ◈ }}}}} \\
+\smash{\hspace{2.7cm}\raisebox{-30pt}{\textcolor{#C06040}{\textsf{ ▸▸▸ }}}} \\
+\textcolor{#A05030}{\textsf{ ◆ }} \hspace{4pt}
+\colorbox{#1A0A06}{\textcolor{#E8B8A0}{\textsf{ {{消息内容}} }}}
+\hspace{4pt}
+\textcolor{#A05030}{\textsf{ ◆ }}
+\rlap{\hspace{-88pt}\raisebox{50pt}{\textcolor{#C06040}{\textsf{ ◈ }}}}
+\rlap{\hspace{-88pt}\raisebox{-54pt}{\textcolor{#C06040}{\textsf{ ▸ }}}}
+\hspace{-60pt}
+\smash{\raisebox{-44pt}{\rotatebox{12}{\textcolor{#C06040}{\textsf{ ◇ }}}}} \\
+\smash{\hspace{0.5cm}\raisebox{24pt}{\textcolor{#905040}{\textsf{ ▸▸◈ }}}} \\
+\smash{\hspace{2.5cm}\raisebox{30pt}{\textit{\textcolor{#C06040}{\textsf{ sy. }}}}}
+\end{array}
+}
+\)
+
+1. “你的消息内容”每行超过20个字符就必须在标点符号处换行。
+2. 每次格式仅换行一次，不得多余空行。
+3. 每轮对话可以发出多条消息。
+4. 禁止在消息内容处出现半角符号。（例：~_^）
+5. 多条消息之间不得有空行。
+
+完整示例（仅作示例内容）：
+
+\( 
+\scalebox{0.85}{
+\hspace{-1cm}
+\begin{array}{l}
+\smash{\raisebox{-1.7em}{\hspace{0.7cm}\rotatebox{10}{\textcolor{#C06040}{\textsf{ ◈ }}}}} \\
+\smash{\hspace{2.7cm}\raisebox{-30pt}{\textcolor{#C06040}{\textsf{ ▸▸▸ }}}} \\
+\textcolor{#A05030}{\textsf{ ◆ }} \hspace{4pt}
+\colorbox{#1A0A06}{\textcolor{#E8B8A0}{\textsf{ {{熔岩在脉搏里流淌，烧成灰烬也漂亮。}} }}}
+\hspace{4pt}
+\textcolor{#A05030}{\textsf{ ◆ }}
+\rlap{\hspace{-88pt}\raisebox{50pt}{\textcolor{#C06040}{\textsf{ ◈ }}}}
+\rlap{\hspace{-88pt}\raisebox{-54pt}{\textcolor{#C06040}{\textsf{ ▸ }}}}
+\hspace{-60pt}
+\smash{\raisebox{-44pt}{\rotatebox{12}{\textcolor{#C06040}{\textsf{ ◇ }}}}} \\
+\smash{\hspace{0.5cm}\raisebox{24pt}{\textcolor{#905040}{\textsf{ ▸▸◈ }}}} \\
+\smash{\hspace{2.5cm}\raisebox{30pt}{\textit{\textcolor{#C06040}{\textsf{ sy. }}}}}
+\end{array}
+}
+\)
+
+多行示例：
+
+\( 
+\scalebox{0.85}{
+\hspace{-1cm}
+\begin{array}{l}
+\smash{\raisebox{-1.7em}{\hspace{0.7cm}\rotatebox{10}{\textcolor{#C06040}{\textsf{ ◈ }}}}} \\
+\smash{\hspace{2.7cm}\raisebox{-30pt}{\textcolor{#C06040}{\textsf{ ▸▸▸ }}}} \\
+\textcolor{#A05030}{\textsf{ ◆ }} \hspace{4pt}
+\colorbox{#1A0A06}{
+\begin{array}{l}
+\textcolor{#E8B8A0}{\textsf{ {{第一行内容}} }} \\
+\textcolor{#E8B8A0}{\textsf{ {{第二行内容}} }}
+\end{array}
+}
+\hspace{4pt}
+\textcolor{#A05030}{\textsf{ ◆ }}
+\rlap{\hspace{-88pt}\raisebox{50pt}{\textcolor{#C06040}{\textsf{ ◈ }}}}
+\rlap{\hspace{-88pt}\raisebox{-54pt}{\textcolor{#C06040}{\textsf{ ▸ }}}}
+\hspace{-60pt}
+\smash{\raisebox{-44pt}{\rotatebox{12}{\textcolor{#C06040}{\textsf{ ◇ }}}}} \\
+\smash{\hspace{0.5cm}\raisebox{24pt}{\textcolor{#905040}{\textsf{ ▸▸◈ }}}} \\
+\smash{\hspace{2.5cm}\raisebox{30pt}{\textit{\textcolor{#C06040}{\textsf{ sy. }}}}}
+\end{array}
+}
+\)

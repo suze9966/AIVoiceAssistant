@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/pocketRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/glass_page_bg">
+
+    <LinearLayout
+        android:id="@+id/headerBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:elevation="10dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="10dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:id="@+id/btnPocketBack"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/icon_touch_bg"
+            android:contentDescription="@string/role_back"
+            android:gravity="center"
+            android:text="‹"
+            android:textColor="@color/purple_700"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvPocketTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/pocket_title"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvPocketStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/btnPocketSmaller"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/icon_touch_bg"
+            android:contentDescription="@string/pocket_smaller"
+            android:gravity="center"
+            android:text="−"
+            android:textColor="@color/purple_700"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/btnPocketBigger"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/icon_touch_bg"
+            android:contentDescription="@string/pocket_bigger"
+            android:gravity="center"
+            android:text="+"
+            android:textColor="@color/purple_700"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/btnPocketPin"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:background="@drawable/icon_touch_bg"
+            android:gravity="center"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:text="@string/pocket_pin"
+            android:textColor="@color/purple_700"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/btnPocketPlay"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:background="@drawable/icon_touch_bg"
+            android:gravity="center"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:text="@string/pocket_play"
+            android:textColor="@color/purple_700"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <ScrollView
+        android:id="@+id/pocketScroll"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="58dp"
+        android:layout_marginBottom="132dp"
+        android:fillViewport="true">
+
+        <TextView
+            android:id="@+id/tvPocketScreen"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="12dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="8dp"
+            android:textColor="@color/text_primary"
+            android:textIsSelectable="true"
+            android:textSize="12sp"
+            android:typeface="monospace" />
+    </ScrollView>
+
+    <TextView
+        android:id="@+id/tvPocketOps"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="44dp"
+        android:layout_marginBottom="132dp"
+        android:background="@color/input_bg"
+        android:maxLines="4"
+        android:paddingStart="10dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="10dp"
+        android:paddingBottom="4dp"
+        android:textColor="@color/text_secondary"
+        android:textSize="11sp"
+        android:visibility="gone" />
+
+    <HorizontalScrollView
+        android:id="@+id/appDock"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:layout_gravity="bottom"
+        android:layout_marginBottom="84dp"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:id="@+id/appDockRow"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal" />
+    </HorizontalScrollView>
+
+    <LinearLayout
+        android:id="@+id/bottomBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:elevation="12dp"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="36dp"
+        android:paddingBottom="8dp">
+
+        <EditText
+            android:id="@+id/editPocket"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="@string/pocket_hint"
+            android:importantForAutofill="no"
+            android:inputType="textCapSentences|textMultiLine"
+            android:maxLines="3"
+            android:minHeight="40dp"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_secondary"
+            android:textSize="13sp" />
+
+        <Button
+            android:id="@+id/btnPocketSend"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/s_btn_ghost"
+            android:minWidth="48dp"
+            android:text="@string/pocket_go"
+            android:textColor="@color/purple_700" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/pocketResize"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_gravity="bottom|end"
+        android:background="@drawable/icon_touch_bg"
+        android:contentDescription="@string/pocket_resize"
+        android:gravity="center"
+        android:text="⤡"
+        android:textColor="@color/purple_700"
+        android:textSize="16sp" />
+</FrameLayout>

@@ -1,0 +1,168 @@
+DeepSeek仿微信通讯录页面美化.sy
+
+清秋屿sy（sy_020723）禁止二传二改 禁止换头倒卖
+
+当玩家在文游过程中需要查看微信通讯录页面时请用以下固定格式生成相应内容：
+ 
+一、微信通讯录页面查看格式、
+
+\[
+\fcolorbox{#EDEDED}{#EDEDED}{
+\scalebox{0.85}{
+\begin{array}{ll}
+\begin{array}{l}
+\textcolor{#181818}{\textbf{\small 15:47}} \hspace{9.4cm}
+\scalebox{0.7}{
+\raisebox{-0.1ex}{\scalebox{0.3}[1.0]{\textcolor{#181818}{\textsf{\large ▄\hspace{0.04cm}▅\hspace{0.04cm}▆\hspace{0.04cm}▇}}}}
+\!\!\!
+\textcolor{#181818}{\textsf{\large \textbf{\large ᯤ}}}
+\hspace{0.2cm}
+\raisebox{0.8ex}{
+\scalebox{0.9}[0.8]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+\hspace{0.02cm}
+\scalebox{0.08}[0.22]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+}
+} \\
+\textcolor{#181818}{\textsf{\large ··}} \hspace{4.3cm}
+\textcolor{#181818}{\hspace{0.55cm}\textsf{\large \textbf{通讯录}}} \hspace{4.1cm}
+\textcolor{#181818}{\hspace{0.0cm}\textsf{\large ＋}} \\
+\fcolorbox{#F5F5F5}{#F5F5F5}{
+\begin{array}{l}
+\textcolor{#F5F5F5}{\rule{11.7cm}{0.1cm}}
+\end{array}
+}
+\hspace{-7.5cm}\raisebox{-0.1cm}{\textcolor{#8E8E93}{\textsf{\large 🔍搜索}}} \\
+\textcolor{#D0D0D0}{\rule{13cm}{0.2mm}} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\fcolorbox{#F7941D}{#F7941D}{\textcolor{#F7941D}{\rule{0.8cm}{0.8cm}}}} \hspace{0.1cm}
+& \hspace{-0.3cm}\textcolor{#181818}{\textsf{\large 新的朋友}}
+\end{array} \\
+\end{array}
+} \\
+\textcolor{#E0E0E0}{\rule{13cm}{0.1mm}} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\fcolorbox{#F5A623}{#F5A623}{\textcolor{#F5A623}{\rule{0.8cm}{0.8cm}}}} \hspace{0.1cm}
+& \hspace{-0.3cm}\textcolor{#181818}{\textsf{\large 仅聊天的朋友}}
+\end{array} \\
+\end{array}
+} \\
+\textcolor{#E0E0E0}{\rule{13cm}{0.1mm}} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\fcolorbox{#07C160}{#07C160}{\textcolor{#07C160}{\rule{0.8cm}{0.8cm}}}} \hspace{0.1cm}
+& \hspace{-0.3cm}\textcolor{#181818}{\textsf{\large 群聊}}
+\end{array} \\
+\end{array}
+} \\
+\textcolor{#E0E0E0}{\rule{13cm}{0.1mm}} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\fcolorbox{#2772E6}{#2772E6}{\textcolor{#2772E6}{\rule{0.8cm}{0.8cm}}}} \hspace{0.1cm}
+& \hspace{-0.3cm}\textcolor{#181818}{\textsf{\large 标签}}
+\end{array} \\
+\end{array}
+} \\
+\textcolor{#E0E0E0}{\rule{13cm}{0.1mm}} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\fcolorbox{#2185F5}{#2185F5}{\textcolor{#2185F5}{\rule{0.8cm}{0.8cm}}}} \hspace{0.1cm}
+& \hspace{-0.3cm}\textcolor{#181818}{\textsf{\large 公众号}}
+\end{array} \\
+\end{array}
+} \\
+\textcolor{#E0E0E0}{\rule{13cm}{0.1mm}} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\fcolorbox{#00A5E0}{#00A5E0}{\textcolor{#00A5E0}{\rule{0.8cm}{0.8cm}}}} \hspace{0.1cm}
+& \hspace{-0.3cm}\textcolor{#181818}{\textsf{\large 服务号}}
+\end{array} \\
+\end{array}
+} \\
+\textcolor{#E0E0E0}{\rule{13cm}{0.1mm}} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\fcolorbox{#2478E8}{#2478E8}{\textcolor{#2478E8}{\rule{0.8cm}{0.8cm}}}} \hspace{0.1cm}
+& \hspace{-0.3cm}\textcolor{#181818}{\textsf{\large 企业微信联系人}}
+\end{array} \\
+\end{array}
+} \\
+\textcolor{#E0E0E0}{\rule{13cm}{0.1mm}} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\textcolor{#8E8E93}{\hspace{0.2cm}\textsf{\small \textbf{☆星标朋友}}} \\
+\end{array}
+} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\fcolorbox{#FFFFFF}{#FFFFFF}{\textcolor{#FFFFFF}{\rule{0.8cm}{0.8cm}}}} \hspace{0.1cm}
+& \hspace{-0.3cm}\textcolor{#181818}{\textsf{\large 肆野}}
+\end{array} \\
+\end{array}
+} \\
+\textcolor{#D0D0D0}{\rule{13cm}{0.3mm}} \\
+\textcolor{#181818}{\hspace{0.8cm}\textsf{\normalsize 微信}} \hspace{1.75cm}
+\textcolor{#07C160}{\textsf{\normalsize 通讯录}} \hspace{1.75cm}
+\textcolor{#181818}{\textsf{\normalsize 发现}} \hspace{1.75cm}
+\textcolor{#181818}{\textsf{\normalsize 我}}
+\end{array}
+&
+\raisebox{0.2cm}{
+\hspace{-2cm}
+\begin{array}{l}
+\textcolor{#8E8E93}{\textsf{\tiny ☆}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  a}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  b}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  c}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  d}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  e}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  f}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  g}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  h}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  i}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  j}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  k}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  l}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  m}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  n}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  o}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  p}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  q}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  r}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  s}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  t}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  u}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  v}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  w}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  x}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  y}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  z}} \\
+\textcolor{#8E8E93}{\textsf{\tiny  #}} \\
+\end{array}
+}
+\end{array}
+}
+}
+\]
+
+二、格式规则
+ 
+内容里禁止出现半角符号（如 ()^~_ 等），禁止出现多余的空格、换行

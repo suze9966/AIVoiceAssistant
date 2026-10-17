@@ -1,0 +1,124 @@
+DeepSeek仿微信特定好友朋友圈页面美化.sy
+
+清秋屿sy（sy_020723）禁止二传二改 禁止换头倒卖
+
+当玩家在文游过程中需要查看某特定角色的微信朋友圈时请用以下固定格式生成相应内容：
+ 
+一、特定角色微信朋友圈页面查看格式、
+
+\[
+\scalebox{0.85}{
+\fcolorbox{#D0D0D0}{#FFFFFF}{
+\begin{array}{l}
+\textcolor{#181818}{\textbf{\small 05:21}} \hspace{9.1cm}
+\scalebox{0.7}{
+\raisebox{-0.1ex}{\scalebox{0.3}[1.0]{\textcolor{#181818}{\textsf{\large ▄\hspace{0.04cm}▅\hspace{0.04cm}▆\hspace{0.04cm}▇}}}}
+\!\!\!
+\textcolor{#181818}{\textsf{\large \textbf{\large ᯤ}}}
+\hspace{0.2cm}
+\raisebox{0.8ex}{
+\scalebox{0.9}[0.8]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+\hspace{0.02cm}
+\scalebox{0.08}[0.22]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+}
+} \\
+\\
+\\
+\\
+\\
+\\
+\textcolor{#E0E0E0}{\rule{12.5cm}{0.1mm}} \hspace{-4.0cm}\raisebox{0.15cm}{\textcolor{#262626}{\textsf{\normalsize 备注 }} \hspace{0.2cm} \raisebox{-0.4cm}{\fcolorbox{#D8E8F0}{#D8E8F0}{\textcolor{#D8E8F0}{\rule{1cm}{1cm}}}}} \\
+\\
+\hspace{10.05cm}\textcolor{#666666}{\textsf{\small 个性签名}} \\
+\\
+\\
+\\
+\begin{array}{@{\hspace{-0.3cm}}l@{\hspace{0.4cm}}l@{\hspace{0.4cm}}l}
+\textcolor{#262626}{\textbf{\Large 置顶 }} & \raisebox{-1cm}{\fcolorbox{#E8E8E8}{#E8E8E8}{\textcolor{#E8E8E8}{\rule{2.5cm}{2.5cm}}} \hspace{0.1cm} \fcolorbox{#E8E8E8}{#E8E8E8}{\textcolor{#E8E8E8}{\rule{2.5cm}{2.5cm}}} \hspace{0.1cm} \fcolorbox{#E8E8E8}{#E8E8E8}{\textcolor{#E8E8E8}{\rule{2.5cm}{2.5cm}}}} & \textcolor{#8E8E93}{\scalebox{0.6}[1]{\Large >}} \\
+\end{array} \\
+\textcolor{#F5F5F5}{\textsf{ \hspace{-0.5cm} \rule{12.5cm}{0.1mm} }} \\
+\begin{array}{@{\hspace{-0.3cm}}l@{\hspace{0.4cm}}l@{\hspace{0.4cm}}l}
+\textcolor{#262626}{\textbf{\Large 今天 }} & \raisebox{-2cm}{\fcolorbox{#E8E8E8}{#E8E8E8}{\textcolor{#E8E8E8}{\rule{2.5cm}{2.5cm}}}} & \textcolor{#181818}{\textsf{\normalsize 朋友圈文案1 }} \\
+\end{array} \\
+\begin{array}{@{\hspace{-0.3cm}}l@{\hspace{0.4cm}}l@{\hspace{0.4cm}}l}
+\textcolor{#262626}{\textbf{\Large 昨天 }} & \raisebox{-2cm}{\fcolorbox{#E8E8E8}{#E8E8E8}{\textcolor{#E8E8E8}{\rule{2.5cm}{2.5cm}}}} & \textcolor{#181818}{\textsf{\normalsize 朋友圈文案2 }} \\
+\end{array} \\
+\begin{array}{@{\hspace{-0.3cm}}l@{\hspace{0.4cm}}l@{\hspace{0.4cm}}l}
+\hspace{-0.1cm}\textcolor{#262626}{\textbf{\LARGE 00}}\hspace{-0.12cm}\textcolor{#262626}{\textsf{\footnotesize x月 }} & \raisebox{-2cm}{\fcolorbox{#E8E8E8}{#E8E8E8}{\textcolor{#E8E8E8}{\rule{2.5cm}{2.5cm}}}} & \textcolor{#181818}{\textsf{\normalsize 朋友圈文案3 }} \\
+\end{array} \\
+\begin{array}{@{\hspace{-0.3cm}}l@{\hspace{0.4cm}}l@{\hspace{0.4cm}}l}
+\hspace{-0.1cm}\textcolor{#262626}{\textbf{\LARGE 00}}\hspace{-0.12cm}\textcolor{#262626}{\textsf{\footnotesize x月 }} & \raisebox{-2cm}{\fcolorbox{#E8E8E8}{#E8E8E8}{\textcolor{#E8E8E8}{\rule{2.5cm}{2.5cm}}}} & \textcolor{#181818}{\textsf{\normalsize 朋友圈文案4 }} \\
+\end{array} \\
+\\
+\\
+\\
+\\
+\end{array}
+}
+}
+\]
+
+二、格式规则
+ 
+1.内容里禁止出现半角符号（如 ()^~_ 等），禁止出现多余的空格、换行
+2.不要在现格式指令代码中加入额外的转义符\
+3.个性签名位置动态调整：个性签名位置根据个性签名字符数之和动态移动，初始字符数之和为4个字符（文字为1字符，符号为0.5字符），每增加1字符，个性签名左移0.5；每减少1字符，个性签名右移0.5
+例如：个性签名为“我說幸福就是在你身邊♡”（十个字和一个符号，共10.5个字符）此时个性签名字符数相较初始字符增加了6.5字符，则此时个性签名应左移6.5*0.5=3.25
+4.除非玩家特殊要求，否则置顶图片（正方形）固定为三个，且完全遵循查看格式
+5.朋友圈文案字数尽量不超过11字符
+超出11字符时，朋友圈文案动态调整：根据朋友圈文案字符数之和动态移动（文字为1字符，符号为0.5字符），当文案字符超过11字符时， 以11字符为强制分割点（分割点为非整数字符时，以10.5字符为分割点 而非11.5字符），1至11（或10.5）字符不动；12至22（或11.5至21.5）字符下移0.8并左移6.8；23至33（或22.5至32.5）字符下移0.8*2并左移6.8*2，以此类推
+例如：朋友圈文案为“没有更新的日子都在享受生活⟡”（十三个个字和一个符号，共13.5个字符），分割点为11字符处，则此时该条朋友圈文案动态调整为：“没有更新的日子都在享受”不动，“生活⟡”下移0.8并左移6.8
+
+三、示例
+
+\[
+\scalebox{0.85}{
+\fcolorbox{#D0D0D0}{#FFFFFF}{
+\begin{array}{l}
+\textcolor{#181818}{\textbf{\small 05:21}} \hspace{9.1cm}
+\scalebox{0.7}{
+\raisebox{-0.1ex}{\scalebox{0.3}[1.0]{\textcolor{#181818}{\textsf{\large ▄\hspace{0.04cm}▅\hspace{0.04cm}▆\hspace{0.04cm}▇}}}}
+\!\!\!
+\textcolor{#181818}{\textsf{\large \textbf{\large ᯤ}}}
+\hspace{0.2cm}
+\raisebox{0.8ex}{
+\scalebox{0.9}[0.8]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+\hspace{0.02cm}
+\scalebox{0.08}[0.22]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+}
+} \\
+\\
+\\
+\\
+\\
+\\
+\textcolor{#E0E0E0}{\rule{12.5cm}{0.1mm}} \hspace{-4.0cm}\raisebox{0.15cm}{\textcolor{#262626}{\textsf{\normalsize 肆野 }} \hspace{0.2cm} \raisebox{-0.4cm}{\fcolorbox{#D8E8F0}{#D8E8F0}{\textcolor{#D8E8F0}{\rule{1cm}{1cm}}}}} \\
+\\
+\hspace{9.55cm}\textcolor{#666666}{\textsf{\small 人生是旷野}} \\
+\\
+\\
+\\
+\begin{array}{@{\hspace{-0.3cm}}l@{\hspace{0.4cm}}l@{\hspace{0.4cm}}l}
+\textcolor{#262626}{\textbf{\Large 置顶 }} & \raisebox{-1cm}{\fcolorbox{#E8E8E8}{#E8E8E8}{\textcolor{#E8E8E8}{\rule{2.5cm}{2.5cm}}} \hspace{0.1cm} \fcolorbox{#E8E8E8}{#E8E8E8}{\textcolor{#E8E8E8}{\rule{2.5cm}{2.5cm}}} \hspace{0.1cm} \fcolorbox{#E8E8E8}{#E8E8E8}{\textcolor{#E8E8E8}{\rule{2.5cm}{2.5cm}}}} & \textcolor{#8E8E93}{\scalebox{0.6}[1]{\Large >}} \\
+\end{array} \\
+\textcolor{#F5F5F5}{\textsf{ \hspace{-0.5cm} \rule{12.5cm}{0.1mm} }} \\
+\begin{array}{@{\hspace{-0.3cm}}l@{\hspace{0.4cm}}l@{\hspace{0.4cm}}l}
+\textcolor{#262626}{\textbf{\Large 今天 }} & \raisebox{-2cm}{\fcolorbox{#E8E8E8}{#E8E8E8}{\textcolor{#E8E8E8}{\rule{2.5cm}{2.5cm}}}} & \textcolor{#181818}{\textsf{\normalsize 欢迎登陆我的视角՞˶･֊･˶՞ }} \\
+\end{array} \\
+\begin{array}{@{\hspace{-0.3cm}}l@{\hspace{0.4cm}}l@{\hspace{0.4cm}}l}
+\textcolor{#262626}{\textbf{\Large 昨天 }} & \raisebox{-2cm}{\fcolorbox{#E8E8E8}{#E8E8E8}{\textcolor{#E8E8E8}{\rule{2.5cm}{2.5cm}}}} & \textcolor{#181818}{\textsf{\normalsize 地球旋转我吃饭～🍽️ }} \\
+\end{array} \\
+\begin{array}{@{\hspace{-0.3cm}}l@{\hspace{0.4cm}}l@{\hspace{0.4cm}}l}
+\hspace{-0.1cm}\textcolor{#262626}{\textbf{\LARGE 15}}\hspace{-0.12cm}\textcolor{#262626}{\textsf{\footnotesize 3月 }} & \raisebox{-2cm}{\fcolorbox{#E8E8E8}{#E8E8E8}{\textcolor{#E8E8E8}{\rule{2.5cm}{2.5cm}}}} & \textcolor{#181818}{\textsf{\normalsize 近期麻瓜生活ᜊ ᶻᶻ }} \\
+\end{array} \\
+\begin{array}{@{\hspace{-0.3cm}}l@{\hspace{0.4cm}}l@{\hspace{0.4cm}}l}
+\hspace{-0.1cm}\textcolor{#262626}{\textbf{\LARGE 03}}\hspace{-0.12cm}\textcolor{#262626}{\textsf{\footnotesize 3月 }} & \raisebox{-2cm}{\fcolorbox{#E8E8E8}{#E8E8E8}{\textcolor{#E8E8E8}{\rule{2.5cm}{2.5cm}}}} & \textcolor{#181818}{\textsf{\normalsize 没有更新的日子都在享受}}\raisebox{-0.8cm}{\hspace{-6.8cm}\textcolor{#181818}{\textsf{\normalsize 生活⟡ }}} \\
+\end{array} \\
+\\
+\\
+\\
+\\
+\end{array}
+}
+}
+\]

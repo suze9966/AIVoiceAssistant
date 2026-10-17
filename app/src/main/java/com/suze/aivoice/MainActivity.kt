@@ -238,9 +238,10 @@ class MainActivity : AppCompatActivity() {
             pop.menu.add(0, 24, 14, getString(R.string.menu_emotion))
             pop.menu.add(0, 25, 15, getString(R.string.menu_mind))
             pop.menu.add(0, 26, 16, getString(R.string.menu_scene))
-            pop.menu.add(0, 2, 17, getString(R.string.menu_clear))
-            pop.menu.add(0, 4, 18, getString(R.string.menu_stop_speak))
-            pop.menu.add(0, 3, 19, getString(R.string.menu_wake))
+            pop.menu.add(0, 27, 17, getString(R.string.menu_pocket))
+            pop.menu.add(0, 2, 18, getString(R.string.menu_clear))
+            pop.menu.add(0, 4, 19, getString(R.string.menu_stop_speak))
+            pop.menu.add(0, 3, 20, getString(R.string.menu_wake))
             pop.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     1 -> { openSettingsDrawer(); true }
@@ -260,6 +261,7 @@ class MainActivity : AppCompatActivity() {
                     24 -> { startActivity(Intent(this, EmotionActivity::class.java)); true }
                     25 -> { startActivity(Intent(this, MindActivity::class.java)); true }
                     26 -> { showSceneMenu(); true }
+                    27 -> { startActivity(Intent(this, PocketPhoneActivity::class.java)); true }
                     2 -> {
                         history.clear()
                         adapter.notifyDataSetChanged()

@@ -1,0 +1,233 @@
+美化·便签合集
+
+请使用以下格式与我对话：
+ 
+一、格式结构
+
+1.#D45A5A：
+\(
+\scalebox{0.85}{
+\hspace{-0.8cm}
+\begin{array}{l}
+\textcolor{#D45A5A}{\textsf{ · 地点·角色名 }} \\
+\textcolor{#D45A5A}{\hspace{0.5cm}\textsf{ 行动内容 }} \\
+\textcolor{#D45A5A}{\textsf{ █ }} \hspace{3pt}
+\colorbox{#F5D0D0}{
+\colorbox{#FFF0F0}{
+\begin{array}{l}
+\textcolor{#B34444}{\textsf{ 对话内容 }}
+\end{array}
+}
+}
+\\
+\vspace{4pt}
+\textcolor{#CC8888}{\textsf{ > 内心os }}
+\end{array}
+}
+\)
+
+2.#E8835A：
+\(
+\scalebox{0.85}{
+\hspace{-0.8cm}
+\begin{array}{l}
+\textcolor{#E8835A}{\textsf{ · 地点·角色名 }} \\
+\textcolor{#E8835A}{\hspace{0.5cm}\textsf{ 行动内容 }} \\
+\textcolor{#E8835A}{\textsf{ █ }} \hspace{3pt}
+\colorbox{#F5F0EB}{
+\colorbox{#FFF8F0}{
+\begin{array}{l}
+\textcolor{#7A4A3A}{\textsf{ 对话内容 }}
+\end{array}
+}
+}
+\\
+\vspace{4pt}
+\textcolor{#B09070}{\textsf{ > 内心os }}
+\end{array}
+}
+\)
+
+3.#D48A6A：
+\(
+\scalebox{0.85}{
+\hspace{-0.8cm}
+\begin{array}{l}
+\textcolor{#D48A6A}{\textsf{ · 地点·角色名 }} \\
+\textcolor{#D48A6A}{\hspace{0.5cm}\textsf{ 行动内容 }} \\
+\textcolor{#D48A6A}{\textsf{ █ }} \hspace{3pt}
+\colorbox{#F0D0B8}{
+\colorbox{#FFF5E8}{
+\begin{array}{l}
+\textcolor{#A06040}{\textsf{ 对话内容 }}
+\end{array}
+}
+}
+\\
+\vspace{4pt}
+\textcolor{#C09070}{\textsf{ > 内心os }}
+\end{array}
+}
+\)
+
+4.#4A7A5A：
+\(
+\scalebox{0.85}{
+\hspace{-0.8cm}
+\begin{array}{l}
+\textcolor{#4A7A5A}{\textsf{ · 地点·角色名 }} \\
+\textcolor{#4A7A5A}{\hspace{0.5cm}\textsf{ 行动内容 }} \\
+\textcolor{#4A7A5A}{\textsf{ █ }} \hspace{3pt}
+\colorbox{#E8F0E0}{
+\colorbox{#F5FAF0}{
+\begin{array}{l}
+\textcolor{#2A5A3A}{\textsf{ 对话内容 }}
+\end{array}
+}
+}
+\\
+\vspace{4pt}
+\textcolor{#6A9A7A}{\textsf{ > 内心os }}
+\end{array}
+}
+\)
+
+5.#5A8A8A：
+\(
+\scalebox{0.85}{
+\hspace{-0.8cm}
+\begin{array}{l}
+\textcolor{#5A8A8A}{\textsf{ · 地点·角色名 }} \\
+\textcolor{#5A8A8A}{\hspace{0.5cm}\textsf{ 行动内容 }} \\
+\textcolor{#5A8A8A}{\textsf{ █ }} \hspace{3pt}
+\colorbox{#E0F0F0}{
+\colorbox{#F0FAFA}{
+\begin{array}{l}
+\textcolor{#2A5A5A}{\textsf{ 对话内容 }}
+\end{array}
+}
+}
+\\
+\vspace{4pt}
+\textcolor{#7AAAAA}{\textsf{ > 内心os }}
+\end{array}
+}
+\)
+
+6.#5A8AAA：
+\(
+\scalebox{0.85}{
+\hspace{-0.8cm}
+\begin{array}{l}
+\textcolor{#5A8AAA}{\textsf{ · 地点·角色名 }} \\
+\textcolor{#5A8AAA}{\hspace{0.5cm}\textsf{ 行动内容 }} \\
+\textcolor{#5A8AAA}{\textsf{ █ }} \hspace{3pt}
+\colorbox{#B8D8E8}{
+\colorbox{#D6E8F5}{
+\begin{array}{l}
+\textcolor{#2A5A7A}{\textsf{ 对话内容 }}
+\end{array}
+}
+}
+\\
+\vspace{4pt}
+\textcolor{#7AAAC8}{\textsf{ > 内心os }}
+\end{array}
+}
+\)
+
+7.#6A9AC9：
+\(
+\scalebox{0.85}{
+\hspace{-0.8cm}
+\begin{array}{l}
+\textcolor{#6A9AC9}{\textsf{ · 地点·角色名 }} \\
+\textcolor{#6A9AC9}{\hspace{0.5cm}\textsf{ 行动内容 }} \\
+\textcolor{#6A9AC9}{\textsf{ █ }} \hspace{3pt}
+\colorbox{#D0E8F8}{
+\colorbox{#F0F8FF}{
+\begin{array}{l}
+\textcolor{#3A6A8A}{\textsf{ 对话内容 }}
+\end{array}
+}
+}
+\\
+\vspace{4pt}
+\textcolor{#8AB0D0}{\textsf{ > 内心os }}
+\end{array}
+}
+\)
+
+8.#5A7AC0：
+\(
+\scalebox{0.85}{
+\hspace{-0.8cm}
+\begin{array}{l}
+\textcolor{#5A7AC0}{\textsf{ · 地点·角色名 }} \\
+\textcolor{#5A7AC0}{\hspace{0.5cm}\textsf{ 行动内容 }} \\
+\textcolor{#5A7AC0}{\textsf{ █ }} \hspace{3pt}
+\colorbox{#C8D8F0}{
+\colorbox{#E8EEF8}{
+\begin{array}{l}
+\textcolor{#2A4A7A}{\textsf{ 对话内容 }}
+\end{array}
+}
+}
+\\
+\vspace{4pt}
+\textcolor{#7A9AC0}{\textsf{ > 内心os }}
+\end{array}
+}
+\)
+
+9.#6A5A7A：
+\(
+\scalebox{0.85}{
+\hspace{-0.8cm}
+\begin{array}{l}
+\textcolor{#6A5A7A}{\textsf{ · 地点·角色名 }} \\
+\textcolor{#6A5A7A}{\hspace{0.5cm}\textsf{ 行动内容 }} \\
+\textcolor{#6A5A7A}{\textsf{ █ }} \hspace{3pt}
+\colorbox{#4A3A5A}{
+\colorbox{#D8D0E0}{
+\colorbox{#F0EAF5}{
+\begin{array}{l}
+\textcolor{#3A2A4A}{\textsf{ 对话内容 }}
+\end{array}
+}
+}
+}
+\\
+\vspace{4pt}
+\textcolor{#9A8AAA}{\textsf{ > 内心os }}
+\end{array}
+}
+\)
+
+10.#A0A8B0：
+\(
+\scalebox{0.85}{
+\hspace{-0.8cm}
+\begin{array}{l}
+\textcolor{#A0A8B0}{\textsf{ · 地点·角色名 }} \\
+\textcolor{#A0A8B0}{\hspace{0.5cm}\textsf{ 行动内容 }} \\
+\textcolor{#A0A8B0}{\textsf{ █ }} \hspace{3pt}
+\colorbox{#D8DCE0}{
+\colorbox{#F0F2F5}{
+\begin{array}{l}
+\textcolor{#5A6A7A}{\textsf{ 对话内容 }}
+\end{array}
+}
+}
+\\
+\vspace{4pt}
+\textcolor{#A0AAB0}{\textsf{ > 内心os }}
+\end{array}
+}
+\)
+
+二、格式规则
+
+消息内容不限制具体几行：不要每次都固定三行消息 具体视情况而定 
+单行消息字数加符号不允许超过15字
+禁止在对话内出现半角符号（例如:()^~_等）

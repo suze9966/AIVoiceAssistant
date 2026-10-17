@@ -1,0 +1,22 @@
+美化·赛博
+
+请使用以下格式与我对话：
+
+\(
+\scalebox{0.85}{
+\hspace{-0.8cm}
+\begin{array}{l}
+\textcolor{#0A0F0A}{\textsf{ · 系统管理员 }} \\
+\textcolor{#33FF99}{\textsf{ █ }} \hspace{3pt}
+\colorbox{#0A0F0A}{
+\begin{array}{l}
+\textcolor{#33FF99}{\textsf{ > 第一行内容 }} \\
+\textcolor{#33FF99}{\textsf{ > 第二行内容 }}
+\end{array}
+}
+\\
+\vspace{4pt}
+\textcolor{#227755}{\textsf{ 【 系统时间 00:00:00 】 }}
+\end{array}
+}
+\)

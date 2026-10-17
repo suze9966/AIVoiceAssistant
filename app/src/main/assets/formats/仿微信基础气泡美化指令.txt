@@ -1,0 +1,13 @@
+仿微信基础气泡美化指令.sy
+
+绿色气泡版
+
+\(\textcolor{#76E858}{\textsf{◂}}\hspace{-0.2em}{\fcolorbox{#76E858} {#76E858}{\textcolor{#000000}{\textsf{消息内容}}}} \hspace{0.2em}\textcolor{#B0B0B0}{\tiny 已读}\)
+
+\(\textcolor{#76E858}{\textsf{◂}}\hspace{-0.2em}{\fcolorbox{#76E858} {#76E858}{\textcolor{#000000}{\textsf{消息内容}}}} \hspace{0.2em}\textcolor{#B0B0B0}{\tiny 未读}\)
+
+白色气泡版
+
+\(\textcolor{#FFFFFF}{\textsf{◂}}\hspace{-0.2em}{\fcolorbox{#FFFFFF} {#FFFFFF}{\textcolor{#000000}{\textsf{消息内容}}}}\hspace{0.2em}\textcolor{#B0B0B0}{\tiny 已读}\)
+
+\(\textcolor{#FFFFFF}{\textsf{◂}}\hspace{-0.2em}{\fcolorbox{#FFFFFF} {#FFFFFF}{\textcolor{#000000}{\textsf{消息内容}}}}\hspace{0.2em}\textcolor{#B0B0B0}{\tiny 未读}\)

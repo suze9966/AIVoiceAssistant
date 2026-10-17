@@ -1,0 +1,335 @@
+DeepSeek仿微信聊天详情页面美化.sy
+
+清秋屿sy（sy_020723）禁止二传二改 禁止换头倒卖
+
+当玩家在文游过程中需要查看微信聊天详情页面时请用以下固定格式生成相应内容：
+ 
+一、微信聊天详情页面查看默认格式、
+
+\[
+\fcolorbox{#D0D0D0}{#FFFFFF}{
+\scalebox{0.8}{
+\begin{array}{l}
+\textcolor{#181818}{\textbf{\small 05:21}} \hspace{9.4cm}
+\scalebox{0.7}{
+\raisebox{-0.1ex}{\scalebox{0.3}[1.0]{\textcolor{#181818}{\textsf{\large ▄\hspace{0.04cm}▅\hspace{0.04cm}▆\hspace{0.04cm}▇}}}}
+\!\!\!
+\textcolor{#181818}{\textsf{\large \textbf{\large ᯤ}}}
+\hspace{0.2cm}
+\raisebox{0.8ex}{
+\scalebox{0.9}[0.8]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+\hspace{0.02cm}
+\scalebox{0.08}[0.22]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+}
+} \\
+\textcolor{#181818}{\textsf{\large \textbf{<}}} \hspace{4.3cm}
+\textcolor{#181818}{\textsf{\normalsize 聊天详情}} \hspace{4.5cm}
+\\
+\textcolor{#D0D0D0}{\rule{13cm}{0.2mm}} \\
+\raisebox{0cm}{
+\begin{array}{l}
+\begin{array}{lll}
+\raisebox{-0.35cm}{\fcolorbox{#D8E8F0}{#D8E8F0}{\textcolor{#D8E8F0}{\rule{1.0cm}{1.0cm}}}} \hspace{0.2cm}
+& \raisebox{0cm}{
+\begin{array}{l}
+\raisebox{-0.35cm}{\fcolorbox{#C8C8C8}{#FFFFFF}{\textcolor{#FFFFFF}{\rule{1.0cm}{1.0cm}}}} \hspace{-1.65cm}\raisebox{-0.15cm}{\textcolor{#C8C8C8}{\textsf{\huge +}}}
+\end{array}
+}
+& \hspace{-4.9cm}\raisebox{-1.25cm}{\textcolor{#8E8E93}{\textsf{\small 备注}}}
+\end{array} \\
+\end{array}
+} \\
+\hspace{0.2cm}\textcolor{#D8D8D8}{\rule{12.8cm}{1.0mm}} \\
+\\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 查找聊天内容 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#FFFFFF}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\\
+\hspace{0.3cm}\textcolor{#D8D8D8}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{1.0mm} }} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 消息免打扰 }} & \raisebox{0.25cm}{
+\begin{array}{l}
+\raisebox{0.2cm}{\hspace{-1.05cm}\begin{array}{l}
+\textcolor{#D8D8D8}{\textsf{\hspace{-0.3cm}\scalebox{2.0}{◖}\hspace{-0.26cm}\raisebox{-0.06cm}{\rule{0.72cm}{0.72cm}}\hspace{-0.26cm}\scalebox{2.0}{◗}}}
+\end{array}}
+\hspace{-1.78cm} \raisebox{-0.08cm}{\textcolor{#FFFFFF}{\textsf{\scalebox{1.5}{●}}}}
+\end{array}
+} \\
+\textcolor{#D0D0D0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 置顶聊天 }} & \raisebox{0.25cm}{
+\begin{array}{l}
+\raisebox{0.2cm}{\hspace{-1.05cm}\begin{array}{l}
+\textcolor{#D8D8D8}{\textsf{\hspace{-0.3cm}\scalebox{2.0}{◖}\hspace{-0.26cm}\raisebox{-0.06cm}{\rule{0.72cm}{0.72cm}}\hspace{-0.26cm}\scalebox{2.0}{◗}}}
+\end{array}}
+\hspace{-1.78cm} \raisebox{-0.08cm}{\textcolor{#FFFFFF}{\textsf{\scalebox{1.5}{●}}}}
+\end{array}
+} \\
+\textcolor{#D0D0D0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 提醒 }} & \raisebox{0.25cm}{
+\begin{array}{l}
+\raisebox{0.2cm}{\hspace{-1.05cm}\begin{array}{l}
+\textcolor{#D8D8D8}{\textsf{\hspace{-0.3cm}\scalebox{2.0}{◖}\hspace{-0.26cm}\raisebox{-0.06cm}{\rule{0.72cm}{0.72cm}}\hspace{-0.26cm}\scalebox{2.0}{◗}}}
+\end{array}}
+\hspace{-1.78cm} \raisebox{-0.08cm}{\textcolor{#FFFFFF}{\textsf{\scalebox{1.5}{●}}}}
+\end{array}
+} \\
+\textcolor{#D8D8D8}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{1.0mm} }} \\
+\end{array} \\
+\\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 设置当前聊天背景 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#FFFFFF}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\\
+\hspace{0.3cm}\textcolor{#D8D8D8}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{1.0mm} }} \\
+\\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 清空聊天记录 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#FFFFFF}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\\
+\hspace{0.3cm}\textcolor{#D8D8D8}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{1.0mm} }} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 投诉 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#FFFFFF}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\end{array}
+}
+}
+\]
+
+二、微信聊天详情页面可动态调整部分全部开启状态格式
+
+\[
+\fcolorbox{#D0D0D0}{#FFFFFF}{
+\scalebox{0.8}{
+\begin{array}{l}
+\textcolor{#181818}{\textbf{\small 05:21}} \hspace{9.4cm}
+\scalebox{0.7}{
+\raisebox{-0.1ex}{\scalebox{0.3}[1.0]{\textcolor{#181818}{\textsf{\large ▄\hspace{0.04cm}▅\hspace{0.04cm}▆\hspace{0.04cm}▇}}}}
+\!\!\!
+\textcolor{#181818}{\textsf{\large \textbf{\large ᯤ}}}
+\hspace{0.2cm}
+\raisebox{0.8ex}{
+\scalebox{0.9}[0.8]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+\hspace{0.02cm}
+\scalebox{0.08}[0.22]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+}
+} \\
+\textcolor{#181818}{\textsf{\large \textbf{<}}} \hspace{4.3cm}
+\textcolor{#181818}{\textsf{\normalsize 聊天详情}} \hspace{4.5cm}
+\\
+\textcolor{#D0D0D0}{\rule{13cm}{0.2mm}} \\
+\raisebox{0cm}{
+\begin{array}{l}
+\begin{array}{lll}
+\raisebox{-0.35cm}{\fcolorbox{#D8E8F0}{#D8E8F0}{\textcolor{#D8E8F0}{\rule{1.0cm}{1.0cm}}}} \hspace{0.2cm}
+& \raisebox{0cm}{
+\begin{array}{l}
+\raisebox{-0.35cm}{\fcolorbox{#C8C8C8}{#FFFFFF}{\textcolor{#FFFFFF}{\rule{1.0cm}{1.0cm}}}} \hspace{-1.65cm}\raisebox{-0.15cm}{\textcolor{#C8C8C8}{\textsf{\huge +}}}
+\end{array}
+}
+& \hspace{-4.9cm}\raisebox{-1.25cm}{\textcolor{#8E8E93}{\textsf{\small 备注}}}
+\end{array} \\
+\end{array}
+} \\
+\hspace{0.2cm}\textcolor{#D8D8D8}{\rule{12.8cm}{1.0mm}} \\
+\\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 查找聊天内容 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#FFFFFF}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\\
+\hspace{0.3cm}\textcolor{#D8D8D8}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{1.0mm} }} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 消息免打扰 }} & \raisebox{0.25cm}{
+\begin{array}{l}
+\raisebox{0.2cm}{\hspace{-1.05cm}\begin{array}{l}
+\textcolor{#25C950}{\textsf{\hspace{-0.3cm}\scalebox{2.0}{◖}\hspace{-0.26cm}\raisebox{-0.06cm}{\rule{0.72cm}{0.72cm}}\hspace{-0.26cm}\scalebox{2.0}{◗}}}
+\end{array}}
+\hspace{-1.18cm} \raisebox{-0.08cm}{\textcolor{#FFFFFF}{\textsf{\scalebox{1.5}{●}}}}
+\end{array}
+} \\
+\textcolor{#D0D0D0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 置顶聊天 }} & \raisebox{0.25cm}{
+\begin{array}{l}
+\raisebox{0.2cm}{\hspace{-1.05cm}\begin{array}{l}
+\textcolor{#25C950}{\textsf{\hspace{-0.3cm}\scalebox{2.0}{◖}\hspace{-0.26cm}\raisebox{-0.06cm}{\rule{0.72cm}{0.72cm}}\hspace{-0.26cm}\scalebox{2.0}{◗}}}
+\end{array}}
+\hspace{-1.18cm} \raisebox{-0.08cm}{\textcolor{#FFFFFF}{\textsf{\scalebox{1.5}{●}}}}
+\end{array}
+} \\
+\textcolor{#D0D0D0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 提醒 }} & \raisebox{0.25cm}{
+\begin{array}{l}
+\raisebox{0.2cm}{\hspace{-1.05cm}\begin{array}{l}
+\textcolor{#25C950}{\textsf{\hspace{-0.3cm}\scalebox{2.0}{◖}\hspace{-0.26cm}\raisebox{-0.06cm}{\rule{0.72cm}{0.72cm}}\hspace{-0.26cm}\scalebox{2.0}{◗}}}
+\end{array}}
+\hspace{-1.18cm} \raisebox{-0.08cm}{\textcolor{#FFFFFF}{\textsf{\scalebox{1.5}{●}}}}
+\end{array}
+} \\
+\textcolor{#D8D8D8}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{1.0mm} }} \\
+\end{array} \\
+\\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 设置当前聊天背景 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#FFFFFF}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\\
+\hspace{0.3cm}\textcolor{#D8D8D8}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{1.0mm} }} \\
+\\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 清空聊天记录 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#FFFFFF}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\\
+\hspace{0.3cm}\textcolor{#D8D8D8}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{1.0mm} }} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 投诉 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#FFFFFF}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\end{array}
+}
+}
+\]
+
+三、格式规则
+ 
+1.内容里禁止出现半角符号（如 ()^~_ 等），禁止出现多余的空格、换行
+2.不要在现格式指令代码中加入额外的转义符\
+3.消息免打扰、置顶聊天、提醒所在行的状态开关根据玩家要求动态调节
+
+四、示例
+
+\[
+\fcolorbox{#D0D0D0}{#FFFFFF}{
+\scalebox{0.8}{
+\begin{array}{l}
+\textcolor{#181818}{\textbf{\small 05:21}} \hspace{9.4cm}
+\scalebox{0.7}{
+\raisebox{-0.1ex}{\scalebox{0.3}[1.0]{\textcolor{#181818}{\textsf{\large ▄\hspace{0.04cm}▅\hspace{0.04cm}▆\hspace{0.04cm}▇}}}}
+\!\!\!
+\textcolor{#181818}{\textsf{\large \textbf{\large ᯤ}}}
+\hspace{0.2cm}
+\raisebox{0.8ex}{
+\scalebox{0.9}[0.8]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+\hspace{0.02cm}
+\scalebox{0.08}[0.22]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+}
+} \\
+\textcolor{#181818}{\textsf{\large \textbf{<}}} \hspace{4.3cm}
+\textcolor{#181818}{\textsf{\normalsize 聊天详情}} \hspace{4.5cm}
+\\
+\textcolor{#D0D0D0}{\rule{13cm}{0.2mm}} \\
+\raisebox{0cm}{
+\begin{array}{l}
+\begin{array}{lll}
+\raisebox{-0.35cm}{\fcolorbox{#D8E8F0}{#D8E8F0}{\textcolor{#D8E8F0}{\rule{1.0cm}{1.0cm}}}} \hspace{0.2cm}
+& \raisebox{0cm}{
+\begin{array}{l}
+\raisebox{-0.35cm}{\fcolorbox{#C8C8C8}{#FFFFFF}{\textcolor{#FFFFFF}{\rule{1.0cm}{1.0cm}}}} \hspace{-1.65cm}\raisebox{-0.15cm}{\textcolor{#C8C8C8}{\textsf{\huge +}}}
+\end{array}
+}
+& \hspace{-4.9cm}\raisebox{-1.25cm}{\textcolor{#8E8E93}{\textsf{\small 宝宝}}}
+\end{array} \\
+\end{array}
+} \\
+\hspace{0.2cm}\textcolor{#D8D8D8}{\rule{12.8cm}{1.0mm}} \\
+\\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 查找聊天内容 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#FFFFFF}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\\
+\hspace{0.3cm}\textcolor{#D8D8D8}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{1.0mm} }} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 消息免打扰 }} & \raisebox{0.25cm}{
+\begin{array}{l}
+\raisebox{0.2cm}{\hspace{-1.05cm}\begin{array}{l}
+\textcolor{#D8D8D8}{\textsf{\hspace{-0.3cm}\scalebox{2.0}{◖}\hspace{-0.26cm}\raisebox{-0.06cm}{\rule{0.72cm}{0.72cm}}\hspace{-0.26cm}\scalebox{2.0}{◗}}}
+\end{array}}
+\hspace{-1.78cm} \raisebox{-0.08cm}{\textcolor{#FFFFFF}{\textsf{\scalebox{1.5}{●}}}}
+\end{array}
+} \\
+\textcolor{#D0D0D0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 置顶聊天 }} & \raisebox{0.25cm}{
+\begin{array}{l}
+\raisebox{0.2cm}{\hspace{-1.05cm}\begin{array}{l}
+\textcolor{#25C950}{\textsf{\hspace{-0.3cm}\scalebox{2.0}{◖}\hspace{-0.26cm}\raisebox{-0.06cm}{\rule{0.72cm}{0.72cm}}\hspace{-0.26cm}\scalebox{2.0}{◗}}}
+\end{array}}
+\hspace{-1.18cm} \raisebox{-0.08cm}{\textcolor{#FFFFFF}{\textsf{\scalebox{1.5}{●}}}}
+\end{array}
+} \\
+\textcolor{#D0D0D0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 提醒 }} & \raisebox{0.25cm}{
+\begin{array}{l}
+\raisebox{0.2cm}{\hspace{-1.05cm}\begin{array}{l}
+\textcolor{#D8D8D8}{\textsf{\hspace{-0.3cm}\scalebox{2.0}{◖}\hspace{-0.26cm}\raisebox{-0.06cm}{\rule{0.72cm}{0.72cm}}\hspace{-0.26cm}\scalebox{2.0}{◗}}}
+\end{array}}
+\hspace{-1.78cm} \raisebox{-0.08cm}{\textcolor{#FFFFFF}{\textsf{\scalebox{1.5}{●}}}}
+\end{array}
+} \\
+\textcolor{#D8D8D8}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{1.0mm} }} \\
+\end{array} \\
+\\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 设置当前聊天背景 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#FFFFFF}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\\
+\hspace{0.3cm}\textcolor{#D8D8D8}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{1.0mm} }} \\
+\\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 清空聊天记录 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#FFFFFF}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\\
+\hspace{0.3cm}\textcolor{#D8D8D8}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{1.0mm} }} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} 投诉 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#FFFFFF}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\end{array}
+}
+}
+\]

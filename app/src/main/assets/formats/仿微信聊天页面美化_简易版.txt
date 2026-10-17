@@ -1,0 +1,354 @@
+DeepSeek仿微信聊天页面美化.sy
+
+清秋屿sy（sy_020723）禁止二传二改 禁止换头倒卖
+
+当玩家在文游过程中需要查看与某角色的微信聊天页面时请用以下固定格式生成相应内容：
+ 
+一、微信聊天页面查看格式、
+
+\[
+\fcolorbox{#EDEDED}{#EDEDED}{
+\scalebox{0.85}{
+\begin{array}{l}
+\hspace{-0.2cm}\raisebox{0cm}{
+\begin{array}{l}
+\textcolor{#181818}{\textbf{\small 05:21}} \hspace{9.4cm}
+\scalebox{0.7}{
+\raisebox{-0.1ex}{\scalebox{0.3}[1.0]{\textcolor{#181818}{\textsf{\large ▄\hspace{0.04cm}▅\hspace{0.04cm}▆\hspace{0.04cm}▇}}}}
+\!\!\!
+\textcolor{#181818}{\textsf{\large \textbf{\large ᯤ}}}
+\hspace{0.2cm}
+\raisebox{0.8ex}{
+\scalebox{0.9}[0.8]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+\hspace{0.02cm}
+\scalebox{0.08}[0.22]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+}
+}
+\end{array}
+} \\
+\textcolor{#181818}{\textsf{\large \textbf{<}}} \hspace{5.1cm}
+\textcolor{#181818}{\textsf{\normalsize 备注}} \hspace{4.5cm}
+\hspace{-0.05cm}\textcolor{#181818}{\textsf{\large \textbf{⋯}}} \\
+\hspace{0.2cm}\textcolor{#D0D0D0}{\rule{13cm}{0.2mm}} \\
+\hspace{-0.2cm}\scalebox{0.8}{
+\begin{array}{l c r}
+\\
+\begin{array}{l}
+\raisebox{-0.4cm}{\fcolorbox{#D8E8F0}{#D8E8F0}{\textcolor{#D8E8F0}{\rule{1.0cm}{1.0cm}}}} \hspace{0.1cm}
+\raisebox{0cm}{\textcolor{#FFFFFF}{\blacktriangleleft}} \hspace{-0.3cm}
+\raisebox{0cm}{\colorbox{#FFFFFF}{
+\begin{array}{l}
+\quad \textcolor{#333333}{\textsf{ 消息内容}} \quad
+\end{array}
+}}
+\end{array} & & \\
+\\
+& & \hspace{-0.5cm}
+\begin{array}{r}
+\raisebox{0cm}{\colorbox{#76E858}{
+\begin{array}{l}
+\quad \textcolor{#333333}{\textsf{ 消息内容}} \quad
+\end{array}
+}} \hspace{-0.3cm}
+\raisebox{0cm}{\textcolor{#76E858}{\blacktriangleright}} \hspace{0.1cm}
+\raisebox{-0.4cm}{\fcolorbox{#F0D8E8}{#F0D8E8}{\textcolor{#F0D8E8}{\rule{1.0cm}{1.0cm}}}}
+\end{array} \\
+\\
+\begin{array}{l}
+\raisebox{-0.4cm}{\fcolorbox{#D8E8F0}{#D8E8F0}{\textcolor{#D8E8F0}{\rule{1.0cm}{1.0cm}}}} \hspace{0.1cm}
+\raisebox{0cm}{\textcolor{#FFFFFF}{\blacktriangleleft}} \hspace{-0.3cm}
+\raisebox{0cm}{\colorbox{#FFFFFF}{
+\begin{array}{l}
+\quad \textcolor{#333333}{\textsf{ 消息内容}} \quad
+\end{array}
+}}
+\end{array} & & \\
+\\
+\begin{array}{l}
+\raisebox{-0.4cm}{\fcolorbox{#D8E8F0}{#D8E8F0}{\textcolor{#D8E8F0}{\rule{1.0cm}{1.0cm}}}} \hspace{0.1cm}
+\raisebox{0cm}{\textcolor{#FFFFFF}{\blacktriangleleft}} \hspace{-0.3cm}
+\raisebox{0cm}{\colorbox{#FFFFFF}{
+\begin{array}{l}
+\quad \textcolor{#333333}{\textsf{ 消息内容}} \quad
+\end{array}
+}}
+\end{array} & & \\
+\\
+& & \hspace{-0.5cm}
+\begin{array}{r}
+\raisebox{0cm}{\colorbox{#76E858}{
+\begin{array}{l}
+\quad \textcolor{#333333}{\textsf{ 消息内容}} \quad
+\end{array}
+}} \hspace{-0.3cm}
+\raisebox{0cm}{\textcolor{#76E858}{\blacktriangleright}} \hspace{0.1cm}
+\raisebox{-0.4cm}{\fcolorbox{#F0D8E8}{#F0D8E8}{\textcolor{#F0D8E8}{\rule{1.0cm}{1.0cm}}}}
+\end{array} \\
+\\
+\begin{array}{l}
+\raisebox{-0.4cm}{\fcolorbox{#D8E8F0}{#D8E8F0}{\textcolor{#D8E8F0}{\rule{1.0cm}{1.0cm}}}} \hspace{0.1cm}
+\raisebox{0cm}{\textcolor{#FFFFFF}{\blacktriangleleft}} \hspace{-0.3cm}
+\raisebox{0cm}{\colorbox{#FFFFFF}{
+\begin{array}{l}
+\quad \textcolor{#333333}{\textsf{ 消息内容}} \quad
+\end{array}
+}}
+\end{array} & & \\
+\\
+\begin{array}{l}
+\raisebox{-0.4cm}{\fcolorbox{#D8E8F0}{#D8E8F0}{\textcolor{#D8E8F0}{\rule{1.0cm}{1.0cm}}}} \hspace{0.1cm}
+\raisebox{0cm}{\textcolor{#FFFFFF}{\blacktriangleleft}} \hspace{-0.3cm}
+\raisebox{0cm}{\colorbox{#FFFFFF}{
+\begin{array}{l}
+\quad \textcolor{#333333}{\textsf{ 消息内容}} \quad
+\end{array}
+}}
+\end{array} & & \\
+\\
+& & \hspace{-0.5cm}
+\begin{array}{r}
+\raisebox{0cm}{\colorbox{#76E858}{
+\begin{array}{l}
+\quad \textcolor{#333333}{\textsf{ 消息内容}} \quad
+\end{array}
+}} \hspace{-0.3cm}
+\raisebox{0cm}{\textcolor{#76E858}{\blacktriangleright}} \hspace{0.1cm}
+\raisebox{-0.4cm}{\fcolorbox{#F0D8E8}{#F0D8E8}{\textcolor{#F0D8E8}{\rule{1.0cm}{1.0cm}}}}
+\end{array} \\
+\\
+\begin{array}{l}
+\raisebox{-0.4cm}{\fcolorbox{#D8E8F0}{#D8E8F0}{\textcolor{#D8E8F0}{\rule{1.0cm}{1.0cm}}}} \hspace{0.1cm}
+\raisebox{0cm}{\textcolor{#FFFFFF}{\blacktriangleleft}} \hspace{-0.3cm}
+\raisebox{0cm}{\colorbox{#FFFFFF}{
+\begin{array}{l}
+\quad \textcolor{#333333}{\textsf{ 消息内容}} \quad
+\end{array}
+}}
+\end{array} & & \\
+\\
+\end{array}
+} \\
+\hspace{-0.35cm}\raisebox{0cm}{
+\begin{array}{l}
+\scalebox{0.7}{
+\begin{array}{l}
+\hspace{-1.6cm}
+\raisebox{0.1cm}{
+\begin{array}{l}
+\scalebox{2.3}{
+\begin{array}{c}
+\textcolor{#262626}{\textsf{\Large ○}} \hspace{-0.71cm} \raisebox{-0.04cm}{\textcolor{#262626}{\textsf{\textbf{\footnotesize \rotatebox[origin=c]{-90}{ᯤ}}}}}
+\end{array}
+}
+\end{array}
+}
+\hspace{0.08em}
+\hspace{-0.65em}\raisebox{-0.1cm}{\colorbox{#FFFFFF}{\textcolor{#FFFFFF}{\text{ 输入框                                              }}}}
+\hspace{-0.75cm}
+\raisebox{0cm}{
+\begin{array}{l}
+\scalebox{2.3}{
+\begin{array}{c}
+\textcolor{#262626}{\textsf{\Large ○}} \hspace{-0.83cm} \raisebox{0.12cm}{\textcolor{#262626}{\textsf{\textbf{\large \hspace{0.06cm}··}}}}
+\end{array}
+}
+\hspace{-1.92cm}\raisebox{0.6cm}{\textcolor{#262626}{\textsf{\textbf{\huge \rotatebox{180}{⌓}}}}}
+\end{array}
+}
+\hspace{-1.1cm}
+\raisebox{0.1cm}{
+\begin{array}{l}
+\scalebox{2.3}{
+\begin{array}{c}
+\textcolor{#262626}{\textsf{\Large ○}} \hspace{-0.71cm} \raisebox{0.06cm}{\textcolor{#262626}{\textsf{\textbf{\small +}}}}
+\end{array}
+}
+\end{array}
+}
+\end{array}
+}
+\hspace{-13.8cm}\raisebox{1.1cm}{\textcolor{#D0D0D0}{\rule{13cm}{0.2mm}}}
+\end{array}
+} \\
+\end{array}
+}
+}
+\]
+
+二、格式规则
+ 
+1.内容里禁止出现半角符号（如 ()^~_ 等），禁止出现多余的空格、换行
+2.不要在现格式指令代码中加入额外的转义符\
+3.右侧消息位置动态移动：右侧消息位置根据左侧最长消息和右侧最长消息字符数之和动态移动，初始字符数之和为8个字符（文字为1字符，符号为0.5字符），每增加1字符，右侧消息左移0.6；每减少1字符，右侧消息右移0.6 
+例如：左侧最长消息为“今天怎么样？”（五个字和一个符号，共5.5个字符）右侧最长消息为“还好啊 怎么了？”（六个字和两个符号，共7字符）此时最长消息字符数之和即为 12.5字符，相较初始字符增加了4.5字符，则此时右侧消息应左移4.5*0.6=2.7 
+
+三、示例
+
+\[
+\fcolorbox{#EDEDED}{#EDEDED}{
+\scalebox{0.85}{
+\begin{array}{l}
+\hspace{-0.2cm}\raisebox{0cm}{
+\begin{array}{l}
+\textcolor{#181818}{\textbf{\small 05:21}} \hspace{9.4cm}
+\scalebox{0.7}{
+\raisebox{-0.1ex}{\scalebox{0.3}[1.0]{\textcolor{#181818}{\textsf{\large ▄\hspace{0.04cm}▅\hspace{0.04cm}▆\hspace{0.04cm}▇}}}}
+\!\!\!
+\textcolor{#181818}{\textsf{\large \textbf{\large ᯤ}}}
+\hspace{0.2cm}
+\raisebox{0.8ex}{
+\scalebox{0.9}[0.8]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+\hspace{0.02cm}
+\scalebox{0.08}[0.22]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+}
+}
+\end{array}
+} \\
+\textcolor{#181818}{\textsf{\large \textbf{<}}} \hspace{5.1cm}
+\textcolor{#181818}{\textsf{\normalsize 宝宝}} \hspace{4.5cm}
+\hspace{-0.05cm}\textcolor{#181818}{\textsf{\large \textbf{⋯}}} \\
+\hspace{0.2cm}\textcolor{#D0D0D0}{\rule{13cm}{0.2mm}} \\
+\hspace{-0.2cm}\scalebox{0.8}{
+\begin{array}{l c r}
+\\
+\begin{array}{l}
+\raisebox{-0.4cm}{\fcolorbox{#D8E8F0}{#D8E8F0}{\textcolor{#D8E8F0}{\rule{1.0cm}{1.0cm}}}} \hspace{0.1cm}
+\raisebox{0cm}{\textcolor{#FFFFFF}{\blacktriangleleft}} \hspace{-0.3cm}
+\raisebox{0cm}{\colorbox{#FFFFFF}{
+\begin{array}{l}
+\quad \textcolor{#333333}{\textsf{ 到家了吗 路上冷不冷}} \quad
+\end{array}
+}}
+\end{array} & & \\
+\\
+& & \hspace{-6.5cm}
+\begin{array}{r}
+\raisebox{0cm}{\colorbox{#76E858}{
+\begin{array}{l}
+\quad \textcolor{#333333}{\textsf{ 刚到家 今天风好大}} \quad
+\end{array}
+}} \hspace{-0.3cm}
+\raisebox{0cm}{\textcolor{#76E858}{\blacktriangleright}} \hspace{0.1cm}
+\raisebox{-0.4cm}{\fcolorbox{#F0D8E8}{#F0D8E8}{\textcolor{#F0D8E8}{\rule{1.0cm}{1.0cm}}}}
+\end{array} \\
+\\
+\begin{array}{l}
+\raisebox{-0.4cm}{\fcolorbox{#D8E8F0}{#D8E8F0}{\textcolor{#D8E8F0}{\rule{1.0cm}{1.0cm}}}} \hspace{0.1cm}
+\raisebox{0cm}{\textcolor{#FFFFFF}{\blacktriangleleft}} \hspace{-0.3cm}
+\raisebox{0cm}{\colorbox{#FFFFFF}{
+\begin{array}{l}
+\quad \textcolor{#333333}{\textsf{ 下次我去接你}} \quad
+\end{array}
+}}
+\end{array} & & \\
+\\
+\begin{array}{l}
+\raisebox{-0.4cm}{\fcolorbox{#D8E8F0}{#D8E8F0}{\textcolor{#D8E8F0}{\rule{1.0cm}{1.0cm}}}} \hspace{0.1cm}
+\raisebox{0cm}{\textcolor{#FFFFFF}{\blacktriangleleft}} \hspace{-0.3cm}
+\raisebox{0cm}{\colorbox{#FFFFFF}{
+\begin{array}{l}
+\quad \textcolor{#333333}{\textsf{ 别一个人走夜路}} \quad
+\end{array}
+}}
+\end{array} & & \\
+\\
+& & \hspace{-6.5cm}
+\begin{array}{r}
+\raisebox{0cm}{\colorbox{#76E858}{
+\begin{array}{l}
+\quad \textcolor{#333333}{\textsf{ 知道啦 你也是}} \quad
+\end{array}
+}} \hspace{-0.3cm}
+\raisebox{0cm}{\textcolor{#76E858}{\blacktriangleright}} \hspace{0.1cm}
+\raisebox{-0.4cm}{\fcolorbox{#F0D8E8}{#F0D8E8}{\textcolor{#F0D8E8}{\rule{1.0cm}{1.0cm}}}}
+\end{array} \\
+\\
+\begin{array}{l}
+\raisebox{-0.4cm}{\fcolorbox{#D8E8F0}{#D8E8F0}{\textcolor{#D8E8F0}{\rule{1.0cm}{1.0cm}}}} \hspace{0.1cm}
+\raisebox{0cm}{\textcolor{#FFFFFF}{\blacktriangleleft}} \hspace{-0.3cm}
+\raisebox{0cm}{\colorbox{#FFFFFF}{
+\begin{array}{l}
+\quad \textcolor{#333333}{\textsf{ 早点睡 别熬夜}} \quad
+\end{array}
+}}
+\end{array} & & \\
+\\
+\begin{array}{l}
+\raisebox{-0.4cm}{\fcolorbox{#D8E8F0}{#D8E8F0}{\textcolor{#D8E8F0}{\rule{1.0cm}{1.0cm}}}} \hspace{0.1cm}
+\raisebox{0cm}{\textcolor{#FFFFFF}{\blacktriangleleft}} \hspace{-0.3cm}
+\raisebox{0cm}{\colorbox{#FFFFFF}{
+\begin{array}{l}
+\quad \textcolor{#333333}{\textsf{ 明天早上叫你起床}} \quad
+\end{array}
+}}
+\end{array} & & \\
+\\
+& & \hspace{-6.5cm}
+\begin{array}{r}
+\raisebox{0cm}{\colorbox{#76E858}{
+\begin{array}{l}
+\quad \textcolor{#333333}{\textsf{ 好 晚安}} \quad
+\end{array}
+}} \hspace{-0.3cm}
+\raisebox{0cm}{\textcolor{#76E858}{\blacktriangleright}} \hspace{0.1cm}
+\raisebox{-0.4cm}{\fcolorbox{#F0D8E8}{#F0D8E8}{\textcolor{#F0D8E8}{\rule{1.0cm}{1.0cm}}}}
+\end{array} \\
+\\
+\begin{array}{l}
+\raisebox{-0.4cm}{\fcolorbox{#D8E8F0}{#D8E8F0}{\textcolor{#D8E8F0}{\rule{1.0cm}{1.0cm}}}} \hspace{0.1cm}
+\raisebox{0cm}{\textcolor{#FFFFFF}{\blacktriangleleft}} \hspace{-0.3cm}
+\raisebox{0cm}{\colorbox{#FFFFFF}{
+\begin{array}{l}
+\quad \textcolor{#333333}{\textsf{ 晚安 梦里见}} \quad
+\end{array}
+}}
+\end{array} & & \\
+\\
+\end{array}
+} \\
+\hspace{-0.35cm}\raisebox{0cm}{
+\begin{array}{l}
+\scalebox{0.7}{
+\begin{array}{l}
+\hspace{-1.6cm}
+\raisebox{0.1cm}{
+\begin{array}{l}
+\scalebox{2.3}{
+\begin{array}{c}
+\textcolor{#262626}{\textsf{\Large ○}} \hspace{-0.71cm} \raisebox{-0.04cm}{\textcolor{#262626}{\textsf{\textbf{\footnotesize \rotatebox[origin=c]{-90}{ᯤ}}}}}
+\end{array}
+}
+\end{array}
+}
+\hspace{0.08em}
+\hspace{-0.65em}\raisebox{-0.1cm}{\colorbox{#FFFFFF}{\textcolor{#FFFFFF}{\text{ 输入框                                              }}}}
+\hspace{-0.75cm}
+\raisebox{0cm}{
+\begin{array}{l}
+\scalebox{2.3}{
+\begin{array}{c}
+\textcolor{#262626}{\textsf{\Large ○}} \hspace{-0.83cm} \raisebox{0.12cm}{\textcolor{#262626}{\textsf{\textbf{\large \hspace{0.06cm}··}}}}
+\end{array}
+}
+\hspace{-1.92cm}\raisebox{0.6cm}{\textcolor{#262626}{\textsf{\textbf{\huge \rotatebox{180}{⌓}}}}}
+\end{array}
+}
+\hspace{-1.1cm}
+\raisebox{0.1cm}{
+\begin{array}{l}
+\scalebox{2.3}{
+\begin{array}{c}
+\textcolor{#262626}{\textsf{\Large ○}} \hspace{-0.71cm} \raisebox{0.06cm}{\textcolor{#262626}{\textsf{\textbf{\small +}}}}
+\end{array}
+}
+\end{array}
+}
+\end{array}
+}
+\hspace{-13.8cm}\raisebox{1.1cm}{\textcolor{#D0D0D0}{\rule{13cm}{0.2mm}}}
+\end{array}
+} \\
+\end{array}
+}
+}
+\]

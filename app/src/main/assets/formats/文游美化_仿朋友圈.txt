@@ -1,0 +1,190 @@
+DeepSeek仿朋友圈美化指令.sy
+
+清秋屿sy（sy_020723）禁止二传二改 禁止换头倒卖
+
+当玩家在文游过程中需要查看朋友圈时请用以下固定格式生成相应内容：
+ 
+一、朋友圈查看格式、
+
+\[
+\fcolorbox{#EDEDED}{#EDEDED}{
+\scalebox{0.85}{
+\begin{array}{l}
+% 状态栏（系统原生）
+\textcolor{#181818}{\textbf{\small 13:22}} \hspace{9.4cm} 
+\scalebox{0.7}{
+\raisebox{-0.1ex}{\scalebox{0.3}[1.0]{\textcolor{#181818}{\textsf{\large ▄\hspace{0.04cm}▅\hspace{0.04cm}▆\hspace{0.04cm}▇}}}}
+\!\!\!
+\textcolor{#181818}{\textsf{\large \textbf{\large ᯤ}}}
+\hspace{0.2cm}
+\raisebox{0.8ex}{
+\scalebox{0.9}[0.8]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+\hspace{0.02cm}
+\scalebox{0.08}[0.22]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+}
+} \\
+%
+% 导航栏
+\textcolor{#181818}{\textsf{\large  <}} \hspace{4.3cm} \textcolor{#181818}{\textsf{\large \textbf{朋友圈}}} \hspace{4.1cm} \textcolor{#181818}{\textsf{\large 📷}} \\
+\textcolor{#D0D0D0}{\rule{13cm}{0.3mm}} \\
+%
+% 第一条朋友圈
+\raisebox{-0.8cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\colorbox{#FFFFFF}{\textcolor{#FFFFFF}{\rule{0.6cm}{0.6cm}}}} & \hspace{-0.3cm}\textcolor{#2C5F8A}{\textbf{\small ID}}
+\end{array} \\
+\textcolor{#181818}{\hspace{2.0cm}\textsf{ 文案内容 }} \\
+\textcolor{#181818}{\hspace{2.0cm}\textsf{ 第二行文案（可选）}} \\
+\textcolor{#E0E0E0}{\hspace{2.0cm}\rule{3.0cm}{3.0cm}} \hspace{0.1cm} \textcolor{#E0E0E0}{\rule{3.0cm}{3.0cm}} \hspace{0.1cm} \textcolor{#E0E0E0}{\rule{3.0cm}{3.0cm}} \\
+\textcolor{#181818}{\hspace{2.0cm}\textcolor{#8E8E93}{\scriptsize 时间}} \hspace{7.59cm} \scalebox{0.9}[0.5]{\colorbox{#E0E0E0}{\textcolor{#2C5F8A}{\textbf{··}}}} \\
+\textcolor{#E0E0E0}{\hspace{2.0cm}\rule{10.4cm}{0.75cm}} \hspace{0.2cm} \raisebox{0.20cm}{\hspace{-10.5cm}\textcolor{#181818}{\textcolor{#2C5F8A}{\footnotesize ♡ ID}} \textcolor{#000000}{, } \textcolor{#2C5F8A}{\footnotesize ID} \textcolor{#000000}{, } \textcolor{#2C5F8A}{\footnotesize ID}}
+\end{array}
+} \\
+%
+\textcolor{#E0E0E0}{\rule{13cm}{0.3mm}} \\
+%
+% 第二条朋友圈
+\raisebox{-0.8cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\colorbox{#FFFFFF}{\textcolor{#FFFFFF}{\rule{0.6cm}{0.6cm}}}} & \hspace{-0.3cm}\textcolor{#2C5F8A}{\textbf{\small ID}}
+\end{array} \\
+\textcolor{#181818}{\hspace{2.0cm}\textsf{ 文案内容 }} \\
+\textcolor{#E0E0E0}{\hspace{2.0cm}\rule{5.5cm}{5.5cm}} \\
+\textcolor{#181818}{\hspace{2.0cm}\textcolor{#8E8E93}{\scriptsize 时间}} \hspace{7.83cm} \scalebox{0.9}[0.5]{\colorbox{#E0E0E0}{\textcolor{#2C5F8A}{\textbf{··}}}} \\
+\textcolor{#E0E0E0}{\hspace{2.0cm}\rule{10.4cm}{0.75cm}} \hspace{0.2cm} \raisebox{0.20cm}{\hspace{-10.5cm}\textcolor{#181818}{\textcolor{#2C5F8A}{\footnotesize ♡ ID}} \textcolor{#000000}{, } \textcolor{#2C5F8A}{\footnotesize ID} \textcolor{#000000}{, } \textcolor{#2C5F8A}{\footnotesize ID}}
+\end{array}
+} \\
+%
+\textcolor{#E0E0E0}{\rule{13cm}{0.3mm}} \\
+%
+% 第三条朋友圈
+\raisebox{-0.8cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\colorbox{#FFFFFF}{\textcolor{#FFFFFF}{\rule{0.6cm}{0.6cm}}}} & \hspace{-0.3cm}\textcolor{#2C5F8A}{\textbf{\small ID}}
+\end{array} \\
+\textcolor{#181818}{\hspace{2.0cm}\textsf{ 文案内容 }} \\
+\textcolor{#181818}{\hspace{2.0cm}\textsf{ 第二行文案（可选）}} \\
+\textcolor{#181818}{\hspace{2.0cm}\textsf{ 第三行文案（可选）}} \\
+\textcolor{#E0E0E0}{\hspace{2.0cm}\rule{3.0cm}{3.0cm}} \hspace{0.1cm} \textcolor{#E0E0E0}{\rule{3.0cm}{3.0cm}} \hspace{0.1cm} \textcolor{#E0E0E0}{\rule{3.0cm}{3.0cm}} \\
+\textcolor{#181818}{\hspace{2.0cm}\textcolor{#8E8E93}{\scriptsize 时间}} \hspace{7.59cm} \scalebox{0.9}[0.5]{\colorbox{#E0E0E0}{\textcolor{#2C5F8A}{\textbf{··}}}} \\
+\textcolor{#E0E0E0}{\hspace{2.0cm}\rule{10.4cm}{0.75cm}} \hspace{0.2cm} \raisebox{0.20cm}{\hspace{-10.5cm}\textcolor{#181818}{\textcolor{#2C5F8A}{\footnotesize ♡ ID}} \textcolor{#000000}{, } \textcolor{#2C5F8A}{\footnotesize ID} \textcolor{#000000}{, } \textcolor{#2C5F8A}{\footnotesize ID}}
+\end{array}
+} \\
+%
+% 底部留白
+\\
+\textcolor{#D0D0D0}{\rule{13cm}{0.3mm}}
+\end{array}
+}
+}
+\]
+
+二、格式规则
+ 
+1. 朋友圈内容不限制，根据每次情况动态调整（目前为纯文案、文案加单图、文案加三图三种形式）
+2. 内容里禁止出现半角符号（如 ()^~_ 等），禁止出现多余的空格、换行
+3. 文案换行规则：每条朋友圈正文按17个字（含标点符号）强制换行，达到17个字立即换行，不按断句、不按语义，最后一行可以不足17个字，换行时不切割标点符号
+4. 点赞框规则：点赞内容（含♡和所有标点符号）按20个字强制换行，达到20个字立即换行，不按断句，最后一行可以不足20个字，ID用中文逗号加空格分隔，点赞者ID不重复，且不与发布者ID相同
+5. 点赞框高度规则：点赞框高度 = 0.75 +（行数 - 1）× 1.05，即1行：0.75cm、2行：1.8cm、3行：2.85cm、4行：3.9cm，以此类推，点赞框宽度固定为10.4cm
+6. 当前配图规则：单图：5.5cm × 5.5cm，三图：每张3.0cm × 3.0cm
+7. 朋友圈内容符合人设及文游剧情：角色发的消息要符合该角色的性格习惯，不 OOC，每个角色的朋友圈风格要差异化，风格各异：有人习惯使用标点符号断句、有人习惯只用空格断句、有人习惯纯文字、有人习惯加颜文字或emoji表情，颜文字需结合语境选用（如着急用哭脸、心疼用流泪、好笑用动物表情、无奈用叹气）、有人习惯发纯文案、有人喜欢配图
+8. 输出朋友圈时按照该美化指令生成完整的LaTeX朋友圈代码，禁止使用代码块
+
+三、强制执行清单
+
+文案每行正好17个字后换行，最后一行可不足
+点赞内容每行正好20个字后换行，最后一行可不足
+点赞框高度按公式计算
+所有标点为全角，无任何半角符号
+配图尺寸正确
+6. 朋友圈形式不单一
+7. 点赞者ID不重复且与发布者不同 
+8. 没有指令格式之外的多余换行好空格
+
+四、示例
+
+\[
+\fcolorbox{#EDEDED}{#EDEDED}{
+\scalebox{0.85}{
+\begin{array}{l}
+\textcolor{#181818}{\textbf{\small 13:22}} \hspace{9.4cm}
+\scalebox{0.7}{
+\raisebox{-0.1ex}{\scalebox{0.3}[1.0]{\textcolor{#181818}{\textsf{\large ▄\hspace{0.04cm}▅\hspace{0.04cm}▆\hspace{0.04cm}▇}}}}
+\!\!\!
+\textcolor{#181818}{\textsf{\large \textbf{\large ᯤ}}}
+\hspace{0.2cm}
+\raisebox{0.8ex}{
+\scalebox{0.9}[0.8]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+\hspace{0.02cm}
+\scalebox{0.08}[0.22]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+}
+} \\
+\textcolor{#181818}{\textsf{\large <}} \hspace{4.3cm}
+\textcolor{#181818}{\textsf{\large \textbf{朋友圈}}} \hspace{4.1cm}
+\textcolor{#181818}{\textsf{\large 📷}} \\
+\textcolor{#D0D0D0}{\rule{13cm}{0.3mm}} \\
+\raisebox{-0.8cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\colorbox{#FFFFFF}{\textcolor{#FFFFFF}{\rule{0.6cm}{0.6cm}}}}
+& \hspace{-0.3cm}\textcolor{#2C5F8A}{\textbf{\small 田柾国}}
+\end{array} \\
+\textcolor{#181818}{\hspace{2.0cm}\textsf{ 健身房打卡 ✓ 今天状态不错。}} \\
+\textcolor{#E0E0E0}{\hspace{2.0cm}\rule{5.5cm}{5.5cm}} \\
+\textcolor{#181818}{\hspace{2.0cm}\textcolor{#8E8E93}{\scriptsize 32分钟前}} \hspace{7.83cm}
+\scalebox{0.9}[0.5]{\colorbox{#E0E0E0}{\textcolor{#2C5F8A}{\textbf{··}}}} \\
+\textcolor{#E0E0E0}{\hspace{2.0cm}\rule{10.4cm}{0.75cm}}
+\hspace{0.2cm}
+\raisebox{0.20cm}{\hspace{-10.5cm}\textcolor{#181818}{\textcolor{#2C5F8A}{\footnotesize ♡ 金泰亨}} \textcolor{#000000}{, } \textcolor{#2C5F8A}{\footnotesize 金硕珍} \textcolor{#000000}{, } \textcolor{#2C5F8A}{\footnotesize 肆野} \textcolor{#000000}{, } \textcolor{#2C5F8A}{\footnotesize 朴智旻}}
+\end{array}
+} \\
+\textcolor{#E0E0E0}{\rule{13cm}{0.3mm}} \\
+\raisebox{-0.8cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\colorbox{#FFFFFF}{\textcolor{#FFFFFF}{\rule{0.6cm}{0.6cm}}}}
+& \hspace{-0.3cm}\textcolor{#2C5F8A}{\textbf{\small 朴智旻}}
+\end{array} \\
+\textcolor{#181818}{\hspace{2.0cm}\textsf{ 今天天气好好☀️ 出来走走吧。}} \\
+\textcolor{#181818}{\hspace{2.0cm}\textcolor{#8E8E93}{\scriptsize 1小时前}} \hspace{7.83cm}
+\scalebox{0.9}[0.5]{\colorbox{#E0E0E0}{\textcolor{#2C5F8A}{\textbf{··}}}} \\
+\textcolor{#E0E0E0}{\hspace{2.0cm}\rule{10.4cm}{1.8cm}}
+\hspace{0.2cm}
+\raisebox{0.65cm}{\hspace{-10.5cm}\textcolor{#181818}{\textcolor{#2C5F8A}{\footnotesize ♡ 闵玧其}} \textcolor{#000000}{, } \textcolor{#2C5F8A}{\footnotesize 田柾国} \textcolor{#000000}{, } \textcolor{#2C5F8A}{\footnotesize 郑号锡} \textcolor{#000000}{, } \textcolor{#2C5F8A}{\footnotesize 肆野} \textcolor{#000000}{, } \textcolor{#2C5F8A}{\footnotesize 金南俊} \textcolor{#000000}{,} \\ \hspace{-10.5cm}\textcolor{#2C5F8A}{\footnotesize 沈知妤}}
+\end{array}
+} \\
+\textcolor{#E0E0E0}{\rule{13cm}{0.3mm}} \\
+\raisebox{-0.8cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\colorbox{#FFFFFF}{\textcolor{#FFFFFF}{\rule{0.6cm}{0.6cm}}}}
+& \hspace{-0.3cm}\textcolor{#2C5F8A}{\textbf{\small 金泰亨}}
+\end{array} \\
+\textcolor{#181818}{\hspace{2.0cm}\textsf{ 海边日落比我想象中还要美。看着浪花}} \\
+\textcolor{#181818}{\hspace{2.0cm}\textsf{ 一遍遍涌上来，好像所有烦恼都可以被}} \\
+\textcolor{#181818}{\hspace{2.0cm}\textsf{ 带走。}} \\
+\textcolor{#E0E0E0}{\hspace{2.0cm}\rule{3.0cm}{3.0cm}}
+\hspace{0.1cm} \textcolor{#E0E0E0}{\rule{3.0cm}{3.0cm}}
+\hspace{0.1cm} \textcolor{#E0E0E0}{\rule{3.0cm}{3.0cm}} \\
+\textcolor{#181818}{\hspace{2.0cm}\textcolor{#8E8E93}{\scriptsize 15分钟前}} \hspace{7.59cm}
+\scalebox{0.9}[0.5]{\colorbox{#E0E0E0}{\textcolor{#2C5F8A}{\textbf{··}}}} \\
+\textcolor{#E0E0E0}{\hspace{2.0cm}\rule{10.4cm}{2.85cm}}
+\hspace{0.2cm}
+\raisebox{1.35cm}{\hspace{-10.5cm}\textcolor{#181818}{\textcolor{#2C5F8A}{\footnotesize ♡ 肆野}} \textcolor{#000000}{, } \textcolor{#2C5F8A}{\footnotesize 金南俊} \textcolor{#000000}{, } \textcolor{#2C5F8A}{\footnotesize 田柾国} \textcolor{#000000}{, } \textcolor{#2C5F8A}{\footnotesize 朴智旻} \textcolor{#000000}{, } \textcolor{#2C5F8A}{\footnotesize 郑号锡} \textcolor{#000000}{,} \\ \hspace{-10.5cm}\textcolor{#2C5F8A}{\footnotesize 金硕珍} \textcolor{#000000}{, } \textcolor{#2C5F8A}{\footnotesize 闵玧其} \textcolor{#000000}{, } \textcolor{#2C5F8A}{\footnotesize 沈知妤} \textcolor{#000000}{, } \textcolor{#2C5F8A}{\footnotesize 林娜琏} \textcolor{#000000}{, } \textcolor{#2C5F8A}{\footnotesize 周子瑜} \textcolor{#000000}{,} \\ \hspace{-10.5cm}\textcolor{#2C5F8A}{\footnotesize 名井南}}
+\end{array}
+} \\
+\\
+\textcolor{#D0D0D0}{\rule{13cm}{0.3mm}}
+\end{array}
+}
+}
+\]

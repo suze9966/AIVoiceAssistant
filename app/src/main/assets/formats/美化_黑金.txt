@@ -1,0 +1,60 @@
+美化·黑金
+
+请使用以下格式与我对话：
+
+\(
+\scalebox{0.85}{
+\hspace{-1cm}
+\begin{array}{l}
+\smash{\raisebox{-1.8em}{\hspace{0.6cm}\rotatebox{-15}{\textcolor{#B8A07A}{\textsf{ ✦ }}}}} \\
+\smash{\hspace{2.8cm}\raisebox{-32pt}{\textcolor{#B8A07A}{\textsf{ ◈﹒⏤ }}}} \\
+\textcolor{#9B8B6E}{\textsf{ ✧ }} \hspace{4pt}
+\colorbox{#1A1A1A}{\textcolor{#D4C4A8}{\textsf{ {{消息内容}} }}}
+\hspace{4pt}
+\textcolor{#9B8B6E}{\textsf{ ✧ }}
+\rlap{\hspace{-88pt}\raisebox{52pt}{\textcolor{#B8A07A}{\textsf{ ✦ }}}}
+\rlap{\hspace{-88pt}\raisebox{-58pt}{\textcolor{#B8A07A}{\textsf{ ✧ }}}}
+\hspace{-62pt}
+\smash{\raisebox{-48pt}{\rotatebox{-20}{\textcolor{#B8A07A}{\textsf{ ✦ }}}}} \\
+\smash{\hspace{0.6cm}\raisebox{28pt}{\textcolor{#8A7A62}{\textsf{ ✦⁺˖ }}}} \\
+\smash{\hspace{2.8cm}\raisebox{34pt}{\textit{\textcolor{#B8A07A}{\textsf{ sy. }}}}}
+\end{array}
+}
+\)
+
+使用规则
+
+1. 消息内容每行超过20个字符必须在标点符号处换行。
+2. 每次格式仅换行一次，不得多余空行。
+3. 每轮对话可发多条消息。
+4. 禁止在消息内容处出现半角符号（例：~_^）。
+5. 多条消息之间不得有空行。
+
+多行格式示例
+
+当消息内容需要换行时，使用以下结构：
+
+\(
+\scalebox{0.85}{
+\hspace{-1cm}
+\begin{array}{l}
+\smash{\raisebox{-1.8em}{\hspace{0.6cm}\rotatebox{-15}{\textcolor{#B8A07A}{\textsf{ ✦ }}}}} \\
+\smash{\hspace{2.8cm}\raisebox{-32pt}{\textcolor{#B8A07A}{\textsf{ ◈﹒⏤ }}}} \\
+\textcolor{#9B8B6E}{\textsf{ ✧ }} \hspace{4pt}
+\colorbox{#1A1A1A}{
+\begin{array}{l}
+\textcolor{#D4C4A8}{\textsf{ {{第一行内容}} }} \\
+\textcolor{#D4C4A8}{\textsf{ {{第二行内容}} }}
+\end{array}
+}
+\hspace{4pt}
+\textcolor{#9B8B6E}{\textsf{ ✧ }}
+\rlap{\hspace{-88pt}\raisebox{52pt}{\textcolor{#B8A07A}{\textsf{ ✦ }}}}
+\rlap{\hspace{-88pt}\raisebox{-58pt}{\textcolor{#B8A07A}{\textsf{ ✧ }}}}
+\hspace{-62pt}
+\smash{\raisebox{-48pt}{\rotatebox{-20}{\textcolor{#B8A07A}{\textsf{ ✦ }}}}} \\
+\smash{\hspace{0.6cm}\raisebox{28pt}{\textcolor{#8A7A62}{\textsf{ ✦⁺˖ }}}} \\
+\smash{\hspace{2.8cm}\raisebox{34pt}{\textit{\textcolor{#B8A07A}{\textsf{ sy. }}}}}
+\end{array}
+}
+\)

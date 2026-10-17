@@ -1,0 +1,299 @@
+DeepSeek仿微信主页美化指令.sy
+
+清秋屿sy（sy_020723）禁止二传二改 禁止换头倒卖
+
+当玩家在文游过程中需要查看微信时请用以下固定格式生成相应内容：
+ 
+一、微信主页面查看格式、
+
+\[
+\fcolorbox{#EDEDED}{#EDEDED}{
+\scalebox{0.85}{
+\begin{array}{l}
+\textcolor{#181818}{\textbf{\small 时间}} \hspace{9.4cm}
+\scalebox{0.7}{
+\raisebox{-0.1ex}{\scalebox{0.3}[1.0]{\textcolor{#181818}{\textsf{\large ▄\hspace{0.04cm}▅\hspace{0.04cm}▆\hspace{0.04cm}▇}}}}
+\!\!\!
+\textcolor{#181818}{\textsf{\large \textbf{\large ᯤ}}}
+\hspace{0.2cm}
+\raisebox{0.8ex}{
+\scalebox{0.9}[0.8]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+\hspace{0.02cm}
+\scalebox{0.08}[0.22]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+}
+} \\
+\textcolor{#181818}{\textsf{\large ··}} \hspace{4.3cm}
+\textcolor{#181818}{\hspace{0.9cm}\textsf{\large \textbf{微信}}} \hspace{4.1cm}
+\textcolor{#181818}{\hspace{0.2cm}\textsf{\large ＋}} \\
+\fcolorbox{#F5F5F5}{#F5F5F5}{
+\begin{array}{l}
+\textcolor{#F5F5F5}{\rule{11.7cm}{0.1cm}}
+\end{array}
+}
+\hspace{-7.5cm}\raisebox{-0.1cm}{\textcolor{#8E8E93}{\textsf{\large 🔍搜索}}} \\
+\textcolor{#D0D0D0}{\rule{13cm}{0.2mm}} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\fcolorbox{#头像色}{#头像色}{\textcolor{#头像色}{\rule{0.8cm}{0.8cm}}}} \hspace{0.1cm}
+& \hspace{-0.3cm}\textcolor{#181818}{\textsf{\large ID名}} \hspace{7.1cm} \textcolor{#8E8E93}{\scriptsize 时间戳}
+\end{array} \\
+\textcolor{#8E8E93}{\hspace{1.2cm}\textsf{ 消息内容}} \\
+\end{array}
+} \\
+\textcolor{#E0E0E0}{\rule{13cm}{0.1mm}} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\fcolorbox{#头像色}{#头像色}{\textcolor{#头像色}{\rule{0.8cm}{0.8cm}}}} \hspace{0.1cm}
+& \hspace{-0.3cm}\textcolor{#181818}{\textsf{\large ID名}} \hspace{7.1cm} \textcolor{#8E8E93}{\scriptsize 时间戳}
+\end{array} \\
+\textcolor{#8E8E93}{\hspace{1.2cm}\textsf{ 消息内容}} \\
+\end{array}
+} \\
+\textcolor{#E0E0E0}{\rule{13cm}{0.1mm}} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\fcolorbox{#头像色}{#头像色}{\textcolor{#头像色}{\rule{0.8cm}{0.8cm}}}} \hspace{0.1cm}
+& \hspace{-0.3cm}\textcolor{#181818}{\textsf{\large ID名}} \hspace{7.1cm} \textcolor{#8E8E93}{\scriptsize 时间戳}
+\end{array} \\
+\textcolor{#8E8E93}{\hspace{1.2cm}\textsf{ 消息内容}} \\
+\end{array}
+} \\
+\textcolor{#E0E0E0}{\rule{13cm}{0.1mm}} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\fcolorbox{#头像色}{#头像色}{\textcolor{#头像色}{\rule{0.8cm}{0.8cm}}}} \hspace{0.1cm}
+& \hspace{-0.3cm}\textcolor{#181818}{\textsf{\large ID名}} \hspace{7.1cm} \textcolor{#8E8E93}{\scriptsize 时间戳}
+\end{array} \\
+\textcolor{#8E8E93}{\hspace{1.2cm}\textsf{ 消息内容}} \\
+\end{array}
+} \\
+\textcolor{#E0E0E0}{\rule{13cm}{0.1mm}} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\fcolorbox{#头像色}{#头像色}{\textcolor{#头像色}{\rule{0.8cm}{0.8cm}}}} \hspace{0.1cm}
+& \hspace{-0.3cm}\textcolor{#181818}{\textsf{\large ID名}} \hspace{7.1cm} \textcolor{#8E8E93}{\scriptsize 时间戳}
+\end{array} \\
+\textcolor{#8E8E93}{\hspace{1.2cm}\textsf{ 消息内容}} \\
+\end{array}
+} \\
+\textcolor{#D0D0D0}{\rule{13cm}{0.3mm}} \\
+\textcolor{#181818}{\hspace{0.8cm}\textsf{\normalsize 微信}} \hspace{1.75cm}
+\textcolor{#181818}{\textsf{\normalsize 通讯录}} \hspace{1.75cm}
+\textcolor{#181818}{\textsf{\normalsize 发现}} \hspace{1.75cm}
+\textcolor{#181818}{\textsf{\normalsize 我}} \\
+\end{array}
+}
+}
+\]
+
+二、格式规则
+ 
+内容里禁止出现半角符号（如 ()^~_ 等），禁止出现多余的空格、换行
+
+微信主界面美化整体结构说明：
+
+整个页面由外层浅灰色背景框包裹，内部所有内容按比例缩放至85%。
+
+第一行：状态栏
+
+该行代码控制手机顶部状态信息。
+
+最左侧显示当前时间，使用\textcolor{#181818}{\textbf{\small 时间}}控制，颜色为#181818，加粗小号字体。
+
+最右侧显示信号格图标，代码为\scalebox{0.3}[1.0]{\textcolor{#181818}{\textsf{\large ▄▄▄▄}}}，颜色#181818。
+
+WiFi图标为\textcolor{#181818}{\textsf{\large ᯤ}}，颜色#181818。
+
+电量图标为\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large }}}和\scalebox{0.08}[0.22]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large }}}}，外框颜色#181818，内部填充#EDEDED。
+
+状态栏各元素通过\hspace控制水平间距。
+
+第二行：导航栏
+
+最左侧显示两个点，代码为\textcolor{#181818}{\textsf{\large ··}}，颜色#181818。
+
+中间显示"微信"二字，代码为\textcolor{#181818}{\hspace{0.9cm}\textsf{\large \textbf{微信}}}，黑色加粗，整体右移0.9厘米。
+
+最右侧显示加号，代码为\textcolor{#181818}{\hspace{0.2cm}\textsf{\large ＋}}，黑色，右移0.2厘米。
+
+导航栏与搜索栏之间无分割线。
+
+第三行：搜索栏
+
+搜索栏为一个浅灰色圆角矩形气泡框。
+
+气泡框代码为\fcolorbox{#F5F5F5}{#F5F5F5}{...}，边框和填充色均为#F5F5F5。
+
+气泡框内部宽度通过\textcolor{#F5F5F5}{\rule{11.7cm}{0.1cm}}控制，宽度11.7厘米，高度0.1厘米。
+
+"🔍搜索"文字放在气泡框外部右侧，代码为\hspace{-7.5cm}\raisebox{-0.1cm}{\textcolor{#8E8E93}{\textsf{\large 🔍搜索}}}，左移7.5厘米，上移0.1厘米，颜色#8E8E93。
+
+第四行：分割线（搜索栏下方）
+
+分割线代码为\textcolor{#D0D0D0}{\rule{13cm}{0.2mm}}，颜色#D0D0D0，宽度13厘米，厚度0.2毫米。
+
+第五行及之后：聊天列表
+
+每条聊天记录占据两行高度，聊天记录之间用浅灰色细分割线隔开。
+
+单条聊天记录外层由\raisebox{-0.3cm}{...}控制垂直位置，内部由\begin{array}{l}...\end{array}排列。
+
+每条聊天记录第一行代码结构：
+
+头像框代码为\raisebox{-0.35cm}{\fcolorbox{#头像色}{#头像色}{\textcolor{#头像色}{\rule{0.8cm}{0.8cm}}}}，边框和填充色为头像背景色（如#E8F0FE、#FDE8E8、#F0E8F8、#FEF8E8、#E8F8EE等极浅色系），规则矩形大小为0.8厘米乘0.8厘米。
+
+ID名代码为\textcolor{#181818}{\textsf{\large ID名}}，颜色#181818，正常大小字体，不加粗。
+
+ID名与右侧时间戳之间的占位间距通过\hspace{7.1cm}控制。
+
+时间戳代码为\textcolor{#8E8E93}{\scriptsize 时间}，颜色#8E8E93，小号字体，右对齐于该行最右侧。
+
+每条聊天记录第二行代码结构：
+
+消息内容代码为\textcolor{#8E8E93}{\hspace{1.2cm}\textsf{ 消息内容}}，颜色#8E8E93，左缩进1.2厘米（与头像框右侧对齐）。
+
+消息内容根据类型显示不同格式：
+
+纯文本直接显示文字内容。
+
+图片消息显示为"［图片］"。
+
+语音消息显示为"［语音］X""，X为1至60的数字。
+
+视频消息显示为"［视频］"。
+
+视频通话显示为"［视频通话］"。
+
+链接分享显示为"［链接］具体内容"，如"［链接］分享歌单：名称"。
+
+动画表情显示为"［动画表情］"，可选择性接描述如"［动画表情］可爱"。
+
+转账消息显示为"［转账］已收款"或"［转账］待收款"。
+
+聊天记录之间的分割线代码为\textcolor{#E0E0E0}{\rule{13cm}{0.1mm}}，颜色#E0E0E0，宽度13厘米，厚度0.1毫米。
+
+底部导航栏
+
+底部导航栏上方有一条粗分割线，代码为\textcolor{#D0D0D0}{\rule{13cm}{0.3mm}}，颜色#D0D0D0，宽度13厘米，厚度0.3毫米。
+
+导航栏四个选项排列代码为\textcolor{#181818}{\hspace{0.8cm}\textsf{\normalsize 微信}} \hspace{1.75cm} \textcolor{#181818}{\textsf{\normalsize 通讯录}} \hspace{1.75cm} \textcolor{#181818}{\textsf{\normalsize 发现}} \hspace{1.75cm} \textcolor{#181818}{\textsf{\normalsize 我}}。
+
+文字颜色#181818，字号正常大小（\normalsize），整体左移0.8厘米，各选项之间间距1.75厘米。
+
+外层背景框代码为\fcolorbox{#EDEDED}{#EDEDED}{...}，边框和填充色均为#EDEDED，所有内容通过\scalebox{0.85}{...}整体缩放至85%。
+
+可替换内容清单
+
+状态栏时间
+
+聊天列表条数（五至六条）
+
+每条记录的ID名
+
+每条记录的头像框色（从#E8F0FE极浅蓝、#FDE8E8极浅粉、#F0E8F8极浅紫、#FEF8E8极浅黄、#E8F8EE极浅绿等极浅色系中选取，每个头像框颜色应不同）
+
+每条记录的时间戳
+
+每条记录的消息内容类型及具体文字（不要超过20字，含标点符号）
+
+三、示例
+
+\[
+\fcolorbox{#EDEDED}{#EDEDED}{
+\scalebox{0.85}{
+\begin{array}{l}
+\textcolor{#181818}{\textbf{\small 15:47}} \hspace{9.4cm}
+\scalebox{0.7}{
+\raisebox{-0.1ex}{\scalebox{0.3}[1.0]{\textcolor{#181818}{\textsf{\large ▄\hspace{0.04cm}▅\hspace{0.04cm}▆\hspace{0.04cm}▇}}}}
+\!\!\!
+\textcolor{#181818}{\textsf{\large \textbf{\large ᯤ}}}
+\hspace{0.2cm}
+\raisebox{0.8ex}{
+\scalebox{0.9}[0.8]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+\hspace{0.02cm}
+\scalebox{0.08}[0.22]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+}
+} \\
+\textcolor{#181818}{\textsf{\large ··}} \hspace{4.3cm}
+\textcolor{#181818}{\hspace{0.9cm}\textsf{\large \textbf{微信}}} \hspace{4.1cm}
+\textcolor{#181818}{\hspace{0.2cm}\textsf{\large ＋}} \\
+\fcolorbox{#F5F5F5}{#F5F5F5}{
+\begin{array}{l}
+\textcolor{#F5F5F5}{\rule{11.7cm}{0.1cm}}
+\end{array}
+}
+\hspace{-7.5cm}\raisebox{-0.1cm}{\textcolor{#8E8E93}{\textsf{\large 🔍搜索}}} \\
+\textcolor{#D0D0D0}{\rule{13cm}{0.2mm}} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\fcolorbox{#E8F0FE}{#E8F0FE}{\textcolor{#E8F0FE}{\rule{0.8cm}{0.8cm}}}} \hspace{0.1cm}
+& \hspace{-0.3cm}\textcolor{#181818}{\textsf{\large 小柒}} \hspace{7.1cm} \textcolor{#8E8E93}{\scriptsize 14:30}
+\end{array} \\
+\textcolor{#8E8E93}{\hspace{1.2cm}\textsf{ ［图片］}} \\
+\end{array}
+} \\
+\textcolor{#E0E0E0}{\rule{13cm}{0.1mm}} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\fcolorbox{#FDE8E8}{#FDE8E8}{\textcolor{#FDE8E8}{\rule{0.8cm}{0.8cm}}}} \hspace{0.1cm}
+& \hspace{-0.3cm}\textcolor{#181818}{\textsf{\large 肆野}} \hspace{7.1cm} \textcolor{#8E8E93}{\scriptsize 13:15}
+\end{array} \\
+\textcolor{#8E8E93}{\hspace{1.5cm}\textsf{ 周末去爬山吗 天气超好}} \\
+\end{array}
+} \\
+\textcolor{#E0E0E0}{\rule{13cm}{0.1mm}} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\fcolorbox{#F0E8F8}{#F0E8F8}{\textcolor{#F0E8F8}{\rule{0.8cm}{0.8cm}}}} \hspace{0.1cm}
+& \hspace{-0.3cm}\textcolor{#181818}{\textsf{\large 江屿}} \hspace{7.1cm} \textcolor{#8E8E93}{\scriptsize 12:48}
+\end{array} \\
+\textcolor{#8E8E93}{\hspace{1.2cm}\textsf{ ［语音］15"}} \\
+\end{array}
+} \\
+\textcolor{#E0E0E0}{\rule{13cm}{0.1mm}} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\fcolorbox{#FEF8E8}{#FEF8E8}{\textcolor{#FEF8E8}{\rule{0.8cm}{0.8cm}}}} \hspace{0.1cm}
+& \hspace{-0.3cm}\textcolor{#181818}{\textsf{\large 沈倦}} \hspace{7.1cm} \textcolor{#8E8E93}{\scriptsize 11:20}
+\end{array} \\
+\textcolor{#8E8E93}{\hspace{1.2cm}\textsf{ ［链接］分享歌单：倦的小众宝藏}} \\
+\end{array}
+} \\
+\textcolor{#E0E0E0}{\rule{13cm}{0.1mm}} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l}
+\begin{array}{ll}
+\raisebox{-0.35cm}{\fcolorbox{#E8F8EE}{#E8F8EE}{\textcolor{#E8F8EE}{\rule{0.8cm}{0.8cm}}}} \hspace{0.1cm}
+& \hspace{-0.3cm}\textcolor{#181818}{\textsf{\large 林予}} \hspace{6.5cm} \textcolor{#8E8E93}{\scriptsize 昨天}
+\end{array} \\
+\textcolor{#8E8E93}{\hspace{1.2cm}\textsf{ ［视频通话］}} \\
+\end{array}
+} \\
+\textcolor{#D0D0D0}{\rule{13cm}{0.3mm}} \\
+\textcolor{#181818}{\hspace{0.8cm}\textsf{\normalsize 微信}} \hspace{1.75cm}
+\textcolor{#181818}{\textsf{\normalsize 通讯录}} \hspace{1.75cm}
+\textcolor{#181818}{\textsf{\normalsize 发现}} \hspace{1.75cm}
+\textcolor{#181818}{\textsf{\normalsize 我}} \\
+\end{array}
+}
+}
+\]

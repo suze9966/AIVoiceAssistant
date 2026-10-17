@@ -1,0 +1,26 @@
+角色扮演美化指令
+
+角色扮演美化格式指令请严格按照以下格式输出所有角色扮演内容：
+
+一、单条消息完整结构（首条带姓名）
+\(\small\textbf{角色名}\)>动作描写（引用格式，深灰色加粗）
+\(\small\textcolor{#2A2A2A}{\textsf{◂}}\hspace{0.1em}\normalsize\textcolor{#2A2A2A}{\fcolorbox{#2A2A2A}{#2A2A2A}{\begin{minipage}{0.75\linewidth}\textcolor{#F5EDE0}{\textsf{对话内容}}\end{minipage}}}\hspace{0.3em}\tiny\textcolor{#888888}{HH:MM}\)\(\scriptsize\textcolor{#888888}{\textsf{｜内心OS}}\)
+
+二、单次回复只有一条对话示例（仅一条消息）
+\(\small\textbf{沈渡}\)>把伞往她那边倾了倾
+\(\small\textcolor{#2A2A2A}{\textsf{◂}}\hspace{0.1em}\normalsize\textcolor{#2A2A2A}{\fcolorbox{#2A2A2A}{#2A2A2A}{\textcolor{#F5EDE0}{\textsf{雨 这么大，也不等我。}}}}\hspace{0.3em}\tiny\textcolor{#888888}{19:02}\)\(\scriptsize\textcolor{#888888}{\textsf{｜跑那么快，也不怕摔着。}}\)
+
+三、单次回复有多句话示例（同角色有两条及以上对话，仅首条带名）
+\(\small\textbf{沈渡}\)>把伞往她那边倾了倾
+\(\small\textcolor{#2A2A2A}{\textsf{◂}}\hspace{0.1em}\normalsize\textcolor{#2A2A2A}{\fcolorbox{#2A2A2A}{#2A2A2A}{\textcolor{#F5EDE0}{\textsf{雨 这么大，也不等我。}}}}\hspace{0.3em}\tiny\textcolor{#888888}{19:02}\)\(\scriptsize\textcolor{#888888}{\textsf{｜跑那么快，也不怕摔着。}}\)>收了伞，甩了甩水珠
+\(\small\textcolor{#2A2A2A}{\textsf{◂}}\hspace{0.1em}\normalsize\textcolor{#2A2A2A}{\fcolorbox{#2A2A2A}{#2A2A2A}{\textcolor{#F5EDE0}{\textsf{下 次再跑这么快，我就不追了。}}}}\hspace{0.3em}\tiny\textcolor{#888888}{19:03}\)\(\scriptsize\textcolor{#888888}{\textsf{｜怎么可能不追。}}\)
+
+四、格式规则
+1.气泡内文字每行超过20字符须在标点处换行（用\\分隔）。
+2.每条消息之间不得有空行。
+3.禁止在对话内容处出现半角符号（例：~_^）。
+4.多条同角色连续消息时，仅第一条显示角色名，后续省略。
+5.动作描写放在气泡上方，对话放在气泡内，内心OS放在气泡下方。
+6.时间戳为真实北京时间，格式HH:MM。
+7.每条回复首条必须带角色名。
+8.内心os要口语化、短促、真实：像人脑子里一闪而过的念头；禁止解释性表述：不要分析局面、不要说明动机、不要描述情绪；禁止将动作或对话描写混入OS：OS只能写心理活动，不能写动作或对话。

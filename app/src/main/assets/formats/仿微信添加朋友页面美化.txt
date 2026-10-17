@@ -1,0 +1,92 @@
+DeepSeek仿微信添加朋友页面美化.sy
+
+清秋屿sy（sy_020723）禁止二传二改 禁止换头倒卖
+
+当玩家在文游过程中需要查看微信添加朋友页面时请用以下固定格式生成相应内容：
+ 
+一、微信添加朋友页面查看格式、
+
+\[
+\fcolorbox{#EDEDED}{#EDEDED}{
+\scalebox{0.85}{
+\begin{array}{l}
+\textcolor{#181818}{\textbf{\small 15:47}} \hspace{9.4cm}
+\scalebox{0.7}{
+\raisebox{-0.1ex}{\scalebox{0.3}[1.0]{\textcolor{#181818}{\textsf{\large ▄\hspace{0.04cm}▅\hspace{0.04cm}▆\hspace{0.04cm}▇}}}}
+\!\!\!
+\textcolor{#181818}{\textsf{\large \textbf{\large ᯤ}}}
+\hspace{0.2cm}
+\raisebox{0.8ex}{
+\scalebox{0.9}[0.8]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+\hspace{0.02cm}
+\scalebox{0.08}[0.22]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+}
+} \\
+\textcolor{#181818}{\textsf{\large <}} \hspace{4.2cm}
+\textcolor{#181818}{\textsf{\large 添加朋友}} \hspace{4.8cm}
+\\
+\textcolor{#D0D0D0}{\rule{13cm}{0.12mm}} \\
+\fcolorbox{#F5F5F5}{#F5F5F5}{
+\begin{array}{l}
+\textcolor{#F5F5F5}{\rule{11.7cm}{0.1cm}}
+\end{array}
+}
+\hspace{-8.4cm}\raisebox{-0.1cm}{\textcolor{#8E8E93}{\textsf{\normalsize 🔍账号/手机号}}}
+\\
+\\
+\\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.7cm} \raisebox{-0.3cm}{\textcolor{#007BDE}{\normalsize \rotatebox{90}{『』}}} \hspace{0.5cm} 扫一扫 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#8E8E93}{\hspace{1.5cm}\textsf{\scriptsize 扫描二维码名片}} \\
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.7cm} \raisebox{-0.2cm}{\textcolor{#07C160}{\LARGE ✆}} \hspace{0.5cm} 手机联系人 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#8E8E93}{\hspace{1.5cm}\textsf{\scriptsize 添加通讯录中的朋友}} \\
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} \textcolor{#7468E8}{\Large 𖣨} \hspace{0.5cm} 雷达 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#8E8E93}{\hspace{1.5cm}\textsf{\scriptsize 添加身边的朋友}} \\
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} \textcolor{#0084FF}{\Large ⎚} \hspace{0.5cm} 企业微信联系人 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#8E8E93}{\hspace{1.5cm}\textsf{\scriptsize 通过手机号搜索企业微信用户}} \\
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} \raisebox{1cm}{\textcolor{#07C160}{\Large \rotatebox{180}{♉︎}}} \hspace{0.5cm} \raisebox{0.5cm}{面对面建群} }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#8E8E93}{\hspace{1.5cm}\textsf{\scriptsize 与身边的朋友进入同一个群聊}} \\
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} \textcolor{#0084FF}{\Large \hspace{0.0cm}\rotatebox{-30}{◊} \hspace{-0.9cm}\raisebox{-0.16cm}{\rotatebox{30}{◊}}} \hspace{0.5cm} 公众号 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#8E8E93}{\hspace{1.5cm}\textsf{\scriptsize 获取更多资讯}} \\
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} \raisebox{0.2cm}{\textcolor{#F56A56}{\Large ◛}} \hspace{0.5cm} 服务号 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#8E8E93}{\hspace{1.5cm}\textsf{\scriptsize 获取更多购物信息和服务}} \\
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\\
+\end{array}
+}
+}
+\]
+
+二、格式规则
+ 
+1.内容里禁止出现半角符号（如 ()^~_ 等），禁止出现多余的空格、换行
+2.不要在现格式指令代码中加入额外的转义符\

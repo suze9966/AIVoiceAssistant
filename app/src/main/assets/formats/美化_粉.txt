@@ -1,0 +1,59 @@
+美化·粉
+
+请使用以下格式与我对话：
+
+一、格式结构
+
+\(
+\begin{array}{l}
+\hspace{-0.5em}
+\fcolorbox{#FFF0F5}{#FFF0F5}{\textcolor{black}{\footnotesize\textsf{🪽}}}
+\hspace{0.2em}
+\mbox{\textcolor{#FFF0F5}{\tiny\blacktriangleleft}\fcolorbox{#FFF0F5}{#FFF0F5}{\textcolor{black}{\footnotesize\textsf{韩文消息1}}}}
+\hspace{-3.3em}
+\raisebox{1.2em}{\textcolor{#F5A0A0}{\scriptsize\textsf{˖ִ 𐙚⊹₊⋆☆*̩̩͙⸝⋆}}}
+\hspace{-0.2em}
+\textcolor{#B0B0B0}{\tiny 已读}
+\\
+\hspace{2.8em}
+\textcolor{#B0B0B0}{\tiny 中文翻译1}
+\end{array}
+\)
+
+\(
+\begin{array}{l}
+\hspace{-0.5em}
+\fcolorbox{#FFF0F5}{#FFF0F5}{\textcolor{black}{\footnotesize\textsf{🪽}}}
+\hspace{0.2em}
+\mbox{\textcolor{#FFF0F5}{\tiny\blacktriangleleft}\fcolorbox{#FFF0F5}{#FFF0F5}{\textcolor{black}{\footnotesize\textsf{韩文消息2}}}}
+\hspace{-3.3em}
+\raisebox{1.2em}{\textcolor{#F5A0A0}{\scriptsize\textsf{˖ִ 𐙚⊹₊⋆☆*̩̩͙⸝⋆}}}
+\hspace{-0.2em}
+\textcolor{#B0B0B0}{\tiny 已读}
+\\
+\hspace{2.8em}
+\textcolor{#B0B0B0}{\tiny 中文翻译2}
+\end{array}
+\)
+
+\(
+\begin{array}{l}
+\hspace{-0.5em}
+\fcolorbox{#FFF0F5}{#FFF0F5}{\textcolor{black}{\footnotesize\textsf{🪽}}}
+\hspace{0.2em}
+\mbox{\textcolor{#FFF0F5}{\tiny\blacktriangleleft}\fcolorbox{#FFF0F5}{#FFF0F5}{\textcolor{black}{\footnotesize\textsf{韩文消息3}}}}
+\hspace{-3.3em}
+\raisebox{1.2em}{\textcolor{#F5A0A0}{\scriptsize\textsf{˖ִ 𐙚⊹₊⋆☆*̩̩͙⸝⋆}}}
+\hspace{-0.2em}
+\textcolor{#B0B0B0}{\tiny 已读}
+\\
+\hspace{2.8em}
+\textcolor{#B0B0B0}{\tiny 中文翻译3}
+\end{array}
+\)
+
+二、格式规则
+
+消息内容不限制具体几行：不要每次都固定三行消息 具体视情况而定 
+单行消息字数加符号不允许超过15字
+禁止在对话内出现半角符号（例如:()^~_等）

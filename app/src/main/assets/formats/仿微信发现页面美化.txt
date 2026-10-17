@@ -1,0 +1,115 @@
+DeepSeek仿微信发现页面美化.sy
+
+清秋屿sy（sy_020723）禁止二传二改 禁止换头倒卖
+
+当玩家在文游过程中需要查看微信发现页面时请用以下固定格式生成相应内容：
+ 
+一、微信发现页面查看格式、
+
+\[
+\fcolorbox{#EDEDED}{#EDEDED}{
+\scalebox{0.85}{
+\begin{array}{l}
+\textcolor{#181818}{\textbf{\small 15:47}} \hspace{9.4cm}
+\scalebox{0.7}{
+\raisebox{-0.1ex}{\scalebox{0.3}[1.0]{\textcolor{#181818}{\textsf{\large ▄\hspace{0.04cm}▅\hspace{0.04cm}▆\hspace{0.04cm}▇}}}}
+\!\!\!
+\textcolor{#181818}{\textsf{\large \textbf{\large ᯤ}}}
+\hspace{0.2cm}
+\raisebox{0.8ex}{
+\scalebox{0.9}[0.8]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+\hspace{0.02cm}
+\scalebox{0.08}[0.22]{\fcolorbox{#181818}{#181818}{\textcolor{#EDEDED}{\textsf{\large \textbf{}}}}}
+}
+} \\
+\textcolor{#181818}{\textsf{\large \hspace{4.7cm}\textbf{发现}}} \\
+\textcolor{#D0D0D0}{\rule{13cm}{0.2mm}} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.53cm} \textcolor{#F7C52F}{𖥞} \hspace{0.5cm} 朋友圈 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} \textcolor{#007BDE}{□} \hspace{0.5cm} 扫一扫 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} \textcolor{#F04747}{♪} \hspace{0.5cm} \hspace{0.1cm}听一听 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} \textcolor{#FFC107}{✡︎} \hspace{0.5cm} \hspace{0.1cm}看一看 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} \textcolor{#F24338}{✫} \hspace{0.5cm} 搜一搜 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} \textcolor{#F24338}{◈} \hspace{0.5cm} 游戏 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#E0E0E0}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#262626}{\textsf{ \hspace{-0.5cm} \rotatebox{45}{\textcolor{#7066E6}{∞}} \hspace{0.5cm} \hspace{-0.1cm}小程序 }} & \textcolor{#8E8E93}{\textsf{\hspace{0.2cm}>}} \\
+\textcolor{#EDEDED}{\textsf{ \hspace{-0.5cm} \rule{12.8cm}{0.1mm} }} \\
+\end{array} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#EDEDED}{\textsf{ \hspace{-0.5cm} █ \hspace{0.5cm}  }} & \textcolor{#8E8E93}{} \\
+\end{array}
+} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#EDEDED}{\textsf{ \hspace{-0.5cm} █ \hspace{0.5cm}  }} & \textcolor{#8E8E93}{} \\
+\end{array}
+} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#EDEDED}{\textsf{ \hspace{-0.5cm} █ \hspace{0.5cm}  }} & \textcolor{#8E8E93}{} \\
+\end{array}
+} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#EDEDED}{\textsf{ \hspace{-0.5cm} █ \hspace{0.5cm}  }} & \textcolor{#8E8E93}{} \\
+\end{array}
+} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#EDEDED}{\textsf{ \hspace{-0.5cm} █ \hspace{0.5cm}  }} & \textcolor{#8E8E93}{} \\
+\end{array}
+} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#EDEDED}{\textsf{ \hspace{-0.5cm} █ \hspace{0.5cm}  }} & \textcolor{#8E8E93}{} \\
+\end{array}
+} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#EDEDED}{\textsf{ \hspace{-0.5cm} █ \hspace{0.5cm}  }} & \textcolor{#8E8E93}{} \\
+\end{array}
+} \\
+\raisebox{-0.3cm}{
+\hspace{-0.3cm}
+\begin{array}{l@{\hspace{-1.2cm}}l}
+\textcolor{#EDEDED}{\textsf{ \hspace{-0.5cm} █ \hspace{0.5cm}  }} & \textcolor{#8E8E93}{} \\
+\end{array}
+} \\
+\textcolor{#D0D0D0}{\rule{13cm}{0.3mm}} \\
+\textcolor{#181818}{\hspace{0.8cm}\textsf{\normalsize 微信}} \hspace{1.75cm}
+\textcolor{#181818}{\textsf{\normalsize 通讯录}} \hspace{1.75cm}
+\textcolor{#07C160}{\textsf{\normalsize 发现}} \hspace{1.75cm}
+\textcolor{#181818}{\textsf{\normalsize 我}}
+\end{array}
+}
+}
+\]
+
+二、格式规则
+ 
+内容里禁止出现多余的半角符号（如 ()^~_ 等），禁止出现多余的空格、换行
