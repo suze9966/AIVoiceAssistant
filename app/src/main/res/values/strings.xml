@@ -12,15 +12,16 @@
     <string name="btn_open_drawer">打开设置</string>
     <string name="btn_hold_talk">按住说话</string>
     <string name="settings_title">设置</string>
+    <string name="settings_fold_hint">点分类展开，常用的放在最上面</string>
     <string name="label_base_url">接口地址 Base URL</string>
     <string name="label_api_key">API Key</string>
     <string name="label_model">模型名称</string>
     <string name="label_system">系统提示词（人设）</string>
     <string name="label_voice">豆包音色</string>
     <string name="label_tts_engine">语音引擎（火山引擎 / 克隆音色 / 系统兜底）</string>
-    <string name="label_portrait">精选立绘（内置 6 张矢量，不占体积）</string>
+    <string name="label_portrait">聊天头像库（6 张立绘 + 37 张可更换头像）</string>
     <string name="label_local_kws">小型本地唤醒增强（近似匹配；无系统识别时用能量门）</string>
-    <string name="toast_portrait_applied">已换精选立绘</string>
+    <string name="toast_portrait_applied">已更换聊天头像</string>
     <string name="label_siliconflow_key">硅基流动 Key（只给克隆音色用，加密保存在本机）</string>
     <string name="label_siliconflow_hint">留空不修改；填了才能上传和播放克隆音色</string>
     <string name="label_volc_api_key">火山引擎 API Key（新控制台，加密保存在本机）</string>
@@ -171,7 +172,7 @@
     <string name="label_caiyun_token">旧版 Token（与上面二选一）</string>
     <string name="label_caiyun_security">凭证仅加密保存在本机；优先使用 App Key + Secret</string>
     <string name="group_appearance">聊天外观</string>
-    <string name="label_chat_avatar">小沫头像（相册选图更换）</string>
+    <string name="label_chat_avatar">小沫头像（从头像库选，或相册选图更换）</string>
     <string name="label_chat_background">聊天背景（相册选图更换）</string>
     <string name="btn_change_avatar">更换头像</string>
     <string name="btn_reset_avatar">恢复默认</string>

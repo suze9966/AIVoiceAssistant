@@ -214,7 +214,7 @@ class TtsHelper(private val context: Context, prefs: Prefs? = null) {
             i += cc
         }
         val cleaned = out.toString()
-            .replace(Regex("\\[\\s*sticker\\s*:[^\\]]{1,32}\\]", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("\\[\\s*sticker\\s*:[^\\]]{1,48}\\]", RegexOption.IGNORE_CASE), "")
         // 文游格式库里的 LaTeX 排版指令朗读时要去掉，只留中文内容（否则会念出 textcolor/sf 之类）
         val noTex = stripLatexNoise(cleaned)
         // 剥掉 Markdown 标记：标题井号、加粗星号、行内代码反引号、表格竖线、分隔线、列表符号等

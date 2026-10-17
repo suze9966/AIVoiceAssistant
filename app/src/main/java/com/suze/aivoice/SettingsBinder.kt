@@ -66,6 +66,7 @@ class SettingsBinder(
         val seekPitch = activity.findViewById<SeekBar>(R.id.seekPitch)
         val btnStopSpeak = activity.findViewById<Button>(R.id.btnStopSpeak)
         val btnSave = activity.findViewById<Button>(R.id.btnSave)
+        bindSections()
         bindAppearance()
         activity.findViewById<Button>(R.id.btnConnectLlm).setOnClickListener {
             activity.startActivity(Intent(activity, LlmConnectActivity::class.java))
@@ -322,18 +323,55 @@ class SettingsBinder(
         prefs.volcSpeaker = prevSpeaker
     }
 
+    /** 五张分类默认收起，点标题展开，同时只开一张。 */
+    private fun bindSections() {
+        val pairs = listOf(
+            R.id.sectionLookHead to (R.id.sectionLookBody to R.id.sectionLookArrow),
+            R.id.sectionModelHead to (R.id.sectionModelBody to R.id.sectionModelArrow),
+            R.id.sectionVoiceHead to (R.id.sectionVoiceBody to R.id.sectionVoiceArrow),
+            R.id.sectionAbilityHead to (R.id.sectionAbilityBody to R.id.sectionAbilityArrow),
+            R.id.sectionMoreHead to (R.id.sectionMoreBody to R.id.sectionMoreArrow)
+        )
+        fun show(openHead: Int) {
+            pairs.forEach { (head, bodyArrow) ->
+                val open = head == openHead
+                activity.findViewById<android.view.View>(bodyArrow.first).visibility =
+                    if (open) android.view.View.VISIBLE else android.view.View.GONE
+                activity.findViewById<android.widget.TextView>(bodyArrow.second).text =
+                    if (open) "收起" else "展开"
+            }
+        }
+        pairs.forEach { (head, _) ->
+            activity.findViewById<android.view.View>(head).setOnClickListener {
+                val body = pairs.first { it.first == head }.second.first
+                val opened = activity.findViewById<android.view.View>(body).visibility == android.view.View.VISIBLE
+                if (opened) show(-1) else show(head)
+            }
+        }
+    }
+
     private fun bindAppearance() {
         activity.findViewById<Button>(R.id.btnChangeAvatar).setOnClickListener {
             pickImage(true)
         }
         activity.findViewById<Button>(R.id.btnResetAvatar).setOnClickListener {
             ChatStyleStore.clearAvatar(activity)
+            prefs.portraitId = PortraitLibrary.DEFAULT_ID
+            val spinner = activity.findViewById<Spinner>(R.id.spinnerPortrait)
+            val idx = PortraitLibrary.all().indexOfFirst { it.id == PortraitLibrary.DEFAULT_ID }
+            if (idx >= 0) spinner.setSelection(idx)
             refreshAppearancePreview()
             Toast.makeText(activity, R.string.toast_avatar_reset, Toast.LENGTH_SHORT).show()
         }
         activity.findViewById<Spinner>(R.id.spinnerPortrait).onItemSelectedListener =
             object : AdapterView.OnItemSelectedListener {
                 override fun onItemSelected(p: AdapterView<*>?, v: android.view.View?, pos: Int, id: Long) {
+                    val item = PortraitLibrary.all().getOrNull(pos) ?: return
+                    if (prefs.portraitId != item.id) {
+                        prefs.portraitId = item.id
+                        ChatStyleStore.clearAvatar(activity)
+                        Toast.makeText(activity, R.string.toast_portrait_applied, Toast.LENGTH_SHORT).show()
+                    }
                     refreshAppearancePreview()
                 }
                 override fun onNothingSelected(p: AdapterView<*>?) {}
@@ -600,15 +638,26 @@ class SettingsBinder(
 
     fun refreshAppearancePreview() {
         val avatar = activity.findViewById<android.widget.ImageView>(R.id.ivAvatarPreview)
-        ChatStyleStore.applyAvatar(avatar)
-        if (!ChatStyleStore.hasAvatar(activity)) {
+        if (ChatStyleStore.hasAvatar(activity)) {
+            ChatStyleStore.applyAvatar(avatar)
+        } else {
             val spinner = activity.findViewById<Spinner>(R.id.spinnerPortrait)
             val item = PortraitLibrary.all().getOrNull(spinner.selectedItemPosition)
-            val res = item?.resId ?: PortraitLibrary.resFor(prefs.portraitId)
-            if (res != null) {
+                ?: PortraitLibrary.find(prefs.portraitId)
+            val asset = PortraitLibrary.decodeAsset(activity, item?.asset)
+            if (asset != null) {
                 avatar.setPadding(0, 0, 0, 0)
                 avatar.scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
-                avatar.setImageResource(res)
+                avatar.setImageBitmap(asset)
+            } else {
+                val res = item?.resId?.takeIf { it != 0 } ?: PortraitLibrary.resFor(prefs.portraitId)
+                if (res != null) {
+                    avatar.setPadding(0, 0, 0, 0)
+                    avatar.scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
+                    avatar.setImageResource(res)
+                } else {
+                    ChatStyleStore.applyAvatar(avatar)
+                }
             }
         }
         ChatStyleStore.applyBackgroundPreview(activity.findViewById(R.id.ivBackgroundPreview))

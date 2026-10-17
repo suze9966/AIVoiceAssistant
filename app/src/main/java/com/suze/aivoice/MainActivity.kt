@@ -221,8 +221,7 @@ class MainActivity : AppCompatActivity() {
         ivHeaderAvatar = null
         applyChatStyle()
         setupSettingsDrawer()
-        // 顶部只保留设置按钮：单击开设置抽屉，长按弹出功能菜单（原 ⭐ 菜单的 19 项功能全保留）
-        val btnMenu = findViewById<ImageButton>(R.id.btnDrawer)
+        // 顶部长条已去掉。设置和功能都从底部加号打开，菜单项不减。
         val showMoreMenu: (android.view.View) -> Unit = { v ->
             val pop = PopupMenu(this, v)
             pop.menu.add(0, 1, 0, getString(R.string.btn_settings))
@@ -280,7 +279,6 @@ class MainActivity : AppCompatActivity() {
             }
             pop.show()
         }
-        btnMenu.setOnLongClickListener { v -> showMoreMenu(v); true }
 
         recycler = findViewById(R.id.recyclerChat)
         editInput = findViewById(R.id.editInput)
@@ -299,9 +297,9 @@ class MainActivity : AppCompatActivity() {
         GlassKit.attach(
             findViewById(R.id.chatContent),
             recycler,
-            findViewById(R.id.headerBar),
+            null,
             findViewById(R.id.bottomBar),
-            findViewById(R.id.headerGlass),
+            null,
             findViewById(R.id.bottomGlass)
         )
 
@@ -730,15 +728,11 @@ class MainActivity : AppCompatActivity() {
         ChatStyleStore.applyBackground(ivChatBackground)
         chatBgScrim.visibility = if (ChatStyleStore.hasBackground(this)) View.VISIBLE else View.GONE
         ivHeaderAvatar?.let { ChatStyleStore.applyAvatar(it) }
-        findViewById<View>(R.id.headerGlass)?.invalidate()
         findViewById<View>(R.id.bottomGlass)?.invalidate()
     }
 
     private fun setupSettingsDrawer() {
         drawerLayout = findViewById(R.id.drawerLayout)
-        findViewById<ImageButton>(R.id.btnDrawer).setOnClickListener {
-            toggleSettingsDrawer()
-        }
         drawerLayout.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {
             override fun onDrawerOpened(drawerView: View) {
                 window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
@@ -1189,10 +1183,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** 惰性构建表情面板：1000 个 emoji 分成多行，每行 8 个。 */
+    /** 惰性构建表情面板：状态表情包在最上面，下面仍是 emoji。 */
     private fun buildEmojiPanel(panel: android.widget.ScrollView) {
         val grid = panel.findViewById<android.widget.LinearLayout>(R.id.emojiRow) ?: return
         if (grid.childCount > 0) return
+        addStatusStickerRow(grid)
         val size = (40 * resources.displayMetrics.density).toInt()
         val perRow = 8
         val list = StickerLibrary.emojiPanel
@@ -1216,6 +1211,52 @@ class MainActivity : AppCompatActivity() {
             }
             grid.addView(rowView)
         }
+    }
+
+    /** 状态表情包放在面板第一行，点一下就发出对应图片。 */
+    private fun addStatusStickerRow(grid: android.widget.LinearLayout) {
+        val pad = (8 * resources.displayMetrics.density).toInt()
+        val cell = (72 * resources.displayMetrics.density).toInt()
+        StickerLibrary.statusPack.chunked(4).forEach { chunk ->
+            val rowView = android.widget.LinearLayout(this)
+            rowView.orientation = android.widget.LinearLayout.HORIZONTAL
+            rowView.setPadding(0, pad, 0, 0)
+            rowView.layoutParams = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            chunk.forEach { (name, _) ->
+                val box = android.widget.LinearLayout(this)
+                box.orientation = android.widget.LinearLayout.VERTICAL
+                box.gravity = android.view.Gravity.CENTER
+                box.layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                val iv = android.widget.ImageView(this)
+                iv.layoutParams = android.widget.LinearLayout.LayoutParams(cell, cell)
+                iv.scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
+                val url = StickerLibrary.packUrl(name)
+                if (url != null) ImageLoader.load(url, iv)
+                val label = android.widget.TextView(this)
+                label.text = name
+                label.textSize = 11f
+                label.gravity = android.view.Gravity.CENTER
+                label.setTextColor(0xFF5C6B7A.toInt())
+                box.setOnClickListener { sendStatusSticker(name) }
+                box.addView(iv)
+                box.addView(label)
+                rowView.addView(box)
+            }
+            grid.addView(rowView)
+        }
+    }
+
+    /** 主人点状态表情时，直接发图片气泡，不走大模型。 */
+    private fun sendStatusSticker(name: String) {
+        if (isSending) return
+        val url = StickerLibrary.packUrl(name) ?: return
+        findViewById<android.widget.ScrollView>(R.id.emojiPanel).visibility = View.GONE
+        adapter.add(ChatMessage("user", url, isMe = true, type = ChatMessage.TYPE_IMAGE))
+        scrollToBottom()
+        persistHistory()
     }
 
     /** 发送一个 emoji 表情（以大字号气泡显示） */

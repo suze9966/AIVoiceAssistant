@@ -11,44 +11,44 @@ object GlassKit {
     fun attach(
         scene: View,
         scroller: View,
-        header: View,
+        header: View?,
         bottom: View?,
-        headerGlass: LiquidGlassView,
+        headerGlass: LiquidGlassView?,
         bottomGlass: LiquidGlassView?
     ) {
-        headerGlass.headerStyle()
-        headerGlass.bind(scene)
+        headerGlass?.headerStyle()
+        headerGlass?.bind(scene)
         bottomGlass?.footerStyle()
         bottomGlass?.bind(scene)
         val extra = (8f * scroller.resources.displayMetrics.density).toInt()
         val applyPad = Runnable {
-            val top = header.height
+            val top = header?.height ?: 0
             val bot = bottom?.height ?: 0
-            matchHeight(headerGlass, top)
-            if (bottomGlass != null) matchHeight(bottomGlass, bot)
+            if (headerGlass != null) matchHeight(headerGlass, top)
+            if (bottomGlass != null && bottomGlass !== headerGlass) matchHeight(bottomGlass, bot)
             val wantTop = top + extra
             val wantBot = bot + extra
             if (scroller.paddingTop != wantTop || scroller.paddingBottom != wantBot) {
                 scroller.setPadding(scroller.paddingLeft, wantTop, scroller.paddingRight, wantBot)
             }
-            headerGlass.invalidate()
+            headerGlass?.invalidate()
             bottomGlass?.invalidate()
         }
-        header.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> applyPad.run() }
+        header?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> applyPad.run() }
         bottom?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> applyPad.run() }
         scroller.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            headerGlass.invalidate()
+            headerGlass?.invalidate()
             bottomGlass?.invalidate()
         }
         val redraw = ViewTreeObserver.OnScrollChangedListener {
-            headerGlass.invalidate()
+            headerGlass?.invalidate()
             bottomGlass?.invalidate()
         }
         scroller.viewTreeObserver.addOnScrollChangedListener(redraw)
         if (scroller is RecyclerView) {
             scroller.addOnScrollListener(object : RecyclerView.OnScrollListener() {
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                    headerGlass.invalidate()
+                    headerGlass?.invalidate()
                     bottomGlass?.invalidate()
                 }
             })

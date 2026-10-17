@@ -17,8 +17,27 @@ object StickerLibrary {
     /** 图片表情包基础地址（DiceBear fun-emoji 风格，PNG） */
     private const val DICEBEAR = "https://api.dicebear.com/7.x/fun-emoji/png"
 
-    /** AI 可用的贴图标记正则：[sticker:seed] */
-    private val TAG = Regex("\\[\\s*sticker\\s*:\\s*([^\\]]{1,32})\\]", RegexOption.IGNORE_CASE)
+    /** AI 可用的贴图标记正则：[sticker:seed]，中文状态名也要能放下。 */
+    private val TAG = Regex("\\[\\s*sticker\\s*:\\s*([^\\]]{1,48})\\]", RegexOption.IGNORE_CASE)
+
+    /** 状态表情在 assets 里的目录。 */
+    const val PACK_DIR = "stickers"
+
+    /**
+     * 主人导入的状态表情。
+     * 前 8 张按图上的字命名；最后一张多次裁切都没有读出字，不假装命名。
+     */
+    val statusPack: List<Pair<String, String>> = listOf(
+        "已上吊" to "hang.jpg",
+        "已石化" to "stone.jpg",
+        "正在流泪" to "cry.jpg",
+        "已下班" to "offwork.jpg",
+        "在便秘" to "constipate.jpg",
+        "正在痛经" to "cramp.jpg",
+        "在滴眼药水" to "eyedrop.jpg",
+        "已放学" to "schoolout.jpg",
+        "状态图" to "status.jpg"
+    )
 
     /**
      * 生成一张表情包图片 URL。
@@ -41,12 +60,27 @@ object StickerLibrary {
     fun parseImageTag(text: String): Pair<String?, String> {
         val m = TAG.find(text) ?: return null to text
         val raw = (m.groupValues.getOrNull(1) ?: "xiaomo").trim()
-        // 若括号里是 emoji，就换成一张**本地**图片表情（不联网）；
-        // 否则沿袭旧行为：按关键词从 DiceBear 取图。
-        val url = localStickerByEmoji(raw) ?: imageUrl(raw)
+        // 状态表情优先，其次本地 emoji，最后才走旧的网络图。
+        val url = packUrl(raw) ?: localStickerByEmoji(raw) ?: imageUrl(raw)
         val cleaned = text.replace(m.value, "").trim()
         return url to cleaned
     }
+
+    /** 按状态名或文件名取本地表情包地址。对不上返回 null。 */
+    fun packUrl(raw: String): String? {
+        val key = raw.trim()
+            .removePrefix("该用户")
+            .removePrefix("该用戶")
+            .trim()
+        if (key.isEmpty()) return null
+        val hit = statusPack.firstOrNull { (name, file) ->
+            key == name || key.equals(file, ignoreCase = true) ||
+                key.equals(file.substringBeforeLast('.'), ignoreCase = true)
+        } ?: return null
+        return LOCAL_PREFIX + PACK_DIR + "/" + hit.second
+    }
+
+    fun packNames(): String = statusPack.joinToString("、") { it.first }
 
     /**
      * 把 [sticker:😊] 里的 emoji 解析成本地图片表情地址。
@@ -155,11 +189,14 @@ object StickerLibrary {
         "你还能发**图片表情**（比文字表情更大更可爱）。",
         "用法：在想发的时候，单独写一个标记 [sticker:😊]，把里面的 emoji 换成你想表达的情绪即可；",
         "程序会自动把它换成对应的图片表情发出去，你不需要解释这个标记。",
+        "另外有一套状态表情包，名字是：",
+        packNames(),
+        "。想发时写 [sticker:已上吊] 这种，括号里必须是上面的名字之一。",
         "规矩：",
         "1. 一条回复最多发一个图片表情；",
-        "2. 只在情绪比较强的时候发（特别开心、特别心疼、撒娇、想逗主人笑、主人难过想安慰）；",
+        "2. 只在情绪比较强、或者主人点名要这张状态图时才发；",
         "3. 报时间、报天气、念工具结果、解答问题、说明事实时不要发图；",
-        "4. 主人正在说正经事、说难过的事时，别乱发表情，先好好回话。"
+        "4. 主人正在说正经事时，别乱发表情，先好好回话。"
     ).joinToString("")
 
     // ---------------- 小沫自己的情绪表情（都取自 emojiPanel，保证不重复） ----------------

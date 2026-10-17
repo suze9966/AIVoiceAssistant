@@ -396,6 +396,7 @@ class GroupChatActivity : AppCompatActivity() {
                             buildString {
                                 append(relationGraph.promptBlock(speaker.name, members.map { it.name }))
                                 if (fmtBlock.isNotBlank()) append("\n").append(fmtBlock)
+                                append("\n").append(StickerLibrary.localStickerRule())
                                 PocketPhone(this@GroupChatActivity).awareLine()
                                     .takeIf { it.isNotBlank() }
                                     ?.let { append("\n").append(it) }
@@ -467,9 +468,29 @@ class GroupChatActivity : AppCompatActivity() {
 
     private fun finishSpeaker(text: String, speaker: RoleCharacter, session: Long) {
         if (session != speechSession) return
+        val (stickerUrl, textNoSticker) = StickerLibrary.parseImageTag(text)
+        val shown = if (stickerUrl != null) textNoSticker else text
         if (history.isNotEmpty()) {
-            history[history.size - 1] = history.last().copy(content = text)
-            adapter.updateLast(text)
+            history[history.size - 1] = history.last().copy(
+                content = shown,
+                speakerId = speaker.id,
+                speakerName = speaker.name,
+                speakerEmoji = speaker.emoji
+            )
+            adapter.updateLast(shown)
+        }
+        if (stickerUrl != null && (history.isEmpty() || history.last().type != ChatMessage.TYPE_IMAGE)) {
+            adapter.add(
+                ChatMessage(
+                    "assistant",
+                    stickerUrl,
+                    isMe = false,
+                    type = ChatMessage.TYPE_IMAGE,
+                    speakerId = speaker.id,
+                    speakerName = speaker.name,
+                    speakerEmoji = speaker.emoji
+                )
+            )
         }
         // 关系图谱：记录说话者对在场其他人的态度变化
         runCatching {

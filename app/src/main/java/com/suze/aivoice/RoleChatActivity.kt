@@ -636,6 +636,7 @@ class RoleChatActivity : AppCompatActivity() {
             val pocket = PocketPhone(this).awareLine()
             if (pocket.isNotBlank()) sb.append(pocket).append("\n")
         }
+        sb.append(StickerLibrary.localStickerRule()).append("\n")
         return sb.toString()
     }
     /**
@@ -814,9 +815,14 @@ class RoleChatActivity : AppCompatActivity() {
 
     private fun finishAssistant(text: String, c: RoleCharacter, session: Long = speechSession) {
         if (session != speechSession) return
+        val (stickerUrl, textNoSticker) = StickerLibrary.parseImageTag(text)
+        val shown = if (stickerUrl != null) textNoSticker else text
         if (history.isNotEmpty()) {
-            history[history.size - 1] = history[history.size - 1].copy(content = text)
-            adapter.updateLast(text)
+            history[history.size - 1] = history[history.size - 1].copy(content = shown)
+            adapter.updateLast(shown)
+        }
+        if (stickerUrl != null && (history.isEmpty() || history.last().type != ChatMessage.TYPE_IMAGE)) {
+            adapter.add(ChatMessage("assistant", stickerUrl, isMe = false, type = ChatMessage.TYPE_IMAGE))
         }
         // 情绪共振：把这一轮的用户语气与角色回复喂给情绪引擎（长期状态）
         runCatching {

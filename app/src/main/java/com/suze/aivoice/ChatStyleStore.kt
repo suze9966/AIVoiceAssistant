@@ -64,7 +64,15 @@ object ChatStyleStore {
             view.setImageBitmap(bmp)
             return
         }
-        val portrait = PortraitLibrary.resFor(Prefs(view.context).portraitId) ?: defaultRes
+        val prefs = Prefs(view.context)
+        val asset = PortraitLibrary.decodeAsset(view.context, PortraitLibrary.assetFor(prefs.portraitId))
+        if (asset != null) {
+            view.setPadding(0, 0, 0, 0)
+            view.scaleType = ImageView.ScaleType.CENTER_CROP
+            view.setImageBitmap(asset)
+            return
+        }
+        val portrait = PortraitLibrary.resFor(prefs.portraitId) ?: defaultRes
         view.setPadding(0, 0, 0, 0)
         view.scaleType = ImageView.ScaleType.CENTER_CROP
         view.setImageResource(portrait)

@@ -373,11 +373,11 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("panelRecallEnabled", true)
         set(v) = sp.edit().putBoolean("panelRecallEnabled", v).apply()
 
-    /** 主聊天精选立绘 id，对应 PortraitLibrary。 */
+    /** 主聊天头像库选中项，对应 PortraitLibrary（立绘或打包头像）。 */
     var portraitId: String
         get() {
             val saved = sp.getString("portraitId", PortraitLibrary.DEFAULT_ID) ?: PortraitLibrary.DEFAULT_ID
-            return if (PortraitLibrary.resFor(saved) != null) saved else PortraitLibrary.DEFAULT_ID
+            return if (PortraitLibrary.has(saved)) saved else PortraitLibrary.DEFAULT_ID
         }
         set(v) = sp.edit().putString("portraitId", v).apply()
 }
