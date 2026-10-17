@@ -815,7 +815,8 @@ class RoleChatActivity : AppCompatActivity() {
 
     private fun finishAssistant(text: String, c: RoleCharacter, session: Long = speechSession) {
         if (session != speechSession) return
-        val (stickerUrl, textNoSticker) = StickerLibrary.parseImageTag(text)
+        val (parsedUrl, textNoSticker) = StickerLibrary.parseImageTag(text)
+        val stickerUrl = parsedUrl ?: StickerLibrary.localStickerFor("HAPPY").ifBlank { null }
         val shown = if (stickerUrl != null) textNoSticker else text
         if (history.isNotEmpty()) {
             history[history.size - 1] = history[history.size - 1].copy(content = shown)

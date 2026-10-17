@@ -468,7 +468,8 @@ class GroupChatActivity : AppCompatActivity() {
 
     private fun finishSpeaker(text: String, speaker: RoleCharacter, session: Long) {
         if (session != speechSession) return
-        val (stickerUrl, textNoSticker) = StickerLibrary.parseImageTag(text)
+        val (parsedUrl, textNoSticker) = StickerLibrary.parseImageTag(text)
+        val stickerUrl = parsedUrl ?: StickerLibrary.localStickerFor("HAPPY").ifBlank { null }
         val shown = if (stickerUrl != null) textNoSticker else text
         if (history.isNotEmpty()) {
             history[history.size - 1] = history.last().copy(

@@ -68,6 +68,7 @@ class PocketPhoneActivity : AppCompatActivity() {
     private var musicJob: kotlinx.coroutines.Job? = null
     private var moveAnimator: ValueAnimator? = null
     private var sizeAnimator: ValueAnimator? = null
+    private var contentScale = 1f
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -111,8 +112,12 @@ class PocketPhoneActivity : AppCompatActivity() {
             input.setText("")
             if (current == null) openByWish(text) else play(text)
         }
+        scene.onIconClick = { index ->
+            phone.apps().getOrNull(index)?.let { showApp(it) }
+        }
         buildDock()
         showHome()
+        adaptContent(window.attributes.width, window.attributes.height, force = true)
         playEnter()
     }
 
@@ -128,9 +133,10 @@ class PocketPhoneActivity : AppCompatActivity() {
         return TextView(this).apply {
             text = "$icon $name"
             gravity = Gravity.CENTER
-            textSize = 12f
+            textSize = 12f * contentScale
             setTextColor(getColor(R.color.purple_700))
-            setPadding(16, 4, 16, 4)
+            val pad = (8f * resources.displayMetrics.density * contentScale).roundToInt()
+            setPadding(pad, pad / 4, pad, pad / 4)
             setOnClickListener { click() }
         }
     }
@@ -211,13 +217,14 @@ class PocketPhoneActivity : AppCompatActivity() {
             MotionEvent.ACTION_MOVE -> {
                 if (!resizing || baseW <= 0 || baseH <= 0) return true
                 val dm = resources.displayMetrics
-                val wantW = (baseW + (ev.rawX - startX)).coerceIn(minW().toFloat(), dm.widthPixels.toFloat())
-                val wantH = (baseH + (ev.rawY - startY)).coerceIn(minH().toFloat(), dm.heightPixels.toFloat())
-                val sx = wantW / baseW
-                val sy = wantH / baseH
-                pinchScale = ((sx + sy) / 2f).coerceIn(0.72f, 1.45f)
-                card.scaleX = pinchScale
-                card.scaleY = pinchScale
+                val wantW = (baseW + (ev.rawX - startX)).roundToInt().coerceIn(minW(), dm.widthPixels)
+                val wantH = (baseH + (ev.rawY - startY)).roundToInt().coerceIn(minH(), dm.heightPixels)
+                lp.width = wantW
+                lp.height = wantH
+                pinchScale = 1f
+                card.scaleX = 1f
+                card.scaleY = 1f
+                applyLayout(lp)
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> finishResize(lp)
         }
@@ -227,21 +234,12 @@ class PocketPhoneActivity : AppCompatActivity() {
     private fun finishResize(lp: WindowManager.LayoutParams) {
         if (!resizing) return
         resizing = false
-        val dm = resources.displayMetrics
-        val from = pinchScale.coerceIn(0.72f, 1.45f)
-        val targetW = (baseW * from).roundToInt().coerceIn(minW(), dm.widthPixels)
-        val targetH = (baseH * from).roundToInt().coerceIn(minH(), dm.heightPixels)
-        lp.width = targetW
-        lp.height = targetH
         card.animate().cancel()
         card.scaleX = 1f
         card.scaleY = 1f
-        applyLayout(lp)
-        card.scaleX = 0.985f
-        card.scaleY = 0.985f
-        card.animate().scaleX(1f).scaleY(1f).setDuration(180)
-            .setInterpolator(OvershootInterpolator(1.35f)).start()
         pinchScale = 1f
+        applyLayout(lp)
+        adaptContent(lp.width, lp.height, force = true)
     }
 
     private fun scaleBy(factor: Float) {
@@ -253,13 +251,9 @@ class PocketPhoneActivity : AppCompatActivity() {
         if (w <= 0 || h <= 0) return
         val targetW = (w * factor).roundToInt().coerceIn(minW(), dm.widthPixels)
         val targetH = (h * factor).roundToInt().coerceIn(minH(), dm.heightPixels)
-        card.pivotX = card.width / 2f
-        card.pivotY = card.height * 0.42f
         card.animate().cancel()
-        card.scaleX = (targetW.toFloat() / w).coerceIn(0.88f, 1.12f)
-        card.scaleY = (targetH.toFloat() / h).coerceIn(0.88f, 1.12f)
-        card.animate().scaleX(1f).scaleY(1f).setDuration(220)
-            .setInterpolator(OvershootInterpolator(1.15f)).start()
+        card.scaleX = 1f
+        card.scaleY = 1f
         animateSize(w, h, targetW, targetH)
     }
 
@@ -282,6 +276,12 @@ class PocketPhoneActivity : AppCompatActivity() {
                 cur.height = (fromH + (toH - fromH) * t).roundToInt()
                 applyLayout(cur)
             }
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    val cur = currentLp() ?: return
+                    adaptContent(cur.width, cur.height, force = true)
+                }
+            })
             start()
         }
     }
@@ -325,6 +325,113 @@ class PocketPhoneActivity : AppCompatActivity() {
         } else {
             window.attributes = lp
         }
+        adaptContent(lp.width, lp.height)
+    }
+
+    /** 窗口变大变小后，屏幕里的字、图标和场景一起变，不再停在原来的尺寸。 */
+    private fun adaptContent(width: Int, height: Int, force: Boolean = false) {
+        if (!::screen.isInitialized) return
+        val w = when {
+            width > 0 -> width
+            card.width > 0 -> card.width
+            else -> return
+        }
+        val h = when {
+            height > 0 -> height
+            card.height > 0 -> card.height
+            else -> return
+        }
+        val dm = resources.displayMetrics
+        val baseW = dm.widthPixels * 0.86f
+        val baseH = dm.heightPixels * 0.62f
+        if (baseW <= 0f || baseH <= 0f) return
+        val scale = (((w / baseW) + (h / baseH)) / 2f).coerceIn(0.52f, 1.75f)
+        if (!force && kotlin.math.abs(scale - contentScale) < 0.04f) return
+        contentScale = scale
+        val d = dm.density
+        fun px(dp: Float) = (dp * d * scale).roundToInt().coerceAtLeast(1)
+        fun box(view: View, dpW: Float, dpH: Float) {
+            val lp = view.layoutParams ?: return
+            lp.width = px(dpW)
+            lp.height = px(dpH)
+            view.layoutParams = lp
+        }
+        title.textSize = 16f * scale
+        status.textSize = 11f * scale
+        screen.textSize = 14f * scale
+        screen.setLineSpacing(3f * d * scale, 1f)
+        ops.textSize = 11f * scale
+        input.textSize = 13f * scale
+        input.minHeight = px(40f)
+        findViewById<TextView>(R.id.btnPocketBack)?.let {
+            it.textSize = 24f * scale
+            box(it, 40f, 40f)
+        }
+        findViewById<TextView>(R.id.btnPocketSmaller)?.let {
+            it.textSize = 20f * scale
+            box(it, 40f, 40f)
+        }
+        findViewById<TextView>(R.id.btnPocketBigger)?.let {
+            it.textSize = 20f * scale
+            box(it, 40f, 40f)
+        }
+        findViewById<TextView>(R.id.btnPocketPin)?.let {
+            it.textSize = 12f * scale
+            it.minHeight = px(40f)
+            it.setPadding(px(8f), 0, px(8f), 0)
+        }
+        findViewById<TextView>(R.id.btnPocketPlay)?.let {
+            it.textSize = 12f * scale
+            it.minHeight = px(40f)
+            it.setPadding(px(8f), 0, px(8f), 0)
+        }
+        findViewById<Button>(R.id.btnPocketSend)?.let {
+            it.textSize = 13f * scale
+            box(it, 52f, 40f)
+        }
+        listOf(R.id.btnPocketPrev, R.id.btnPocketPause, R.id.btnPocketNext).forEach { id ->
+            findViewById<TextView>(id)?.let {
+                it.textSize = 12f * scale
+                box(it, 64f, 36f)
+            }
+        }
+        findViewById<View>(R.id.headerBar)?.setPadding(px(10f), px(8f), px(8f), px(8f))
+        findViewById<View>(R.id.pocketScroll)?.let { scroll ->
+            (scroll.layoutParams as? ViewGroup.MarginLayoutParams)?.let {
+                it.topMargin = px(58f)
+                it.bottomMargin = px(132f)
+                scroll.layoutParams = it
+            }
+        }
+        (screen.parent as? View)?.setPadding(px(10f), px(6f), px(10f), px(8f))
+        (ops.layoutParams as? ViewGroup.MarginLayoutParams)?.let {
+            it.marginStart = px(8f)
+            it.marginEnd = px(44f)
+            it.bottomMargin = px(132f)
+            ops.layoutParams = it
+        }
+        findViewById<View>(R.id.appDock)?.let { dockBar ->
+            (dockBar.layoutParams as? ViewGroup.MarginLayoutParams)?.let {
+                it.height = px(44f)
+                it.bottomMargin = px(84f)
+                dockBar.layoutParams = it
+            }
+        }
+        findViewById<View>(R.id.bottomBar)?.let { bar ->
+            bar.setPadding(px(8f), px(4f), px(36f), px(8f))
+        }
+        findViewById<View>(R.id.pocketResize)?.let { handle ->
+            handle.setPadding(0, 0, 0, 0)
+            box(handle, 44f, 44f)
+            (handle as? TextView)?.textSize = 16f * scale
+        }
+        val chipPad = px(8f)
+        for (i in 0 until dock.childCount) {
+            val chip = dock.getChildAt(i) as? TextView ?: continue
+            chip.textSize = 12f * scale
+            chip.setPadding(chipPad, chipPad / 4, chipPad, chipPad / 4)
+        }
+        scene.setUiScale(scale)
     }
 
     private fun playEnter() {
@@ -445,8 +552,8 @@ class PocketPhoneActivity : AppCompatActivity() {
         title.text = getString(R.string.pocket_title)
         status.text = phone.clock() + "  ·  " + phone.battery() + "%"
         screen.typeface = Typeface.DEFAULT
-        scene.bind(null)
-        screen.text = phone.homeCard()
+        screen.text = ""
+        scene.bind(phone.homeScene())
         playerBar.visibility = View.GONE
         stopMusic()
     }

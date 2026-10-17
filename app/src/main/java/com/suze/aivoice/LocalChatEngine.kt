@@ -109,11 +109,11 @@ class LocalChatEngine(private val prefs: Prefs) {
             EmotionEngine.UserCue.ANGRY, EmotionEngine.UserCue.PRAISE,
             EmotionEngine.UserCue.MISS, EmotionEngine.UserCue.HAPPY
         ) || currentMood() == EmotionEngine.Mood.HAPPY
-        if (!strong) return line
-        // 问句 / 事实陈述不配图
-        if (!shouldEmoji(line)) return line
-        // 只偶尔发，别每次都甩图
-        if (Math.random() > 0.28) return line
+        val askedStatus = line.contains("发了一张状态表情") || line.contains("发了状态表情")
+        if (!strong && !askedStatus) return line
+        // 问句 / 事实陈述不配图；主人刚发来状态表情时一定回一张。
+        if (!askedStatus && !shouldEmoji(line)) return line
+        if (!askedStatus && Math.random() > 0.72) return line
         val mood = when (cue) {
             EmotionEngine.UserCue.TIRED -> "TIRED"
             EmotionEngine.UserCue.SAD -> "SAD"
@@ -121,7 +121,8 @@ class LocalChatEngine(private val prefs: Prefs) {
             EmotionEngine.UserCue.PRAISE, EmotionEngine.UserCue.MISS -> "SHY"
             else -> currentMood()?.name ?: "HAPPY"
         }
-        val s = StickerLibrary.localStickerFor(mood)
+        val replied = Regex("「([^」]{1,12})」").find(line)?.groupValues?.getOrNull(1).orEmpty()
+        val s = if (askedStatus && replied.isNotBlank()) StickerLibrary.replyPackFor(replied) else StickerLibrary.localStickerFor(mood)
         if (s.isBlank()) return line
         pendingSticker = s
         // 图片表情会单独占一条气泡，文字里的 emoji 就撤掉，
@@ -339,9 +340,10 @@ class LocalChatEngine(private val prefs: Prefs) {
 
     fun reply(history: List<ChatMessage>): String {
         val clean = history.filter {
-            it.type != ChatMessage.TYPE_IMAGE && it.content.isNotBlank()
+            it.content.isNotBlank()
         }
-        val lastUser = clean.lastOrNull { it.role == "user" }?.content.orEmpty()
+        val lastUserMsg = clean.lastOrNull { it.role == "user" }
+        val lastUser = lastUserMsg?.let { StickerLibrary.describeForModel(it) }.orEmpty()
         val lastAssistant = clean.lastOrNull { it.role == "assistant" }?.content.orEmpty()
         return replyTurn(lastUser, lastAssistant)
     }
@@ -360,6 +362,13 @@ class LocalChatEngine(private val prefs: Prefs) {
     private fun replyTurnInner(input: String, lastAssistant: String): String {
         turn++
         val text = input.trim()
+        if (text.contains("发了一张状态表情") || text.contains("发了状态表情")) {
+            val label = Regex("「([^」]{1,12})」").find(text)?.groupValues?.getOrNull(1).orEmpty()
+            return say(
+                if (label.isNotBlank()) pick("看到了，这张是「$label」。", "看到啦，「$label」这张我接着。", "嗯，这张「$label」我看见了。")
+                else pick("看到了，这张表情我接着。", "表情我看见了。", "看到啦，你发的这张我接着。")
+            )
+        }
         if (text.isEmpty()) {
             return say(
                 when (currentMood()) {

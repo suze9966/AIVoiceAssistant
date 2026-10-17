@@ -66,6 +66,24 @@ object StickerLibrary {
         return url to cleaned
     }
 
+    /** 把本地表情地址还原成状态名。对不上时返回空。 */
+    fun packLabel(url: String): String {
+        val file = url.substringAfterLast('/').substringBefore('?')
+        return statusPack.firstOrNull { it.second.equals(file, ignoreCase = true) }?.first.orEmpty()
+    }
+
+    /** 给模型看的文字。屏幕仍显示图片，模型只收到表情名。 */
+    fun describeForModel(message: ChatMessage): String {
+        if (message.type != ChatMessage.TYPE_IMAGE) return message.content
+        val label = packLabel(message.content)
+        val who = if (message.isMe) "主人" else "小沫"
+        return if (label.isNotBlank()) {
+            "（" + who + "发了一张状态表情：「" + label + "」。这是表情包，不是微信页面，要按这个名字接话。）"
+        } else {
+            "（" + who + "发了一张表情包。要承认看到了，再按语气接话。）"
+        }
+    }
+
     /** 按状态名或文件名取本地表情包地址。对不上返回 null。 */
     fun packUrl(raw: String): String? {
         val key = raw.trim()
@@ -159,6 +177,12 @@ object StickerLibrary {
      * 按心情挑一张**本地图片表情**。返回 `asset://emoji/xxxx_1F600.png` 形式的地址，
      * 交给 [ImageLoader] 从 APK 内置的 assets 里读，不联网。
      */
+    /** 主人刚发来的状态表情，回一张同名或挨着的状态图。 */
+    fun replyPackFor(label: String): String {
+        val hit = statusPack.firstOrNull { it.first == label.trim() } ?: statusPack.first()
+        return LOCAL_PREFIX + PACK_DIR + "/" + hit.second
+    }
+
     fun localStickerFor(mood: String?): String {
         // 按情绪给一组「候选 emoji」，再从面板里定位它们的下标，
         // 不依赖面板顺序，改动面板也不会错位。
@@ -193,10 +217,11 @@ object StickerLibrary {
         packNames(),
         "。想发时写 [sticker:已上吊] 这种，括号里必须是上面的名字之一。",
         "规矩：",
-        "1. 一条回复最多发一个图片表情；",
-        "2. 只在情绪比较强、或者主人点名要这张状态图时才发；",
-        "3. 报时间、报天气、念工具结果、解答问题、说明事实时不要发图；",
-        "4. 主人正在说正经事时，别乱发表情，先好好回话。"
+        "1. 闲聊、撒娇、安慰、接梗时，几乎每次都要发一张图片表情，标记单独放在回复最后一行；",
+        "2. 一条回复最多发一个；状态名只能用上面那九个，情绪表情用单个 emoji；",
+        "3. 主人发来状态表情，你要回一张对得上的状态表情，再补一句接话；",
+        "4. 报时间、报天气、念工具结果、解答问题、说明事实时不要发图；",
+        "5. 不要解释标记，也不要说自己不会发表情包。"
     ).joinToString("")
 
     // ---------------- 小沫自己的情绪表情（都取自 emojiPanel，保证不重复） ----------------

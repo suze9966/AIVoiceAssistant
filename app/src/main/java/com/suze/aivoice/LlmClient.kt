@@ -69,9 +69,12 @@ class LlmClient(private val prefs: Prefs) {
 
     /** 限制历史数量与单条长度，降低隐私暴露、异常流量和意外高额 token 消耗。 */
     private fun safeHistory(history: List<ChatMessage>): List<ChatMessage> = history
-        .filter { it.type != ChatMessage.TYPE_IMAGE && it.content.isNotBlank() }
+        .filter { it.content.isNotBlank() }
         .takeLast(MAX_HISTORY_MESSAGES)
-        .map { it.copy(content = SafeCut.takeUnitsSafe(it.content, MAX_MESSAGE_CHARS)) }
+        .map {
+            val text = if (it.type == ChatMessage.TYPE_IMAGE) StickerLibrary.describeForModel(it) else it.content
+            it.copy(type = ChatMessage.TYPE_TEXT, content = SafeCut.takeUnitsSafe(text, MAX_MESSAGE_CHARS))
+        }
 
     private fun composeSystem(): String {
         var sys = systemPromptOverride?.takeIf { it.isNotBlank() } ?: prefs.systemPrompt

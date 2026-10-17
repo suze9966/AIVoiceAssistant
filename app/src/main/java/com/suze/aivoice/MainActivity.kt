@@ -997,18 +997,19 @@ class MainActivity : AppCompatActivity() {
         streamSpeakStarted = false
         lastQueuedSpeech = ""
 
+        val stickerTurn = !appendUser && userText.contains("发了状态表情")
         // ⚡ 本地口令：天气 / 提醒 / 搜索，先拦截再走大模型
-        val wxCity = detectWeatherQuery(userText)
+        val wxCity = if (stickerTurn) null else detectWeatherQuery(userText)
         if (wxCity != null) {
             isSending = false
             requestWeather(wxCity)
             return
         }
-        if (handleChatMusic(userText)) {
+        if (!stickerTurn && handleChatMusic(userText)) {
             isSending = false
             return
         }
-        val command = VoiceCommandParser.parse(userText)
+        val command = if (stickerTurn) null else VoiceCommandParser.parse(userText)
         if (command != null) {
             isSending = false
             handleVoiceCommand(userText, command)
@@ -1028,10 +1029,13 @@ class MainActivity : AppCompatActivity() {
             refreshMoodSubtitle()
         }
         // ② 思考引擎：记录经历（供反思使用）
-        if (prefs.mindEnabled) mind.record("主人说：" + SafeCut.takeUnitsSafe(userText, 200))
+        if (prefs.mindEnabled) {
+            val noted = if (stickerTurn) userText else "主人说：" + userText
+            mind.record(SafeCut.takeUnitsSafe(noted, 200))
+        }
 
         // ③ 人设：接上茬闲聊；认真提问才开云端推理，闲聊仍直接开口
-        llm.applyCloudThink = KnowledgeAssist.needsWeb(userText)
+        llm.applyCloudThink = !stickerTurn && KnowledgeAssist.needsWeb(userText)
         llm.toolsEnabled = true
         llm.systemPromptOverride = prefs.chattingPersona()
 
@@ -1127,7 +1131,7 @@ class MainActivity : AppCompatActivity() {
                 if (textNoSticker.isNotBlank()) textNoSticker else "（发了一张表情包）"
             } else finalText
             // 本地闲聊时按情绪决定要发的图片表情（云端已用 [sticker:] 标记时以云端为准）
-            val sticker = stickerUrl ?: llm.takeLocalSticker()
+            val sticker = stickerUrl ?: llm.takeLocalSticker() ?: fallbackChatSticker(userText, finalText)
             val spokenRaw = rawText
             val spokenFinal = finalText
             if (prefs.mindEnabled && thought.isNotBlank()) {
@@ -1249,6 +1253,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** 云端忘了写表情标记时，闲聊仍补一张；问事实、报天气不补。 */
+    private fun fallbackChatSticker(userText: String, reply: String): String? {
+        val factual = detectWeatherQuery(userText) != null ||
+            VoiceCommandParser.parse(userText) != null ||
+            KnowledgeAssist.needsWeb(userText)
+        if (factual) return null
+        val sent = Regex("发了状态表情「([^」]{1,12})」").find(userText)?.groupValues?.getOrNull(1).orEmpty()
+        if (sent.isNotBlank()) return StickerLibrary.replyPackFor(sent)
+        if (reply.length > 80 && !reply.contains("呀") && !reply.contains("啦") && !reply.contains("～")) return null
+        val mood = if (::emotion.isInitialized) emotion.currentMood()?.name else "HAPPY"
+        return StickerLibrary.localStickerFor(mood).ifBlank { null }
+    }
+
     /** 主人点状态表情时，直接发图片气泡，不走大模型。 */
     private fun sendStatusSticker(name: String) {
         if (isSending) return
@@ -1257,6 +1274,7 @@ class MainActivity : AppCompatActivity() {
         adapter.add(ChatMessage("user", url, isMe = true, type = ChatMessage.TYPE_IMAGE))
         scrollToBottom()
         persistHistory()
+        sendToLlm("我发了状态表情「" + name + "」，你看到了就按这个接话。", appendUser = false)
     }
 
     /** 发送一个 emoji 表情（以大字号气泡显示） */

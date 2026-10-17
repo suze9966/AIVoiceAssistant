@@ -63,23 +63,17 @@ class PocketPhone(private val context: Context) {
         return e.moodEmoji() + " " + e.emotionPrompt().lineSequence().firstOrNull().orEmpty().take(24)
     }
 
-    fun homeCard(): String {
-        val sb = StringBuilder()
-        sb.append(clock()).append("          ").append(battery()).append("%\n")
-        sb.append(ownerName()).append("的小手机\n")
-        sb.append(moodLine()).append("\n\n")
-        apps().chunked(3).forEach { row ->
-            sb.append(row.joinToString("   ") { it.icon + it.name }).append("\n")
-        }
-        val latest = feeds().take(2)
-        if (latest.isNotEmpty()) {
-            sb.append("\n最近\n")
-            latest.forEach { f ->
-                val line = readable(f.body).lineSequence().firstOrNull { it.isNotBlank() }.orEmpty()
-                if (line.isNotBlank()) sb.append("· ").append(line.take(22)).append("\n")
-            }
-        }
-        return sb.toString().trim()
+    fun homeCard(): String = homeScene().lines.joinToString("\n")
+
+    /** 解锁后的手机桌面：状态栏加图标格子，不是一段文字。 */
+    fun homeScene(): SceneCardView.Model {
+        val lines = mutableListOf(
+            clock(),
+            battery().toString() + "%",
+            ownerName() + "的小手机"
+        )
+        apps().forEach { lines.add(it.icon + " " + it.name) }
+        return SceneCardView.Model("home", "桌面", lines)
     }
 
     fun findFormat(app: App): FormatEntry? {
@@ -94,7 +88,7 @@ class PocketPhone(private val context: Context) {
             ?: list.firstOrNull { key.contains("微信") && it.title.contains("微信") && !it.title.contains("朋友圈") }
     }
 
-    /** 小窗里直接画的那一页。桌面不画卡片。 */
+    /** 小窗里直接画的那一页。桌面走 homeScene。 */
     fun sceneFor(app: App, extra: String = ""): SceneCardView.Model {
         val clean = readable(extra)
         val saved = feeds().firstOrNull { it.appId == app.id }?.body.orEmpty()

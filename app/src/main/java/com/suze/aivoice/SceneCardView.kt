@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.util.AttributeSet
+import android.view.MotionEvent
 import android.view.View
 
 /**
@@ -25,7 +26,21 @@ class SceneCardView @JvmOverloads constructor(
     )
 
     private var model: Model? = null
-    private val density = resources.displayMetrics.density
+    var onIconClick: ((Int) -> Unit)? = null
+    private val iconHits = ArrayList<Pair<RectF, Int>>()
+    private val baseDensity = resources.displayMetrics.density
+    private var density = baseDensity
+    private var uiScale = 1f
+
+    /** 小窗放大缩小时，画面里的字和图形跟窗口一起变。聊天气泡不调用，保持原尺寸。 */
+    fun setUiScale(scale: Float) {
+        val next = scale.coerceIn(0.52f, 1.75f)
+        if (kotlin.math.abs(density - baseDensity * next) < 0.02f) return
+        uiScale = next
+        density = baseDensity * next
+        requestLayout()
+        invalidate()
+    }
     private val bg = Paint(Paint.ANTI_ALIAS_FLAG)
     private val card = Paint(Paint.ANTI_ALIAS_FLAG)
     private val ink = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -49,8 +64,21 @@ class SceneCardView @JvmOverloads constructor(
     fun bind(next: Model?) {
         model = next
         visibility = if (next == null) GONE else VISIBLE
+        isClickable = next?.kind == "home"
         requestLayout()
         invalidate()
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (model?.kind != "home") return super.onTouchEvent(event)
+        if (event.actionMasked == MotionEvent.ACTION_UP) {
+            val hit = iconHits.firstOrNull { it.first.contains(event.x, event.y) }
+            if (hit != null) {
+                onIconClick?.invoke(hit.second)
+                return true
+            }
+        }
+        return true
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -62,6 +90,7 @@ class SceneCardView @JvmOverloads constructor(
             else -> fallback
         }
         val h = if (m == null) 0 else when (m.kind) {
+            "home" -> (300 * density).toInt()
             "player" -> (168 * density).toInt()
             "moments", "profile", "browser" -> (168 * density).toInt()
             "system", "danmaku" -> (150 * density).toInt()
@@ -75,6 +104,7 @@ class SceneCardView @JvmOverloads constructor(
         val r = RectF(0f, 0f, width.toFloat(), height.toFloat())
         val rad = 16f * density
         bg.color = when (m.kind) {
+            "home" -> Color.parseColor("#7EB6E8")
             "system" -> Color.parseColor("#07110A")
             "profile", "browser", "contacts" -> Color.parseColor("#F4F4F4")
             "note" -> Color.parseColor("#FFF8E8")
@@ -82,6 +112,7 @@ class SceneCardView @JvmOverloads constructor(
         }
         canvas.drawRoundRect(r, rad, rad, bg)
         when (m.kind) {
+            "home" -> drawHome(canvas, m)
             "player" -> drawPlayer(canvas, m)
             "moments" -> drawMoments(canvas, m)
             "chat" -> drawChat(canvas, m)
@@ -93,6 +124,77 @@ class SceneCardView @JvmOverloads constructor(
             "danmaku" -> drawDanmaku(canvas, m)
             "forum" -> drawForum(canvas, m)
             else -> drawPlain(canvas, m)
+        }
+    }
+
+    private fun drawHome(canvas: Canvas, m: Model) {
+        iconHits.clear()
+        val clock = line(m, 0, "12:00")
+        val battery = line(m, 1, "80%")
+        val owner = line(m, 2, "苏泽的小手机")
+        ink.color = Color.WHITE
+        ink.textSize = 22f * density
+        ink.typeface = Typeface.DEFAULT_BOLD
+        canvas.drawText(cut(clock, 8), 16f * density, 36f * density, ink)
+        ink.textSize = 12f * density
+        ink.typeface = Typeface.DEFAULT
+        val batt = cut(battery, 6)
+        val battW = ink.measureText(batt)
+        canvas.drawText(batt, width - 16f * density - battW, 28f * density, ink)
+        mute.color = Color.parseColor("#F4FBFF")
+        mute.textSize = 12f * density
+        canvas.drawText(cut(owner, 16), 16f * density, 54f * density, mute)
+        val apps = m.lines.drop(3)
+        if (apps.isEmpty()) return
+        val cols = 3
+        val top = 72f * density
+        val cellW = width / cols.toFloat()
+        val cellH = 72f * density
+        val colors = intArrayOf(
+            Color.parseColor("#3A8DFF"),
+            Color.parseColor("#F0A36B"),
+            Color.parseColor("#7BC47F"),
+            Color.parseColor("#C98AD6"),
+            Color.parseColor("#5BC0DE"),
+            Color.parseColor("#E07A5F"),
+            Color.parseColor("#6F8CFF"),
+            Color.parseColor("#E8B84A"),
+            Color.parseColor("#4FA3E3")
+        )
+        apps.forEachIndexed { i, raw ->
+            val col = i % cols
+            val row = i / cols
+            val cx = cellW * col + cellW / 2f
+            val cy = top + row * cellH + 16f * density
+            val icon = raw.takeWhile { !it.isWhitespace() }.ifBlank { "·" }
+            val name = raw.dropWhile { !it.isWhitespace() }.trim().ifBlank { raw }
+            card.color = colors[i % colors.size]
+            canvas.drawRoundRect(
+                cx - 18f * density,
+                cy - 16f * density,
+                cx + 18f * density,
+                cy + 16f * density,
+                10f * density,
+                10f * density,
+                card
+            )
+            ink.color = Color.WHITE
+            ink.textSize = 14f * density
+            ink.typeface = Typeface.DEFAULT
+            val iconW = ink.measureText(icon)
+            canvas.drawText(icon, cx - iconW / 2f, cy + 5f * density, ink)
+            ink.color = Color.parseColor("#F7FBFF")
+            ink.textSize = 11f * density
+            val nameW = ink.measureText(cut(name, 4))
+            canvas.drawText(cut(name, 4), cx - nameW / 2f, cy + 30f * density, ink)
+            iconHits.add(
+                RectF(
+                    cellW * col,
+                    top + row * cellH,
+                    cellW * (col + 1),
+                    top + (row + 1) * cellH
+                ) to i
+            )
         }
     }
 
