@@ -658,7 +658,12 @@ class FormatStore(private val context: Context) {
             }
             val page = pageHex?.let { argb(it) } ?: 0
             val accent = (namedLine ?: mid.firstOrNull() ?: dark.lastOrNull() ?: hexes.first()).let { argb(it) }
-            val ink = (namedLine ?: if (paperLuma < 120000) light.firstOrNull() else dark.firstOrNull() ?: hexes.first()).let { argb(it) }
+            val inkHex = namedLine ?: if (paperLuma < 120000) {
+                light.firstOrNull()
+            } else {
+                dark.firstOrNull() ?: hexes.firstOrNull()
+            }
+            val ink = inkHex?.let { argb(it) } ?: 0
             return BeautyLook(ink, paper, accent, page)
         }
 

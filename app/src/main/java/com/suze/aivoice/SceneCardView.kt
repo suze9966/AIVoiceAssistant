@@ -1401,10 +1401,13 @@ class SceneCardView @JvmOverloads constructor(
         }
     }
 
-    private fun pageColors(frame: String): IntArray = when (frame) {
-        "wxhome" -> intArrayOf("#E8F0FE", "#FDE8E8", "#F0E8F8", "#FEF8E8", "#E8F8EE").map { Color.parseColor(it) }.toIntArray()
-        "wxbook" -> intArrayOf("#F7941D", "#F5A623", "#07C160", "#2772E6", "#2185F5", "#00A5E0", "#2478E8").map { Color.parseColor(it) }.toIntArray()
-        else -> intArrayOf("#D8E8F0", "#F0D8E8", "#E8F0FE").map { Color.parseColor(it) }.toIntArray()
+    private fun pageColors(frame: String): IntArray {
+        val hexes = when (frame) {
+            "wxhome" -> arrayOf("#E8F0FE", "#FDE8E8", "#F0E8F8", "#FEF8E8", "#E8F8EE")
+            "wxbook" -> arrayOf("#F7941D", "#F5A623", "#07C160", "#2772E6", "#2185F5", "#00A5E0", "#2478E8")
+            else -> arrayOf("#D8E8F0", "#F0D8E8", "#E8F0FE")
+        }
+        return IntArray(hexes.size) { Color.parseColor(hexes[it]) }
     }
 
     private fun notePalette(): List<IntArray> {
