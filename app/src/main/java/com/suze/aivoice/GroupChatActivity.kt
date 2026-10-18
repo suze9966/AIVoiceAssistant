@@ -252,6 +252,17 @@ class GroupChatActivity : AppCompatActivity() {
             .setTitle(R.string.menu_scene_title)
             .setItems(labels) { _, which ->
                 val e = list.getOrNull(which) ?: return@setItems
+                val card = FormatStore.previewCard(e)
+                if (card != null) {
+                    formats.enableOnly(e.id)
+                    val hint = getString(R.string.scene_prompt_hint, e.title)
+                    history.add(ChatMessage("user", hint, isMe = true))
+                    history.add(ChatMessage("assistant", card, isMe = false))
+                    adapter.replaceAll(history)
+                    persistChat()
+                    Toast.makeText(this, "「" + e.title + "」已经换成这套样式了", Toast.LENGTH_SHORT).show()
+                    return@setItems
+                }
                 formats.useOnce(e.id)
                 if (editInput.text.isNullOrBlank()) {
                     editInput.setText(getString(R.string.scene_prompt_hint, e.title))

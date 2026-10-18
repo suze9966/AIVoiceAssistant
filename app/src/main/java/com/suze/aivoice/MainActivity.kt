@@ -1808,10 +1808,22 @@ class MainActivity : AppCompatActivity() {
             replyLocal(userText, getString(R.string.toast_format_export_ok))
             return
         }
-        // 全部启用 / 停用
+        // 全部启用 / 停用。美化卡同一时间只留一套，避免换机后又套回固定样式。
         if (cmd.all && cmd.enable != null) {
             val on = cmd.enable
-            formats.load().forEach { formats.setEnabled(it.id, on) }
+            val list = formats.load()
+            if (on) {
+                val keep = list.firstOrNull { FormatStore.isBeauty(it) }
+                list.forEach { e ->
+                    if (FormatStore.isBeauty(e)) {
+                        if (keep != null && e.id == keep.id) formats.enableOnly(e.id)
+                    } else {
+                        formats.setEnabled(e.id, true)
+                    }
+                }
+            } else {
+                list.forEach { formats.setEnabled(it.id, false) }
+            }
             replyLocal(
                 userText,
                 if (on) getString(R.string.toast_format_all_on) else getString(R.string.toast_format_all_off)
@@ -1858,7 +1870,7 @@ class MainActivity : AppCompatActivity() {
                 replyLocal(userText, getString(R.string.toast_format_missing, cmd.name.orEmpty()))
                 return
             }
-            formats.setEnabled(e.id, cmd.enable)
+            if (cmd.enable) formats.enableOnly(e.id) else formats.setEnabled(e.id, false)
             replyLocal(
                 userText,
                 if (cmd.enable) getString(R.string.toast_format_on, e.title)
@@ -1870,7 +1882,7 @@ class MainActivity : AppCompatActivity() {
         if (!cmd.name.isNullOrBlank()) {
             val e = formats.find(cmd.name)
             if (e != null) {
-                formats.setEnabled(e.id, true)
+                formats.enableOnly(e.id)
                 replyLocal(userText, getString(R.string.toast_format_on, e.title))
                 return
             }
@@ -1957,7 +1969,7 @@ class MainActivity : AppCompatActivity() {
             .setTitle("格式库（${list.count { it.enabled }} / ${list.size} 已启用）")
             .setItems(rows.toTypedArray()) { _, which ->
                 val entry = list.getOrNull(which) ?: return@setItems
-                formats.setEnabled(entry.id, !entry.enabled)
+                if (entry.enabled) formats.setEnabled(entry.id, false) else formats.enableOnly(entry.id)
                 Toast.makeText(
                     this,
                     if (!entry.enabled) getString(R.string.toast_format_on, entry.title)
@@ -2237,8 +2249,9 @@ class MainActivity : AppCompatActivity() {
         }
         val card = FormatStore.previewCard(entry)
         if (card != null) {
+            formats.enableOnly(entry.id)
             replyLocal(hint, card)
-            Toast.makeText(this, "「" + entry.title + "」已经画出来了，右下角可以拖大小", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "「" + entry.title + "」已经换成这套样式了，右下角可以拖大小", Toast.LENGTH_SHORT).show()
             return
         }
         formats.useOnce(entry.id)

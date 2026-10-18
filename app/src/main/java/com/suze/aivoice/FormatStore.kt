@@ -42,12 +42,12 @@ class FormatStore(private val context: Context) {
         val names = context.assets.list("formats")?.toList().orEmpty()
             .filter { it.endsWith(".txt") || it.endsWith(".md") }
             .sortedWith(compareBy({ if (it.any { ch -> ch.code > 0x2E80 }) 1 else 0 }, { it }))
-        names.mapNotNull { n ->
+        names.flatMap { n ->
             val text = runCatching {
                 context.assets.open("formats/$n").bufferedReader().use { it.readText() }
-            }.getOrNull() ?: return@mapNotNull null
-            if (text.isBlank()) return@mapNotNull null
-            FormatEntry(
+            }.getOrNull() ?: return@flatMap emptyList()
+            if (text.isBlank()) return@flatMap emptyList()
+            val base = FormatEntry(
                 id = "builtin:$n",
                 title = titleOf(text, n),
                 content = text,
@@ -55,8 +55,31 @@ class FormatStore(private val context: Context) {
                 builtin = true,
                 trigger = triggerOf(text)
             )
+            listOf(base) + skinEntries(n, text)
         }
     } catch (_: Exception) { emptyList() }
+
+    /** 一份原文里写了多套皮肤时，拆成可单独点选的条目，避免永远只命中第一套。 */
+    private fun skinEntries(fileName: String, text: String): List<FormatEntry> {
+        val oval = listOf("草莓炼乳", "薄荷小熊", "布丁狗", "紫薯麻薯", "橘子果酱")
+        val bubbles = listOf("绿色气泡", "白色气泡")
+        val found = when {
+            text.contains("请回复编号") -> oval.filter { text.contains(it) }
+            text.contains("基础气泡") -> bubbles.filter { text.contains(it) }
+            else -> emptyList()
+        }
+        if (found.size < 2) return emptyList()
+        return found.map { name ->
+            FormatEntry(
+                id = "builtin:$fileName#skin:$name",
+                title = "皮肤·$name",
+                content = "皮肤·$name\n" + text,
+                enabled = false,
+                builtin = true,
+                trigger = "点选后只使用$name"
+            )
+        }
+    }
 
     /** 取原文里最适合当标题的一行（优先含中文、且不是纯 LaTeX 记号的行）。 */
     private fun titleOf(text: String, fallback: String): String {
@@ -126,7 +149,7 @@ class FormatStore(private val context: Context) {
                 b.copy(
                     enabled = enabledMap[b.id] ?: b.enabled,
                     // 主人若改过内置条的标题/触发说明，尊重主人的
-                    title = saved?.title?.takeIf { it.isNotBlank() } ?: b.title,
+                    title = if (b.id.contains("#skin:")) b.title else saved?.title?.takeIf { it.isNotBlank() } ?: b.title,
                     trigger = saved?.trigger ?: b.trigger
                 )
             )
@@ -182,6 +205,28 @@ class FormatStore(private val context: Context) {
         list.removeAll { it.id == id }
         if (list.size == n) return false
         save(list)
+        return true
+    }
+
+    /** 美化卡同一时间只留一套。换样式时关掉其他美化，避免换机后还套着上一张。 */
+    fun enableOnly(id: String): Boolean {
+        val list = loadRef()
+        val hit = list.indexOfFirst { it.id == id }
+        if (hit < 0) return false
+        if (!isBeauty(list[hit])) return setEnabled(id, true)
+        var changed = false
+        for (i in list.indices) {
+            val on = i == hit
+            if (isBeauty(list[i]) && list[i].enabled != on) {
+                list[i] = list[i].copy(enabled = on)
+                changed = true
+            }
+        }
+        if (!list[hit].enabled) {
+            list[hit] = list[hit].copy(enabled = true)
+            changed = true
+        }
+        if (changed) save(list)
         return true
     }
 
@@ -404,7 +449,6 @@ class FormatStore(private val context: Context) {
             .filter { it.isNotEmpty() }
             .map { it.removePrefix("- ").removePrefix("· ").trim() }
             .filter { it.isNotEmpty() && !it.startsWith("\\") }
-            .take(8)
             .toList()
         if (linesOut.isEmpty()) return null
         val title = when {
@@ -414,7 +458,26 @@ class FormatStore(private val context: Context) {
             entry.title.isNotBlank() -> entry.title.take(16)
             else -> "聊天美化"
         }
-        return SceneCardView.Model("beauty", title, linesOut)
+        return beautyModelOf(title, linesOut, entry.content)
+    }
+
+    /** 从当前启用的美化指令里取色。换机后也能跟这台手机一样换样式。 */
+    private fun beautyModelOf(title: String, lines: List<String>, source: String): SceneCardView.Model {
+        val look = beautyLook(source)
+        val face = beautyFace(source, title)
+        return SceneCardView.Model(
+            "beauty",
+            title,
+            lines,
+            look.ink,
+            look.paper,
+            look.accent,
+            look.page,
+            face.frame,
+            face.ornament,
+            face.corner,
+            face.skin
+        )
     }
 
 
@@ -452,7 +515,7 @@ class FormatStore(private val context: Context) {
             return SceneCardView.Model(head.second, head.first, sceneLines(raw, head.first))
         }
 
-        private fun isBeauty(entry: FormatEntry): Boolean {
+        fun isBeauty(entry: FormatEntry): Boolean {
             val blob = entry.title + "\n" + entry.content.take(800)
             return blob.contains("美化") || blob.contains("核心排版") || blob.contains("ovalbox") || blob.contains("气泡")
         }
@@ -461,8 +524,15 @@ class FormatStore(private val context: Context) {
         fun previewCard(entry: FormatEntry): String? {
             if (!isBeauty(entry)) return null
             val model = beautyFrom(entry)
-            val body = model.lines.take(6).joinToString("|")
-            return "[[scene:beauty|" + model.title + if (body.isBlank()) "]]" else "|$body]]"
+            val body = model.lines.take(24).joinToString("|")
+            val colors = listOf(model.inkColor, model.paperColor, model.accentColor, model.pageColor)
+                .joinToString(",") { if (it == 0) "0" else String.format("#%06X", 0xFFFFFF and it) }
+            val style = "style:" + model.frame.ifBlank { "card" } + "," +
+                model.ornament.replace(",", " ") + "," +
+                model.corner.replace(",", " ") + "," +
+                model.skin.replace(",", " ")
+            val tail = if (body.isBlank()) "]]" else "|$body]]"
+            return "[[scene:beauty|" + model.title + "|colors:" + colors + "|" + style + tail
         }
 
         private fun beautyFrom(entry: FormatEntry): SceneCardView.Model {
@@ -475,8 +545,26 @@ class FormatStore(private val context: Context) {
             }
             val lines = readableFields(entry.content).ifEmpty {
                 listOf("核心排版规则", "颜色与样式约束", "AI发言边界", "消息与气泡格式")
-            }.take(8)
-            return SceneCardView.Model("beauty", title, lines)
+            }
+            return beautyLookModel(title, lines, entry.content)
+        }
+
+        private fun beautyLookModel(title: String, lines: List<String>, source: String): SceneCardView.Model {
+            val look = beautyLook(source)
+            val face = beautyFace(source, title)
+            return SceneCardView.Model(
+                "beauty",
+                title,
+                lines,
+                look.ink,
+                look.paper,
+                look.accent,
+                look.page,
+                face.frame,
+                face.ornament,
+                face.corner,
+                face.skin
+            )
         }
 
         /** 格式指令被原样贴进气泡时，收成可拖大的美化框，不再裁成一小块规则标题。 */
@@ -504,7 +592,7 @@ class FormatStore(private val context: Context) {
             val lines = (rules.ifEmpty { heads }).ifEmpty {
                 listOf("核心排版规则", "颜色与样式约束", "AI发言边界", "消息与气泡格式")
             }
-            return SceneCardView.Model("beauty", title, lines)
+            return beautyLookModel(title, lines, raw)
         }
 
         /** 气泡认得出的场景标记：[[scene:player|正在听|梦哑|任然]] */
@@ -514,7 +602,170 @@ class FormatStore(private val context: Context) {
             if (kind !in setOf("player", "moments", "chat", "profile", "browser", "contacts", "note", "system", "danmaku", "forum", "plain", "beauty")) return null
             val parts = m.groupValues[2].split("|").map { it.trim() }.filter { it.isNotEmpty() }
             if (parts.isEmpty()) return null
-            return SceneCardView.Model(kind, parts.first(), parts.drop(1).take(6))
+            val colorPart = parts.firstOrNull { it.startsWith("colors:") }
+            val stylePart = parts.firstOrNull { it.startsWith("style:") }
+            val body = parts.filterNot { it.startsWith("colors:") || it.startsWith("style:") }
+            if (body.isEmpty()) return null
+            val look = parseColorPack(colorPart)
+            val face = parseStylePack(stylePart)
+            return SceneCardView.Model(
+                kind,
+                body.first(),
+                if (kind == "beauty") body.drop(1) else body.drop(1).take(6),
+                look.ink,
+                look.paper,
+                look.accent,
+                look.page,
+                face.frame,
+                face.ornament,
+                face.corner,
+                face.skin
+            )
+        }
+
+        private data class BeautyLook(
+            val ink: Int = 0,
+            val paper: Int = 0,
+            val accent: Int = 0,
+            val page: Int = 0
+        )
+
+        /** 从格式原文的色码里取一套能换的样式。没有色码就留给绘制用默认紫色。 */
+        private fun beautyLook(raw: String): BeautyLook {
+            val hexes = Regex("#([0-9A-Fa-f]{6})").findAll(raw).map { it.groupValues[1].uppercase() }.distinct().toList()
+            if (hexes.isEmpty()) return BeautyLook()
+            fun argb(hex: String): Int = (0xFF000000 or hex.toLong(16)).toInt()
+            fun luma(hex: String): Int {
+                val n = hex.toInt(16)
+                val r = (n shr 16) and 0xFF
+                val g = (n shr 8) and 0xFF
+                val b = n and 0xFF
+                return r * 299 + g * 587 + b * 114
+            }
+            val dark = hexes.filter { luma(it) < 90000 }
+            val light = hexes.filter { luma(it) >= 180000 }
+            val mid = hexes.filter { luma(it) in 90000..179999 }
+            val box = Regex("\\\\colorbox\\{#([0-9A-Fa-f]{6})\\}").find(raw)?.groupValues?.getOrNull(1)?.uppercase()
+            val namedInk = Regex("文字(?:颜色|色)?[^#\n]{0,12}#([0-9A-Fa-f]{6})").find(raw)?.groupValues?.getOrNull(1)?.uppercase()
+            val namedLine = Regex("(?:线条|框色|椭圆框)[^#\n]{0,16}#([0-9A-Fa-f]{6})").find(raw)?.groupValues?.getOrNull(1)?.uppercase()
+            val paperHex = box ?: light.firstOrNull() ?: light.lastOrNull()
+            val paper = paperHex?.let { argb(it) } ?: 0
+            val paperLuma = paperHex?.let { luma(it) } ?: 200000
+            val pageHex = namedInk ?: if (paperLuma < 120000) {
+                light.firstOrNull { it != paperHex } ?: mid.firstOrNull { it != paperHex } ?: hexes.firstOrNull { it != paperHex }
+            } else {
+                dark.firstOrNull { it != paperHex } ?: mid.firstOrNull { it != paperHex }
+            }
+            val page = pageHex?.let { argb(it) } ?: 0
+            val accent = (namedLine ?: mid.firstOrNull() ?: dark.lastOrNull() ?: hexes.first()).let { argb(it) }
+            val ink = (namedLine ?: if (paperLuma < 120000) light.firstOrNull() else dark.firstOrNull() ?: hexes.first()).let { argb(it) }
+            return BeautyLook(ink, paper, accent, page)
+        }
+
+        private data class BeautyFace(
+            val frame: String = "card",
+            val ornament: String = "",
+            val corner: String = "",
+            val skin: String = ""
+        )
+
+        /** 从导入原文里认出框型、装饰圈、角标和皮肤，不再把所有美化画成同一张编号卡。 */
+        private fun beautyFace(raw: String, title: String): BeautyFace {
+            val blob = title + "\n" + raw.take(2400)
+            val page = wechatPage(blob)
+            val skin = skinOf(blob)
+            val frame = when {
+                page.isNotEmpty() -> page
+                blob.contains("便签") -> "note"
+                skin == "role" -> "role"
+                blob.contains("系统管理员") || blob.contains("赛博") || blob.contains("控制台") -> "terminal"
+                skin == "wing" || skin == "bunny" || skin == "face" -> skin
+                blob.contains("双语") -> "bilingual"
+                blob.contains("基础气泡") -> "basic"
+                blob.contains("仿微信") || blob.contains("已读") || blob.contains("fcolorbox") -> "wechat"
+                blob.contains("ovalbox") -> "oval"
+                blob.contains("colorbox") || blob.contains("❋") || blob.contains("✦") || blob.contains("◈") -> "ornament"
+                else -> "card"
+            }
+            val ornament = ornamentOf(blob, frame)
+            val corner = when {
+                raw.contains("sy.") -> "sy."
+                raw.contains("【 系统时间") -> "系统时间"
+                raw.contains("已读") -> "已读"
+                else -> ""
+            }
+            return BeautyFace(frame, ornament, corner, skin)
+        }
+
+        private fun wechatPage(blob: String): String = when {
+            blob.contains("朋友圈编辑") || blob.contains("这一刻的想法") -> "wxedit"
+            blob.contains("特定好友") || blob.contains("个性签名") -> "wxfriend"
+            blob.contains("仿朋友圈") || (blob.contains("文游美化") && blob.contains("朋友圈")) -> "wxmoments"
+            blob.contains("聊天详情") || blob.contains("查找聊天内容") -> "wxdetail"
+            blob.contains("聊天页面") || blob.contains("简易版") -> "wxchat"
+            blob.contains("添加朋友") || blob.contains("账号/手机号") -> "wxadd"
+            blob.contains("通讯录页面") || blob.contains("新的朋友") -> "wxbook"
+            blob.contains("发现页面") || blob.contains("听一听") -> "wxfind"
+            blob.contains("我_页面") || blob.contains("“我”页面") || blob.contains("\"我\"页面") || (blob.contains("微信号") && blob.contains("服务")) -> "wxme"
+            blob.contains("主页") && blob.contains("微信") -> "wxhome"
+            else -> ""
+        }
+
+        private fun skinOf(blob: String): String = when {
+            blob.contains("皮肤·草莓炼乳") -> "berry"
+            blob.contains("皮肤·薄荷小熊") -> "mint"
+            blob.contains("皮肤·布丁狗") -> "pudding"
+            blob.contains("皮肤·紫薯麻薯") -> "taro"
+            blob.contains("皮肤·橘子果酱") -> "orange"
+            blob.contains("香芋紫") || blob.contains("聊天美化 2.0") || blob.contains("聊天美化2.0") || blob.contains("2_0") -> "taro"
+            blob.contains("草莓炼乳") && !blob.contains("请回复编号") -> "berry"
+            blob.contains("薄荷小熊") && !blob.contains("请回复编号") -> "mint"
+            blob.contains("布丁狗") && !blob.contains("请回复编号") -> "pudding"
+            blob.contains("紫薯麻薯") && !blob.contains("请回复编号") -> "taro"
+            blob.contains("橘子果酱") && !blob.contains("请回复编号") -> "orange"
+            blob.contains("🪽") || blob.contains("美化·粉") || blob.contains("美化_粉") -> "wing"
+            blob.contains("🐰") || blob.contains("美化·蓝") || blob.contains("美化_蓝") -> "bunny"
+            blob.contains("ᗜ") -> "face"
+            blob.contains("角色扮演") || blob.contains("内心OS") || blob.contains("内心os") -> "role"
+            blob.contains("皮肤·绿色气泡") -> "green"
+            blob.contains("皮肤·白色气泡") -> "white"
+            blob.contains("基础气泡") && blob.contains("绿色气泡") && blob.contains("白色气泡") -> ""
+            blob.contains("绿色气泡") -> "green"
+            blob.contains("白色气泡") -> "white"
+            else -> ""
+        }
+
+        private fun ornamentOf(blob: String, frame: String): String = when {
+            blob.contains("美化·冰蓝") || blob.contains("美化_冰蓝") || blob.contains("#F8FCFE") -> "◌|～﹒～|❋|◌|∼|❋⁺～|sy."
+            blob.contains("雾蓝") || blob.contains("#F4F6FC") -> "◈|✧﹏✧|✦|◌|✧|✦⁺◈|sy."
+            blob.contains("暖橙") || blob.contains("#FDF5EE") -> "✦|✧･ﾟ|✿|✧|☆|₊˚⊹|sy."
+            blob.contains("红黑") || blob.contains("#1A0A06") -> "◈|▸▸▸|◆|▸|◇|▸▸◈|sy."
+            blob.contains("黑金") || blob.contains("#1A1A1A") && frame == "ornament" -> "✦|◈﹒⏤|✧|✧|✦|✦⁺˖|sy."
+            frame == "note" -> "10"
+            else -> ""
+        }
+
+        private fun parseStylePack(raw: String?): BeautyFace {
+            if (raw.isNullOrBlank()) return BeautyFace()
+            val parts = raw.removePrefix("style:").split(",")
+            val frame = parts.getOrNull(0).orEmpty().ifBlank { "card" }
+            return BeautyFace(
+                frame,
+                parts.getOrNull(1).orEmpty().take(48),
+                parts.getOrNull(2).orEmpty().take(12),
+                parts.getOrNull(3).orEmpty().take(12)
+            )
+        }
+
+        private fun parseColorPack(raw: String?): BeautyLook {
+            if (raw.isNullOrBlank()) return BeautyLook()
+            val parts = raw.removePrefix("colors:").split(",")
+            fun one(i: Int): Int {
+                val s = parts.getOrNull(i).orEmpty()
+                if (!s.startsWith("#") || s.length != 7) return 0
+                return runCatching { (0xFF000000 or s.substring(1).toLong(16)).toInt() }.getOrDefault(0)
+            }
+            return BeautyLook(one(0), one(1), one(2), one(3))
         }
 
         private fun sceneHead(raw: String): Pair<String, String>? = when {
