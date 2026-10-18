@@ -13,7 +13,17 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
-class TavernPluginActivity : AppCompatActivity() {
+class TavernPluginActivity : PocketHostActivity() {
+    private fun goPhoneBack() {
+        if (isTaskRoot) {
+            startActivity(
+                Intent(this, PocketPhoneActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            )
+        }
+        finish()
+    }
+
     private lateinit var store: TavernPluginStore
     private lateinit var adapter: PluginAdapter
     private lateinit var emptyView: TextView
@@ -24,7 +34,7 @@ class TavernPluginActivity : AppCompatActivity() {
         setContentView(R.layout.activity_tavern_plugin)
         store = TavernPluginStore(this)
         emptyView = findViewById(R.id.tvPluginEmpty)
-        findViewById<View>(R.id.btnPluginBack).setOnClickListener { finish() }
+        findViewById<View>(R.id.btnPluginBack).setOnClickListener { goPhoneBack() }
         findViewById<View>(R.id.btnPluginAdd).setOnClickListener {
             if (store.load().size >= TavernPluginStore.MAX_PLUGINS) {
                 Toast.makeText(this, R.string.toast_plugin_limit, Toast.LENGTH_SHORT).show()

@@ -23,7 +23,17 @@ import androidx.recyclerview.widget.RecyclerView
 import java.io.File
 import java.util.Date
 
-class RoleLoungeActivity : AppCompatActivity() {
+class RoleLoungeActivity : PocketHostActivity() {
+    private fun goPhoneBack() {
+        if (isTaskRoot) {
+            startActivity(
+                Intent(this, PocketPhoneActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            )
+        }
+        finish()
+    }
+
     private lateinit var store: RoleStore
     private lateinit var prefs: Prefs
     private lateinit var llm: LlmClient
@@ -62,7 +72,7 @@ class RoleLoungeActivity : AppCompatActivity() {
         prefs = Prefs(this)
         llm = LlmClient(prefs)
         emptyView = findViewById(R.id.tvRoleEmpty)
-        findViewById<View>(R.id.btnRoleBack).setOnClickListener { finish() }
+        findViewById<View>(R.id.btnRoleBack).setOnClickListener { goPhoneBack() }
         findViewById<View>(R.id.btnRoleAdd).setOnClickListener {
             startActivity(Intent(this, RoleEditActivity::class.java))
         }

@@ -11,7 +11,17 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 
-class GroupEditActivity : AppCompatActivity() {
+class GroupEditActivity : PocketHostActivity() {
+    private fun goPhoneBack() {
+        if (isTaskRoot) {
+            startActivity(
+                Intent(this, PocketPhoneActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            )
+        }
+        finish()
+    }
+
     private lateinit var store: GroupStore
     private lateinit var roles: RoleStore
     private var groupId: String = ""
@@ -33,7 +43,7 @@ class GroupEditActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.tvGroupEditTitle).setText(
             if (existing == null) R.string.group_add else R.string.group_edit_title
         )
-        findViewById<View>(R.id.btnGroupEditBack).setOnClickListener { finish() }
+        findViewById<View>(R.id.btnGroupEditBack).setOnClickListener { goPhoneBack() }
 
         val editName = findViewById<EditText>(R.id.editGroupName)
         val editScene = findViewById<EditText>(R.id.editGroupScene)

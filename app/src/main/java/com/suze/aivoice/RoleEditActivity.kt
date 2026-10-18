@@ -18,7 +18,17 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import java.io.File
 
-class RoleEditActivity : AppCompatActivity() {
+class RoleEditActivity : PocketHostActivity() {
+    private fun goPhoneBack() {
+        if (isTaskRoot) {
+            startActivity(
+                Intent(this, PocketPhoneActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            )
+        }
+        finish()
+    }
+
     private lateinit var store: RoleStore
     private var roleId: String = ""
     private var pendingAvatar = false
@@ -68,7 +78,7 @@ class RoleEditActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.tvRoleEditTitle).setText(
             if (existing == null) R.string.role_add_title else R.string.role_edit_title
         )
-        findViewById<View>(R.id.btnRoleEditBack).setOnClickListener { finish() }
+        findViewById<View>(R.id.btnRoleEditBack).setOnClickListener { goPhoneBack() }
 
         val editName = findViewById<EditText>(R.id.editRoleName)
         val editEmoji = findViewById<EditText>(R.id.editRoleEmoji)

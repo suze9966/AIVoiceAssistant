@@ -16,7 +16,17 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import java.util.Date
 
-class GroupLoungeActivity : AppCompatActivity() {
+class GroupLoungeActivity : PocketHostActivity() {
+    private fun goPhoneBack() {
+        if (isTaskRoot) {
+            startActivity(
+                Intent(this, PocketPhoneActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            )
+        }
+        finish()
+    }
+
     private lateinit var store: GroupStore
     private lateinit var adapter: GroupCardAdapter
     private lateinit var emptyView: TextView
@@ -27,7 +37,7 @@ class GroupLoungeActivity : AppCompatActivity() {
         setContentView(R.layout.activity_group_lounge)
         store = GroupStore(this)
         emptyView = findViewById(R.id.tvGroupEmpty)
-        findViewById<View>(R.id.btnGroupBack).setOnClickListener { finish() }
+        findViewById<View>(R.id.btnGroupBack).setOnClickListener { goPhoneBack() }
         findViewById<View>(R.id.btnGroupAdd).setOnClickListener {
             if (RoleStore(this).loadCharacters().size < 2) {
                 Toast.makeText(this, R.string.group_need_roles, Toast.LENGTH_SHORT).show()

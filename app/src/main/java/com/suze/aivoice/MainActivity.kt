@@ -231,7 +231,6 @@ class MainActivity : AppCompatActivity() {
             pop.menu.add(0, 11, 4, getString(R.string.menu_export_chat))
             pop.menu.add(0, 12, 5, getString(R.string.menu_ask_image))
             pop.menu.add(0, 5, 6, getString(R.string.menu_weather))
-            pop.menu.add(0, 6, 7, getString(R.string.menu_role_lounge))
             pop.menu.add(0, 7, 8, getString(R.string.menu_connect_llm))
             pop.menu.add(0, 13, 9, getString(R.string.menu_voice_call))
             pop.menu.add(0, 20, 10, getString(R.string.menu_todo))
@@ -254,7 +253,6 @@ class MainActivity : AppCompatActivity() {
                     11 -> { exportCurrentChat(); true }
                     12 -> { promptAskImage(); true }
                     5 -> { askCityAndShowWeather(); true }
-                    6 -> { startActivity(Intent(this, RoleLoungeActivity::class.java)); true }
                     7 -> { startActivity(Intent(this, LlmConnectActivity::class.java)); true }
                     13 -> { openVoiceCall(); true }
                     20 -> { startActivity(Intent(this, TodoActivity::class.java)); true }

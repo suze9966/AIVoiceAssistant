@@ -44,7 +44,8 @@ class PocketPhone(private val context: Context) {
         App("browser", "\uD83C\uDF10", "浏览器", "搜索记录", "浏览器搜索"),
         App("player", "\uD83C\uDFB5", "播放器", "正在听", "音乐播放器"),
         App("notes", "\uD83D\uDCDD", "便签", "随手记", "便签"),
-        App("chat", "\uD83D\uDC8C", "气泡", "和主人聊天", "聊天气泡")
+        App("chat", "\uD83D\uDC8C", "气泡", "和主人聊天", "聊天气泡"),
+        App("tavern", "\uD83C\uDFAD", "酒馆", "角色、世界书、插件、群聊", "角色酒馆")
     )
 
     fun app(id: String): App? = apps().firstOrNull { it.id == id }
@@ -90,6 +91,9 @@ class PocketPhone(private val context: Context) {
 
     /** 小窗里直接画的那一页。桌面走 homeScene。 */
     fun sceneFor(app: App, extra: String = ""): SceneCardView.Model {
+        if (app.id == "tavern") {
+            return SceneCardView.Model("plain", app.name, listOf("角色酒馆在小手机里单独打开。"))
+        }
         val clean = readable(extra)
         val saved = feeds().firstOrNull { it.appId == app.id }?.body.orEmpty()
         val played = readable(saved)

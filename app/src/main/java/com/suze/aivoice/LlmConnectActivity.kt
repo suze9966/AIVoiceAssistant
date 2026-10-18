@@ -14,7 +14,17 @@ import androidx.appcompat.widget.SwitchCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
-class LlmConnectActivity : AppCompatActivity() {
+class LlmConnectActivity : PocketHostActivity() {
+    private fun goPhoneBack() {
+        if (isTaskRoot) {
+            startActivity(
+                Intent(this, PocketPhoneActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            )
+        }
+        finish()
+    }
+
     private lateinit var prefs: Prefs
     private lateinit var llm: LlmClient
     private var applyingPreset = false
@@ -27,7 +37,7 @@ class LlmConnectActivity : AppCompatActivity() {
         prefs = Prefs(this)
         llm = LlmClient(prefs)
 
-        findViewById<View>(R.id.btnLlmBack).setOnClickListener { finish() }
+        findViewById<View>(R.id.btnLlmBack).setOnClickListener { goPhoneBack() }
         val spinner = findViewById<Spinner>(R.id.spinnerLlmPreset)
         val editBaseUrl = findViewById<EditText>(R.id.editLlmBaseUrl)
         val editApiKey = findViewById<EditText>(R.id.editLlmApiKey)

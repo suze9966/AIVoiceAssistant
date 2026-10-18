@@ -9,6 +9,9 @@ import android.graphics.Typeface
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * 文游场景卡片：气泡里直接画播放器、朋友圈、聊天、资料、浏览器这些页面。
@@ -120,7 +123,11 @@ class SceneCardView @JvmOverloads constructor(
                 val minW = (160 * baseDensity).toInt()
                 val minH = (96 * baseDensity).toInt()
                 val maxW = (resources.displayMetrics.widthPixels * 0.92f).toInt()
-                val maxH = (resources.displayMetrics.heightPixels * 0.72f).toInt()
+                val maxH = if (m.kind == "beauty") {
+                    (resources.displayMetrics.heightPixels * 4f).toInt()
+                } else {
+                    (resources.displayMetrics.heightPixels * 0.72f).toInt()
+                }
                 userW = (dragW + (event.rawX - dragX)).toInt().coerceIn(minW, maxW)
                 userH = (dragH + (event.rawY - dragY)).toInt().coerceIn(minH, maxH)
                 requestLayout()
@@ -161,7 +168,7 @@ class SceneCardView @JvmOverloads constructor(
             else -> fallback
         }
         val natural = if (m == null) 0 else when (m.kind) {
-            "home" -> (300 * baseDensity).toInt()
+            "home" -> homeHeight(m)
             "beauty" -> beautyHeight(m, w)
             "player" -> (196 * baseDensity).toInt()
             "moments", "profile", "browser" -> (188 * baseDensity).toInt()
@@ -175,7 +182,11 @@ class SceneCardView @JvmOverloads constructor(
                 density = baseDensity * fit
             }
         }
-        val cap = (resources.displayMetrics.heightPixels * 0.72f).toInt()
+        val cap = if (m?.kind == "beauty") {
+            (resources.displayMetrics.heightPixels * 4f).toInt()
+        } else {
+            (resources.displayMetrics.heightPixels * 0.72f).toInt()
+        }
         val h = when {
             m == null -> 0
             m.kind == "beauty" -> {
@@ -229,6 +240,12 @@ class SceneCardView @JvmOverloads constructor(
         canvas.drawLine(x - s, y, x, y, track)
         canvas.drawLine(x, y - s, x, y, track)
         canvas.drawLine(x - s * 0.55f, y, x, y - s * 0.55f, track)
+    }
+
+    private fun homeHeight(m: Model): Int {
+        val apps = (m.lines.size - 3).coerceAtLeast(1)
+        val rows = (apps + 2) / 3
+        return ((96 + rows * 72) * baseDensity).toInt()
     }
 
     private fun drawHome(canvas: Canvas, m: Model) {
@@ -589,11 +606,16 @@ class SceneCardView @JvmOverloads constructor(
             ink.textSize = 12f * density
             ink.typeface = Typeface.DEFAULT_BOLD
             ink.color = set[0]
-            canvas.drawText(fit(parts[0], width - 24f * density), 12f * density, y + 12f * density, ink)
-            y += 18f * density
+            bubbleLines(parts[0], width - 24f * density).forEach { part ->
+                canvas.drawText(part, 12f * density, y + 12f * density, ink)
+                y += 16f * density
+            }
             ink.typeface = Typeface.DEFAULT
-            canvas.drawText(fit(parts[1], width - 36f * density), 22f * density, y + 12f * density, ink)
-            y += 18f * density
+            bubbleLines(parts[1], width - 36f * density).forEach { part ->
+                canvas.drawText(part, 22f * density, y + 12f * density, ink)
+                y += 16f * density
+            }
+            y += 2f * density
             val talk = wrapText(parts[2], ink, width - 58f * density)
             val boxH = talk.size * lineH + 10f * density
             accent.color = set[0]
@@ -611,8 +633,11 @@ class SceneCardView @JvmOverloads constructor(
             y += boxH + 4f * density
             ink.color = set[4]
             ink.textSize = 11f * density
-            canvas.drawText(fit("> " + parts[3], width - 24f * density), 12f * density, y + 12f * density, ink)
-            y += 22f * density
+            bubbleLines("> " + parts[3], width - 24f * density).forEach { part ->
+                canvas.drawText(part, 12f * density, y + 12f * density, ink)
+                y += 16f * density
+            }
+            y += 6f * density
         }
     }
 
@@ -640,7 +665,7 @@ class SceneCardView @JvmOverloads constructor(
         }
         mute.color = Color.parseColor("#227755")
         mute.textSize = 11f * density
-        canvas.drawText("【 系统时间 00:00:00 】", 14f * density, height - 12f * density, mute)
+        canvas.drawText(clockLine(), 14f * density, height - 12f * density, mute)
     }
 
     private fun drawTranslateCard(canvas: Canvas, m: Model) {
@@ -687,15 +712,21 @@ class SceneCardView @JvmOverloads constructor(
                 canvas.drawText(head, 13f * density, y + 15f * density, ink)
             }
             val left = if (head.isEmpty()) 12f * density else 40f * density
-            val textW = ink.measureText(pair.first).coerceAtMost(width * 0.62f)
-            val bubble = RectF(left, y, left + textW + 18f * density, y + 24f * density)
+            ink.color = Color.BLACK
+            val parts = bubbleLines(pair.first, width * 0.62f)
+            val textW = parts.maxOf { ink.measureText(it) }
+            val blockH = parts.size * 18f * density + 12f * density
+            val bubble = RectF(left, y, left + textW + 18f * density, y + blockH)
             if (paper == Color.TRANSPARENT) {
                 strokeRound(canvas, bubble, Color.BLACK, bubble.height() / 2f, 1.2f * density)
             } else {
                 fillRound(canvas, bubble, paper, 8f * density)
             }
-            ink.color = Color.BLACK
-            canvas.drawText(fit(pair.first, bubble.width() - 12f * density), bubble.left + 8f * density, y + 16f * density, ink)
+            var ty = y + 16f * density
+            parts.forEach { part ->
+                canvas.drawText(part, bubble.left + 8f * density, ty, ink)
+                ty += 18f * density
+            }
             if (spark.isNotEmpty()) {
                 mute.color = sparkInk
                 mute.textSize = 9f * density
@@ -703,16 +734,19 @@ class SceneCardView @JvmOverloads constructor(
             }
             mute.color = Color.parseColor("#B0B0B0")
             mute.textSize = 10f * density
-            canvas.drawText("已读", bubble.right + 4f * density, y + 16f * density, mute)
-            y += 28f * density
+            canvas.drawText("已读", bubble.right + 4f * density, bubble.bottom - 6f * density, mute)
+            y += blockH + 8f * density
             if (pair.second.isNotEmpty()) {
                 mute.color = Color.parseColor("#87CEEB")
-                canvas.drawText(fit(pair.second, width - left - 16f * density), left + 8f * density, y, mute)
-                track.color = Color.parseColor("#A0A0A0")
-                track.strokeWidth = 1f * density
-                val uw = mute.measureText(fit(pair.second, width - left - 16f * density))
-                canvas.drawLine(left + 8f * density, y + 3f * density, left + 8f * density + uw, y + 3f * density, track)
-                y += 16f * density
+                val under = bubbleLines(pair.second, width - left - 16f * density)
+                under.forEach { part ->
+                    canvas.drawText(part, left + 8f * density, y, mute)
+                    track.color = Color.parseColor("#A0A0A0")
+                    track.strokeWidth = 1f * density
+                    val uw = mute.measureText(part)
+                    canvas.drawLine(left + 8f * density, y + 3f * density, left + 8f * density + uw, y + 3f * density, track)
+                    y += 16f * density
+                }
             }
         }
     }
@@ -742,16 +776,23 @@ class SceneCardView @JvmOverloads constructor(
         rows.forEachIndexed { i, row ->
             if (y > height - 16f * density && i > 0) return@forEachIndexed
             ink.textSize = 13f * density
-            val text = fit(row, width * 0.62f)
-            val bubble = RectF(18f * density, y, 18f * density + ink.measureText(text) + 20f * density, y + 26f * density)
+            val parts = bubbleLines(row, width * 0.62f)
+            val w = parts.maxOf { ink.measureText(it) } + 20f * density
+            val blockH = parts.size * 18f * density + 12f * density
+            val bubble = RectF(18f * density, y, 18f * density + w, y + blockH)
             fillRound(canvas, bubble, Color.parseColor("#E5F0F8"), 8f * density)
             accent.color = Color.parseColor("#E5F0F8")
             canvas.drawPath(triangle(bubble.left - 6f * density, bubble.centerY(), true), accent)
             ink.color = Color.BLACK
-            canvas.drawText(text, bubble.left + 8f * density, y + 17f * density, ink)
+            var ty = y + 16f * density
+            parts.forEach { part ->
+                canvas.drawText(part, bubble.left + 8f * density, ty, ink)
+                ty += 18f * density
+            }
             mute.color = Color.parseColor("#8A8A8A")
-            canvas.drawText("已读", bubble.right + 4f * density, y + 17f * density, mute)
-            y += 34f * density
+            mute.textSize = 10f * density
+            canvas.drawText("已读", bubble.right + 4f * density, y + 16f * density, mute)
+            y += blockH + 8f * density
         }
     }
 
@@ -772,26 +813,37 @@ class SceneCardView @JvmOverloads constructor(
             if (bits.action.isNotEmpty()) {
                 mute.color = Color.parseColor("#666666")
                 mute.textSize = 12f * density
-                canvas.drawText(fit("> " + bits.action, width - 28f * density), 14f * density, y + 12f * density, mute)
-                y += 18f * density
+                bubbleLines("> " + bits.action, width - 28f * density).forEach { part ->
+                    canvas.drawText(part, 14f * density, y + 12f * density, mute)
+                    y += 16f * density
+                }
+                y += 2f * density
             }
             ink.textSize = 13f * density
             ink.typeface = Typeface.DEFAULT
-            val text = fit(bits.talk, width - 86f * density)
-            val bubble = RectF(22f * density, y, 22f * density + ink.measureText(text) + 18f * density, y + 26f * density)
+            val parts = bubbleLines(bits.talk, width - 86f * density)
+            val w = parts.maxOf { ink.measureText(it) } + 18f * density
+            val blockH = parts.size * 18f * density + 12f * density
+            val bubble = RectF(22f * density, y, 22f * density + w, y + blockH)
             fillRound(canvas, bubble, Color.parseColor("#2A2A2A"), 8f * density)
             accent.color = Color.parseColor("#2A2A2A")
             canvas.drawPath(triangle(bubble.left - 6f * density, bubble.centerY(), true), accent)
             ink.color = Color.parseColor("#F5EDE0")
-            canvas.drawText(text, bubble.left + 8f * density, y + 17f * density, ink)
+            var ty = y + 16f * density
+            parts.forEach { part ->
+                canvas.drawText(part, bubble.left + 8f * density, ty, ink)
+                ty += 18f * density
+            }
             mute.color = Color.parseColor("#888888")
             mute.textSize = 10f * density
             canvas.drawText(bits.time, bubble.right + 6f * density, y + 16f * density, mute)
-            y += 30f * density
+            y += blockH + 8f * density
             if (bits.os.isNotEmpty()) {
                 mute.textSize = 11f * density
-                canvas.drawText(fit("｜" + bits.os, width - 24f * density), 14f * density, y + 10f * density, mute)
-                y += 18f * density
+                bubbleLines("｜" + bits.os, width - 24f * density).forEach { part ->
+                    canvas.drawText(part, 14f * density, y + 10f * density, mute)
+                    y += 16f * density
+                }
             }
         }
     }
@@ -814,19 +866,59 @@ class SceneCardView @JvmOverloads constructor(
             }
             ink.textSize = 13f * density
             ink.typeface = Typeface.DEFAULT
-            val body = skin.left + " " + bits.second + " " + skin.right
-            val text = fit(body.trim(), width - 78f * density)
-            val bubble = RectF(14f * density, y, 14f * density + ink.measureText(text) + 22f * density, y + 28f * density)
-            if (!hollow) fillRound(canvas, bubble, blendPage(lineInk), bubble.height() / 2f)
-            strokeRound(canvas, bubble, lineInk, bubble.height() / 2f, 1.5f * density)
-            ink.color = textInk
-            canvas.drawText(text, bubble.left + 10f * density, y + 18f * density, ink)
-            if (hollow) {
-                mute.color = Color.parseColor("#888888")
-                mute.textSize = 10f * density
-                canvas.drawText("19:02", bubble.right + 4f * density, bubble.bottom - 4f * density, mute)
+            val kind = messageKind(bits.second)
+            val shown = skinBody(kind, bits.second, skin)
+            if (kind == "pat") {
+                mute.color = lineInk
+                mute.textSize = 11f * density
+                bubbleLines(shown, width - 36f * density).forEach { part ->
+                    val pw = mute.measureText(part)
+                    canvas.drawText(part, (width - pw) / 2f, y + 12f * density, mute)
+                    y += 16f * density
+                }
+                y += 6f * density
+            } else if (kind == "call") {
+                y = drawCallBlock(canvas, bits.first.ifBlank { m.title }, bits.second, lineInk, textInk, y)
+            } else if (kind == "voice") {
+                y = drawVoiceBar(canvas, bits.second, lineInk, textInk, hollow, y)
+            } else {
+                val parts = bubbleLines(shown, width - 78f * density)
+                val textW = parts.maxOf { ink.measureText(it) }
+                val blockH = parts.size * 18f * density + 12f * density
+                val bubble = RectF(14f * density, y, 14f * density + textW + 22f * density, y + blockH)
+                val fill = when (kind) {
+                    "pay" -> Color.parseColor("#F7D48B")
+                    "paid" -> Color.parseColor("#F8E8C8")
+                    "call" -> Color.parseColor("#E8F6EE")
+                    else -> blendPage(lineInk)
+                }
+                if (!hollow || kind == "pay" || kind == "paid" || kind == "call") {
+                    fillRound(canvas, bubble, fill, bubble.height() / 2f)
+                }
+                strokeRound(canvas, bubble, lineInk, bubble.height() / 2f, 1.5f * density)
+                ink.color = textInk
+                var ty = y + 16f * density
+                parts.forEach { part ->
+                    canvas.drawText(part, bubble.left + 10f * density, ty, ink)
+                    ty += 18f * density
+                }
+                if (hollow && kind == "text") {
+                    mute.color = Color.parseColor("#888888")
+                    mute.textSize = 10f * density
+                    canvas.drawText(clockShort(), bubble.right + 4f * density, bubble.bottom - 4f * density, mute)
+                }
+                y += blockH + 8f * density
+                if (kind == "image") {
+                    val desc = imageCaption(bits.second)
+                    mute.color = Color.parseColor("#888888")
+                    mute.textSize = 11f * density
+                    bubbleLines(desc, width - 48f * density).forEach { part ->
+                        canvas.drawText(part, 22f * density, y + 10f * density, mute)
+                        y += 16f * density
+                    }
+                    y += 4f * density
+                }
             }
-            y += 36f * density
         }
     }
 
@@ -840,21 +932,26 @@ class SceneCardView @JvmOverloads constructor(
             val inkColor = Color.BLACK
             ink.textSize = 13f * density
             ink.typeface = Typeface.DEFAULT
-            val text = fit(row, width * 0.62f)
-            val w = ink.measureText(text) + 20f * density
+            val parts = bubbleLines(row, width * 0.62f)
+            val w = parts.maxOf { ink.measureText(it) } + 20f * density
+            val blockH = parts.size * 18f * density + 12f * density
             val left = if (mine) width - 18f * density - w else 20f * density
-            val bubble = RectF(left, y, left + w, y + 28f * density)
+            val bubble = RectF(left, y, left + w, y + blockH)
             fillRound(canvas, bubble, fill, 8f * density)
             accent.color = fill
             canvas.drawPath(triangle(if (mine) bubble.right else bubble.left, bubble.centerY(), !mine), accent)
             ink.color = inkColor
-            canvas.drawText(text, bubble.left + 8f * density, y + 18f * density, ink)
+            var ty = y + 16f * density
+            parts.forEach { part ->
+                canvas.drawText(part, bubble.left + 8f * density, ty, ink)
+                ty += 18f * density
+            }
             mute.color = Color.parseColor("#B0B0B0")
             mute.textSize = 10f * density
             val mark = if (i % 2 == 0) "已读" else "未读"
             val markX = if (mine) bubble.left - mute.measureText(mark) - 4f * density else bubble.right + 4f * density
-            canvas.drawText(mark, markX, y + 18f * density, mute)
-            y += 36f * density
+            canvas.drawText(mark, markX, y + 16f * density, mute)
+            y += blockH + 8f * density
         }
     }
 
@@ -900,7 +997,7 @@ class SceneCardView @JvmOverloads constructor(
                 canvas.drawText(fit(bits.getOrElse(0) { row }, width * 0.46f), 42f * density, y + 12f * density, ink)
                 mute.color = Color.parseColor("#8E8E93")
                 mute.textSize = 11f * density
-                if (bits.size > 1) canvas.drawText(fit(bits[1], width * 0.42f), 42f * density, y + 24f * density, mute)
+                if (bits.size > 1) canvas.drawText(fit(previewOf(bits[1]), width * 0.42f), 42f * density, y + 24f * density, mute)
                 if (bits.size > 2) {
                     val tw = mute.measureText(bits[2])
                     canvas.drawText(bits[2], width - 12f * density - tw, y + 12f * density, mute)
@@ -908,18 +1005,29 @@ class SceneCardView @JvmOverloads constructor(
                 y += 34f * density
             } else if (m.frame == "wxchat") {
                 val mine = i % 2 == 1
-                val fill = if (mine) Color.parseColor("#76E858") else Color.WHITE
+                val kind = messageKind(row)
+                val fill = when {
+                    kind == "pay" -> Color.parseColor("#F7D48B")
+                    kind == "paid" -> Color.parseColor("#F8E8C8")
+                    mine -> Color.parseColor("#76E858")
+                    else -> Color.WHITE
+                }
                 ink.textSize = 13f * density
-                val text = fit(row, width * 0.58f)
-                val w = ink.measureText(text) + 18f * density
+                val parts = bubbleLines(row, width * 0.58f)
+                val w = parts.maxOf { ink.measureText(it) } + 18f * density
+                val blockH = parts.size * 18f * density + 10f * density
                 val left = if (mine) width - 42f * density - w else 40f * density
                 card.color = if (mine) Color.parseColor("#F0D8E8") else Color.parseColor("#D8E8F0")
                 canvas.drawCircle(if (mine) width - 20f * density else 20f * density, y + 12f * density, 10f * density, card)
-                val bubble = RectF(left, y, left + w, y + 26f * density)
+                val bubble = RectF(left, y, left + w, y + blockH)
                 fillRound(canvas, bubble, fill, 6f * density)
                 ink.color = Color.parseColor("#333333")
-                canvas.drawText(text, bubble.left + 8f * density, y + 17f * density, ink)
-                y += 34f * density
+                var ty = y + 16f * density
+                parts.forEach { part ->
+                    canvas.drawText(part, bubble.left + 8f * density, ty, ink)
+                    ty += 18f * density
+                }
+                y += blockH + 8f * density
             } else if (m.frame == "wxedit") {
                 if (i == 0) {
                     mute.color = Color.parseColor("#8E8E93")
@@ -993,7 +1101,7 @@ class SceneCardView @JvmOverloads constructor(
         ink.color = Color.parseColor(hex)
         ink.textSize = 11f * density
         ink.typeface = Typeface.DEFAULT_BOLD
-        canvas.drawText("15:47", 12f * density, 16f * density, ink)
+        canvas.drawText(clockShort(), 12f * density, 16f * density, ink)
         mute.color = Color.parseColor(hex)
         mute.textSize = 10f * density
         val right = "电量"
@@ -1069,9 +1177,14 @@ class SceneCardView @JvmOverloads constructor(
 
     private fun fit(text: String, maxWidth: Float): String {
         val src = text.trim().ifBlank { " " }
-        ink.textSize = ink.textSize
         if (ink.measureText(src) <= maxWidth) return src
         return wrapText(src, ink, maxWidth).firstOrNull().orEmpty()
+    }
+
+    /** 气泡按折行长高，不再只留第一行。 */
+    private fun bubbleLines(text: String, maxWidth: Float): List<String> {
+        val src = text.trim().ifBlank { " " }
+        return wrapText(src, ink, maxWidth.coerceAtLeast(24f * density))
     }
 
     private fun splitTranslate(row: String): Pair<String, String> {
@@ -1107,8 +1220,146 @@ class SceneCardView @JvmOverloads constructor(
     private fun splitNamed(row: String): Pair<String, String> {
         val i = row.indexOf("：")
         if (i in 1..8) return row.substring(0, i) to row.substring(i + 1)
+        val j = row.indexOf(":")
+        if (j in 1..12 && row.substring(0, j).all { it.code < 128 }) return row.substring(0, j) to row.substring(j + 1)
         return "" to row
     }
+    /** 椭圆皮肤和微信页共用：认出语音、转账、已收款、图片、拍一拍和通话。 */
+    private fun messageKind(text: String): String {
+        val s = text.trim()
+        if (s.contains("拍了拍") || s.contains("拍一拍")) return "pat"
+        if (s.contains("已收款") || s.contains("已被接收") || s.contains("已退还") || s.contains("已被退还")) return "paid"
+        if (s.contains("请收款") || s.contains("待收款") || s.contains("转账")) return "pay"
+        if (s.contains("语音") || s.contains("转文字") || s.contains("▶")) return "voice"
+        if (s.contains("图片") || s.contains("表情") || s.contains(".jpg") || s.contains(".png")) return "image"
+        if (s.contains("通话") || s.contains("待接听") || s.contains("挂断")) return "call"
+        return "text"
+    }
+
+
+    /** 语音条按原文画波形，下面另起转文字，不再把整句塞进一个三角。 */
+    private fun drawVoiceBar(
+        canvas: Canvas,
+        text: String,
+        lineInk: Int,
+        textInk: Int,
+        hollow: Boolean,
+        startY: Float
+    ): Float {
+        var y = startY
+        val bubble = RectF(14f * density, y, 14f * density + 132f * density, y + 32f * density)
+        if (!hollow) fillRound(canvas, bubble, blendPage(lineInk), bubble.height() / 2f)
+        strokeRound(canvas, bubble, lineInk, bubble.height() / 2f, 1.5f * density)
+        ink.color = textInk
+        ink.textSize = 13f * density
+        canvas.drawText("▶", bubble.left + 10f * density, y + 21f * density, ink)
+        accent.color = lineInk
+        val bars = intArrayOf(6, 10, 14, 8, 16, 11, 7, 13, 9)
+        var x = bubble.left + 28f * density
+        bars.forEach { h ->
+            val top = bubble.centerY() - h * density * 0.45f
+            canvas.drawRoundRect(x, top, x + 3f * density, bubble.centerY() + h * density * 0.45f, 1.5f * density, 1.5f * density, accent)
+            x += 8f * density
+        }
+        mute.color = Color.parseColor("#888888")
+        mute.textSize = 10f * density
+        canvas.drawText("0:03", bubble.right - 28f * density, y + 20f * density, mute)
+        y += 40f * density
+        val body = text.replace("语音", "").replace("转文字", "").trim()
+        mute.textSize = 11f * density
+        val caption = if (body.isBlank()) "[转文字]" else body
+        bubbleLines(caption, width - 48f * density).forEach { part ->
+            canvas.drawText(part, 22f * density, y + 10f * density, mute)
+            y += 16f * density
+        }
+        if (hollow) {
+            canvas.drawText(clockShort(), bubble.right + 4f * density, bubble.bottom - 4f * density, mute)
+        }
+        return y + 8f * density
+    }
+    /** 通话按原文画四段：时长、名字、转文字、挂断。 */
+    private fun drawCallBlock(
+        canvas: Canvas,
+        name: String,
+        text: String,
+        lineInk: Int,
+        textInk: Int,
+        startY: Float
+    ): Float {
+        var y = startY
+        val hung = text.contains("挂断") || text.contains("ᴅ")
+        val waiting = text.contains("待接听") || text.contains("未应答") || text.contains("已拒绝") || text.contains("已取消")
+        val head = if (hung) "ᴅ 已挂断" else if (waiting) "待接听" else "通话中"
+        ink.color = textInk
+        ink.textSize = 12f * density
+        ink.typeface = Typeface.DEFAULT_BOLD
+        canvas.drawText(head, 16f * density, y + 14f * density, ink)
+        mute.color = lineInk
+        mute.textSize = 11f * density
+        val time = clockShort()
+        canvas.drawText(time, width - 16f * density - mute.measureText(time), y + 14f * density, mute)
+        y += 22f * density
+        val who = name.ifBlank { "小沫" }
+        val box = RectF(16f * density, y, 16f * density + ink.measureText(who) + 20f * density, y + 24f * density)
+        strokeRound(canvas, box, lineInk, 8f * density, 1.2f * density)
+        canvas.drawText(who, box.left + 10f * density, y + 16f * density, ink)
+        y += 32f * density
+        val body = text.replace("待接听", "").replace("通话中", "").replace("已挂断", "").trim().ifBlank { " " }
+        bubbleLines(body, width - 48f * density).forEach { part ->
+            mute.color = Color.parseColor("#666666")
+            mute.textSize = 12f * density
+            canvas.drawText(part, 18f * density, y + 12f * density, mute)
+            y += 16f * density
+        }
+        y += 6f * density
+        val btn = "ᴅ 挂断"
+        val bw = mute.measureText(btn) + 24f * density
+        val button = RectF((width - bw) / 2f, y, (width + bw) / 2f, y + 26f * density)
+        fillRound(canvas, button, Color.parseColor("#F3D0D0"), 12f * density)
+        ink.color = Color.parseColor("#A33A3A")
+        ink.textSize = 12f * density
+        canvas.drawText(btn, button.left + 12f * density, y + 17f * density, ink)
+        return y + 36f * density
+    }
+    private fun skinBody(kind: String, text: String, skin: SkinMark): String {
+        val body = text.trim().ifBlank { " " }
+        return when (kind) {
+            "voice" -> "▶ " + body
+            "pay" -> "⇋ 请收款  " + body
+            "paid" -> if (body.contains("退")) "↺ 已被退还  " + body else "✓ 已被接收  " + body
+            "image" -> "[图片] " + body
+            "call" -> "☎ " + body
+            "pat" -> body
+            else -> skin.left + " " + body + " " + skin.right
+        }
+    }
+
+    private fun imageCaption(text: String): String {
+        val s = text.trim()
+        val marks = listOf("描述", "图片", ".jpg", ".png")
+        var rest = s
+        marks.forEach { mark ->
+            val i = rest.indexOf(mark)
+            if (i >= 0) rest = rest.substring(i + mark.length)
+        }
+        rest = rest.trim().trim('：', ':', ']', '】', ' ')
+        return if (rest.isBlank() || rest == s) "[图片描述]" else rest
+    }
+    private fun previewOf(text: String): String {
+        val s = text.trim()
+        return when (messageKind(s)) {
+            "voice" -> if (s.startsWith("[")) s else "[语音] " + s
+            "image" -> if (s.startsWith("[")) s else "[图片] " + s
+            "pay" -> if (s.contains("转账") || s.contains("收款")) s else "[转账] " + s
+            "call" -> if (s.contains("通话")) s else "[通话] " + s
+            else -> s
+        }
+    }
+    private fun clockLine(): String {
+        val now = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+        return "【 系统时间 " + now + " 】"
+    }
+    private fun clockShort(): String = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
 
     private data class SkinMark(val color: String, val left: String, val right: String)
 
@@ -1222,16 +1473,17 @@ class SceneCardView @JvmOverloads constructor(
             else -> widthPx - 56f * density
         }.coerceAtLeast(40f * density)
         val wrapped = rows.sumOf { wrapText(it, ink, textW).size.coerceAtLeast(1) }
+        val callExtra = if (frame == "oval") rows.count { it.contains("通话") || it.contains("待接听") || it.contains("挂断") } * 78f else 0f
         val body = when (frame) {
             "ornament" -> 42f + rows.size * 28f + wrapped * 18f
-            "note" -> 18f + rows.size * 62f + wrapped * 16f
+            "note" -> 18f + rows.size * 70f + wrapped * 16f
             "terminal" -> 86f + wrapped * 16f
-            "bilingual", "wing", "bunny" -> 70f + rows.size * 44f
-            "face" -> 126f + rows.size * 34f
-            "role" -> 24f + rows.size * 66f
-            "oval" -> 20f + rows.size * 52f
-            "basic", "wechat" -> 24f + rows.size * 36f
-            "wxchat" -> 78f + rows.size * 34f
+            "bilingual", "wing", "bunny" -> 70f + wrapped * 22f + rows.size * 20f
+            "face" -> 126f + wrapped * 18f + rows.size * 12f
+            "role" -> 24f + wrapped * 20f + rows.size * 28f
+            "oval" -> 20f + wrapped * 20f + rows.size * 28f + callExtra
+            "basic", "wechat" -> 24f + wrapped * 18f + rows.size * 14f
+            "wxchat" -> 78f + wrapped * 18f + rows.size * 16f
             "wxedit" -> 150f + (rows.size - 1).coerceAtLeast(0) * 28f
             "wxhome", "wxbook", "wxmoments" -> 108f + rows.size * 34f
             "wxadd" -> 100f + rows.size * 28f

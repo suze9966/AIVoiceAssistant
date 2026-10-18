@@ -12,7 +12,17 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import java.util.regex.Pattern
 
-class TavernPluginEditActivity : AppCompatActivity() {
+class TavernPluginEditActivity : PocketHostActivity() {
+    private fun goPhoneBack() {
+        if (isTaskRoot) {
+            startActivity(
+                Intent(this, PocketPhoneActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            )
+        }
+        finish()
+    }
+
     private lateinit var store: TavernPluginStore
     private var pluginId: String = ""
 
@@ -31,7 +41,7 @@ class TavernPluginEditActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.tvPluginEditTitle).setText(
             if (existing == null) R.string.plugin_add else R.string.plugin_edit_title
         )
-        findViewById<View>(R.id.btnPluginEditBack).setOnClickListener { finish() }
+        findViewById<View>(R.id.btnPluginEditBack).setOnClickListener { goPhoneBack() }
 
         val targets = listOf(
             TavernPlugin.TARGET_OUTPUT to getString(R.string.plugin_target_output),

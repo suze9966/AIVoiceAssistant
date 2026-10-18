@@ -547,6 +547,15 @@ class PocketPhoneActivity : AppCompatActivity() {
         ops.text = lines.joinToString("\n") { "· $it" }
     }
 
+    private fun openInside(intent: Intent) {
+        val lp = window.attributes
+        intent.putExtra("pocket_x", lp.x)
+        intent.putExtra("pocket_y", lp.y)
+        intent.putExtra("pocket_w", lp.width)
+        intent.putExtra("pocket_h", lp.height)
+        startActivity(intent)
+    }
+
     private fun showHome() {
         current = null
         title.text = getString(R.string.pocket_title)
@@ -559,6 +568,10 @@ class PocketPhoneActivity : AppCompatActivity() {
     }
 
     private fun showApp(app: PocketPhone.App, extra: String = "", remember: Boolean = true) {
+        if (app.id == "tavern") {
+            openInside(Intent(this, RoleLoungeActivity::class.java))
+            return
+        }
         current = app
         title.text = app.icon + " " + app.name
         status.text = phone.clock()
@@ -682,7 +695,7 @@ class PocketPhoneActivity : AppCompatActivity() {
     }
 
     private fun openByWish(wish: String) {
-        val hit = phone.apps().firstOrNull { wish.contains(it.name) }
+        val hit = phone.apps().firstOrNull { wish.contains(it.name) || (it.id == "tavern" && (wish.contains("角色酒馆") || wish.contains("角色聊天"))) }
         if (hit != null) showApp(hit, wish) else play(wish)
     }
 

@@ -21,7 +21,17 @@ import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
-class GroupChatActivity : AppCompatActivity() {
+class GroupChatActivity : PocketHostActivity() {
+    private fun goPhoneBack() {
+        if (isTaskRoot) {
+            startActivity(
+                Intent(this, PocketPhoneActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            )
+        }
+        finish()
+    }
+
     private lateinit var prefs: Prefs
     private lateinit var llm: LlmClient
     private lateinit var roles: RoleStore
@@ -158,7 +168,7 @@ class GroupChatActivity : AppCompatActivity() {
 
     private fun bindHeader(resetStatus: Boolean = true) {
         val r = room ?: return
-        findViewById<View>(R.id.btnRoleChatBack).setOnClickListener { finish() }
+        findViewById<View>(R.id.btnRoleChatBack).setOnClickListener { goPhoneBack() }
         findViewById<TextView>(R.id.tvRoleChatEmoji).text = "\uD83D\uDC65"
         findViewById<ImageView>(R.id.ivRoleChatAvatar).visibility = View.GONE
         findViewById<TextView>(R.id.tvRoleChatName).text = r.name
