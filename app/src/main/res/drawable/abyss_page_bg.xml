@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A 版深海蓝夜：页面底层。深海军蓝纵向渐变 + 左上青蓝辉光 + 右下深蓝辉光。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="270"
+                android:startColor="#04101F"
+                android:centerColor="#071A2E"
+                android:endColor="#0E2E4D" />
+        </shape>
+    </item>
+    <!-- 左上青蓝辉光 -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="55%p"
+                android:centerX="0.22"
+                android:centerY="0.16"
+                android:startColor="#4D46D8F0"
+                android:centerColor="#2646D8F0"
+                android:endColor="#0046D8F0" />
+        </shape>
+    </item>
+    <!-- 右下深蓝辉光，撑出层次 -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="60%p"
+                android:centerX="0.86"
+                android:centerY="0.82"
+                android:startColor="#401A5FA0"
+                android:centerColor="#1C1A5FA0"
+                android:endColor="#001A5FA0" />
+        </shape>
+    </item>
+</layer-list>

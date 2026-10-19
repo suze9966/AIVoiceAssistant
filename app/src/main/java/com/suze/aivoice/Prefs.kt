@@ -62,6 +62,18 @@ class Prefs(context: Context) {
         set(v) = sp.edit().putBoolean("taiwanVoice", v).apply()
 
     /**
+     * 界面主题：A=深海蓝夜 / B=晨雾浅蓝 / C=蓝调液态玻璃。
+     * 三套 drawable 与配色都打包在 APK 里，切换只改这里，Activity 重建后统一重刷。
+     * 存的值认不出来时兜回 B（当前默认视觉）。
+     */
+    var uiTheme: String
+        get() {
+            val v = sp.getString("uiTheme", DEFAULT_UI_THEME) ?: DEFAULT_UI_THEME
+            return if (v in UiThemeManager.THEMES) v else DEFAULT_UI_THEME
+        }
+        set(v) = sp.edit().putString("uiTheme", if (v in UiThemeManager.THEMES) v else DEFAULT_UI_THEME).apply()
+
+    /**
      * 文游功能菜单点选的「本回合专用格式」id。
      *
      * 一次性：注入完这一条消息后立刻清空，避免整段对话都被同一份 LaTeX 格式占住上下文。
@@ -89,6 +101,12 @@ class Prefs(context: Context) {
     }
 
     companion object {
+        /**
+         * 默认界面主题。B（晨雾浅蓝）作为默认：它是主人一直在用的浅蓝基调升级版，
+         * 浅色底在白天最耐看；A 与 C 都是深底夜间向，按喜好在设置里切。
+         */
+        const val DEFAULT_UI_THEME = "B"
+
         /**
          * 历史上出现过的默认提示词开头。用来判断「主人有没有自己改过」：
          * 没改过就自动升级成新文案，改过就原样保留、绝不覆盖主人的编辑。

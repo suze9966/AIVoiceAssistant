@@ -47,6 +47,8 @@ class MemoryActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_memory)
+        // 跟随当前界面主题（A 深海蓝夜 / B 晨雾浅蓝 / C 蓝调液态玻璃）
+        UiThemeManager.applyPage(this, window.decorView.findViewById(android.R.id.content))
         memory = MemoryEngine(this)
         emptyView = findViewById(R.id.tvMemoryEmpty)
         subtitle = findViewById(R.id.tvMemorySubtitle)

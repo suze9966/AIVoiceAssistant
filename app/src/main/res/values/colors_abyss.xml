@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A 版 · 深海蓝夜配色
+  夜间高对比 + 青蓝辉光 + 气泡内发光。与 B(mist_ 前缀)、C(liquid_ 前缀)并存。
+-->
+<resources>
+    <!-- 底色：深海 -->
+    <color name="abyss_bg_top">#04101F</color>
+    <color name="abyss_bg_mid">#071A2E</color>
+    <color name="abyss_bg_end">#0E2E4D</color>
+
+    <!-- 辉光：青蓝 -->
+    <color name="abyss_glow_cyan">#46D8F0</color>
+    <color name="abyss_glow_blue">#2E8BD6</color>
+    <color name="abyss_glow_deep">#1A5FA0</color>
+
+    <!-- 玻璃层 -->
+    <color name="abyss_glass_fill">#B30E2A47</color>
+    <color name="abyss_glass_fill_soft">#8C0B2038</color>
+    <color name="abyss_glass_edge">#4D46D8F0</color>
+    <color name="abyss_glass_highlight">#4DFFFFFF</color>
+
+    <!-- 文本：深底上用亮色 -->
+    <color name="abyss_text_primary">#EAF6FF</color>
+    <color name="abyss_text_secondary">#A9CDE8</color>
+    <color name="abyss_text_tertiary">#6E97BA</color>
+    <color name="abyss_text_on_accent">#FFFFFF</color>
+
+    <!-- 气泡 -->
+    <color name="abyss_bubble_me_start">#3A46D8F0</color>
+    <color name="abyss_bubble_me_end">#E62E8BD6</color>
+    <color name="abyss_bubble_ai_fill">#CC0E2A47</color>
+    <color name="abyss_bubble_ai_text">#EAF6FF</color>
+
+    <!-- 系统栏 -->
+    <color name="abyss_status_bar">#F204101F</color>
+    <color name="abyss_nav_bar">#F2071A2E</color>
+
+    <!-- 强调 -->
+    <color name="abyss_accent">#46D8F0</color>
+    <color name="abyss_accent_light">#7FE4F7</color>
+</resources>

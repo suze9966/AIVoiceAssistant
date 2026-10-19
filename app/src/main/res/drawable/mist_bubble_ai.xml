@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- B 版 · 晨雾浅蓝：小沫的气泡。极通透白色玻璃 + 柔蓝边。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 柔蓝外光 -->
+    <item android:top="-1dp" android:bottom="-1dp" android:left="-1dp" android:right="-1dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#267FC1EA" />
+            <corners android:topLeftRadius="8dp" android:topRightRadius="20dp"
+                android:bottomLeftRadius="20dp" android:bottomRightRadius="20dp" />
+        </shape>
+    </item>
+    <!-- 通透玻璃主体 -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#F2FAFF" />
+            <corners android:topLeftRadius="8dp" android:topRightRadius="20dp"
+                android:bottomLeftRadius="20dp" android:bottomRightRadius="20dp" />
+        </shape>
+    </item>
+    <!-- 顶部高光 -->
+    <item android:top="1dp" android:bottom="0dp" android:left="1dp" android:right="1dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="90"
+                android:startColor="#66FFFFFF"
+                android:centerColor="#26FFFFFF"
+                android:endColor="#0DFFFFFF" />
+            <corners android:topLeftRadius="8dp" android:topRightRadius="19dp"
+                android:bottomLeftRadius="19dp" android:bottomRightRadius="19dp" />
+        </shape>
+    </item>
+</layer-list>

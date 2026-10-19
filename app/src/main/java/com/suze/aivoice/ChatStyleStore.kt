@@ -90,6 +90,10 @@ object ChatStyleStore {
         view.visibility = View.GONE
     }
 
+    /**
+     * 背景预览。没有自定义相册图时，用当前主题的页面底色兜底——
+     * 写死 glass_page_bg 会让主界面已经是深海蓝夜、预览却还是旧浅蓝，看着像 bug。
+     */
     fun applyBackgroundPreview(view: ImageView) {
         val bmp = loadBackground(view.context, 720)
         if (bmp != null) {
@@ -98,7 +102,8 @@ object ChatStyleStore {
             view.setImageBitmap(bmp)
             return
         }
-        view.setImageResource(R.drawable.glass_page_bg)
+        view.setImageDrawable(null)
+        view.setImageResource(UiThemeManager.spec(view.context).pageBg)
         view.scaleType = ImageView.ScaleType.CENTER_CROP
         view.visibility = View.VISIBLE
     }

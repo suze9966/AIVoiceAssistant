@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  C 版 · 蓝调液态玻璃配色
+  与 values/colors.xml 的浅蓝配色并存：浅蓝走原名，这里统一 liquid_ 前缀，
+  切换方案时只改引用，不动既有业务代码。
+-->
+<resources>
+    <!-- 底色：深海蓝 -->
+    <color name="liquid_bg_top">#050B1C</color>
+    <color name="liquid_bg_mid">#0A1B38</color>
+    <color name="liquid_bg_end">#071228</color>
+
+    <!-- 极光泛光三色 -->
+    <color name="liquid_aurora_cyan">#3FC5E0</color>
+    <color name="liquid_aurora_blue">#2E8BD6</color>
+    <color name="liquid_aurora_violet">#6B4BE8</color>
+
+    <!-- 玻璃层 -->
+    <color name="liquid_glass_fill">#B4DCF2</color>
+    <color name="liquid_glass_fill_soft">#8CB4DCF2</color>
+    <color name="liquid_glass_fill_strong">#A6C4DCF2</color>
+    <color name="liquid_glass_edge">#59FFFFFF</color>
+    <color name="liquid_glass_edge_glow">#66FFFFFF</color>
+    <color name="liquid_glass_highlight">#59FFFFFF</color>
+
+    <!-- 文本：深底上用亮色 -->
+    <color name="liquid_text_primary">#F2F8FF</color>
+    <color name="liquid_text_secondary">#B8D4F0</color>
+    <color name="liquid_text_tertiary">#7FA8D4</color>
+    <color name="liquid_text_on_accent">#FFFFFF</color>
+
+    <!-- 气泡 -->
+    <color name="liquid_bubble_me_start">#6BD8F0FF</color>
+    <color name="liquid_bubble_me_end">#8A6B4BE8</color>
+    <color name="liquid_bubble_ai_fill">#B3C8E4F5</color>
+    <color name="liquid_bubble_ai_text">#0B2545</color>
+
+    <!-- 系统栏 -->
+    <color name="liquid_status_bar">#CC071228</color>
+    <color name="liquid_nav_bar">#E6071228</color>
+
+    <!-- 强调 -->
+    <color name="liquid_accent">#2E8BD6</color>
+    <color name="liquid_accent_light">#3FC5E0</color>
+</resources>

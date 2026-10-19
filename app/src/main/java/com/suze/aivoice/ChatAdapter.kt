@@ -141,11 +141,9 @@ class ChatAdapter(
             val ctx = holder.itemView.context
             val style = currentStyle(ctx)
             if (style == null || style.isDefault) {
-                // 默认样式：清掉可能残留的自定义背景，交回布局原 drawable
-                holder.tvMsg.background = ContextCompat.getDrawable(
-                    ctx,
-                    if (msg.isMe) R.drawable.bubble_me_bg else R.drawable.bubble_ai_bg
-                )
+                // 默认样式：清掉可能残留的自定义背景，交回当前主题的气泡
+                // （不能写死 bubble_me_bg/bubble_ai_bg，那样切换主题就失效了）
+                UiThemeManager.applyBubble(ctx, holder.tvMsg, msg.isMe)
             } else {
                 holder.tvMsg.background = BubbleStyleStore.drawableFor(ctx, msg.isMe, style)
                 holder.tvMsg.setTextColor(BubbleStyleStore.textColorFor(msg.isMe, style))
@@ -213,6 +211,8 @@ class ChatAdapter(
         }
         // 气泡下方的小字日期时间（旧数据 at<=0 时自动隐藏）
         holder.tvTime?.let { label ->
+            // 时间戳跟着主题走，否则深底主题下会是看不清的浅蓝小字
+            UiThemeManager.tintTertiary(holder.itemView.context, label)
             val stamp = ChatMessage.stamp(msg.at)
             if (stamp.isEmpty()) {
                 label.visibility = View.GONE

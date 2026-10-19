@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- C 版液态玻璃：发送按钮。实心虹彩渐变 + 发光环。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 外发光 -->
+    <item android:top="-2dp" android:bottom="-2dp" android:left="-2dp" android:right="-2dp">
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="50%p"
+                android:startColor="#663FC5E0"
+                android:centerColor="#333FC5E0"
+                android:endColor="#003FC5E0" />
+        </shape>
+    </item>
+    <!-- 主体虹彩 -->
+    <item>
+        <shape android:shape="oval">
+            <gradient
+                android:type="linear"
+                android:angle="315"
+                android:startColor="#3FC5E0"
+                android:centerColor="#2E8BD6"
+                android:endColor="#6B4BE8" />
+            <stroke android:width="1.2dp" android:color="#80FFFFFF" />
+        </shape>
+    </item>
+    <!-- 顶部高光点 -->
+    <item android:top="4dp" android:bottom="0dp" android:left="6dp" android:right="6dp">
+        <shape android:shape="oval">
+            <gradient
+                android:type="linear"
+                android:angle="270"
+                android:startColor="#66FFFFFF"
+                android:endColor="#00FFFFFF" />
+        </shape>
+    </item>
+</layer-list>

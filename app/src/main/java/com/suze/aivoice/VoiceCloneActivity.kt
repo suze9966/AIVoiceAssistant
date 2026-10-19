@@ -59,6 +59,8 @@ class VoiceCloneActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         setContentView(R.layout.activity_voice_clone)
+        // 跟随当前界面主题（A 深海蓝夜 / B 晨雾浅蓝 / C 蓝调液态玻璃）
+        UiThemeManager.applyPage(this, window.decorView.findViewById(android.R.id.content))
         GlassKit.attachPage(this, findViewById(R.id.pageScroll))
         prefs = Prefs(this)
         client = VoiceCloneClient(prefs)

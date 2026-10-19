@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- C 版液态玻璃：底部输入栏。圆角玻璃 + 虹彩边 + 底部高光。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 半透明玻璃主体 -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="90"
+                android:startColor="#8FB4DCF2"
+                android:centerColor="#A6B4DCF2"
+                android:endColor="#B3B4DCF2" />
+            <corners android:topLeftRadius="26dp" android:topRightRadius="26dp" />
+        </shape>
+    </item>
+    <!-- 顶部高光，玻璃厚度 -->
+    <item android:top="1dp" android:bottom="0dp" android:left="1dp" android:right="1dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="90"
+                android:startColor="#52FFFFFF"
+                android:centerColor="#1FFFFFFF"
+                android:endColor="#0DFFFFFF" />
+            <corners android:topLeftRadius="25dp" android:topRightRadius="25dp" />
+        </shape>
+    </item>
+    <!-- 虹彩折射边 -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="45"
+                android:startColor="#993FC5E0"
+                android:centerColor="#7A6B4BE8"
+                android:endColor="#992E8BD6" />
+            <corners android:topLeftRadius="26dp" android:topRightRadius="26dp" />
+            <stroke android:width="1.2dp" android:color="#66FFFFFF" />
+        </shape>
+    </item>
+</layer-list>

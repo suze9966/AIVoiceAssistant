@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A 版深海蓝夜：我的气泡。青蓝渐变实心 + 外发光。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#4D46D8F0" />
+            <corners android:radius="18dp" />
+        </shape>
+    </item>
+    <item android:left="1dp" android:top="1dp" android:right="1dp" android:bottom="1dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="315"
+                android:startColor="#4FC5E0"
+                android:centerColor="#2E8BD6"
+                android:endColor="#1A6BC8" />
+            <corners android:radius="17dp" />
+        </shape>
+    </item>
+    <item android:left="1dp" android:top="1dp" android:right="1dp" android:bottom="1dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="315"
+                android:startColor="#40FFFFFF"
+                android:centerColor="#0DFFFFFF"
+                android:endColor="#00FFFFFF" />
+            <corners android:radius="17dp" />
+        </shape>
+    </item>
+</layer-list>

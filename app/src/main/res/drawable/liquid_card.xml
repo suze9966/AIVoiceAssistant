@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- C 版液态玻璃：通用玻璃卡片。半透明 + 虹彩折射边 + 顶部高光。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 半透明玻璃主体 -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#8CB4DCF2" />
+            <corners android:radius="20dp" />
+        </shape>
+    </item>
+    <!-- 顶部高光层 -->
+    <item android:top="0dp" android:bottom="0dp" android:left="1dp" android:right="1dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="270"
+                android:startColor="#3DFFFFFF"
+                android:centerColor="#14FFFFFF"
+                android:endColor="#08FFFFFF" />
+            <corners android:radius="19dp" />
+        </shape>
+    </item>
+    <!-- 虹彩折射边 -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="315"
+                android:startColor="#8C3FC5E0"
+                android:centerColor="#733F6BE0"
+                android:endColor="#8C2E8BD6" />
+            <corners android:radius="20dp" />
+            <stroke android:width="1.2dp" android:color="#59FFFFFF" />
+        </shape>
+    </item>
+</layer-list>

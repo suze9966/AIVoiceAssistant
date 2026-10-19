@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- C 版液态玻璃：输入框。胶囊玻璃 + 虹彩边。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#8CC4DCF2" />
+            <corners android:radius="24dp" />
+        </shape>
+    </item>
+    <item android:top="1dp" android:bottom="0dp" android:left="1dp" android:right="1dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="270"
+                android:startColor="#47FFFFFF"
+                android:centerColor="#17FFFFFF"
+                android:endColor="#0BFFFFFF" />
+            <corners android:radius="23dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="0"
+                android:startColor="#803FC5E0"
+                android:centerColor="#662E8BD6"
+                android:endColor="#806B4BE8" />
+            <corners android:radius="24dp" />
+            <stroke android:width="1.1dp" android:color="#59FFFFFF" />
+        </shape>
+    </item>
+</layer-list>

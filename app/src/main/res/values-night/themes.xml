@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Theme.AIVoice" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="android:statusBarColor" tools:targetApi="l">@color/gray_bg</item>
+        <item name="colorPrimary">@color/mist_accent</item>
+        <item name="colorPrimaryVariant">@color/mist_accent_light</item>
+        <item name="colorOnPrimary">@color/mist_text_on_accent</item>
+        <item name="colorSecondary">@color/mist_accent_light</item>
+        <item name="android:statusBarColor" tools:targetApi="l">@color/mist_status_bar</item>
         <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
-        <item name="android:navigationBarColor" tools:targetApi="l">@color/surface_soft</item>
+        <item name="android:navigationBarColor" tools:targetApi="l">@color/mist_nav_bar</item>
         <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
-        <item name="android:windowBackground">@drawable/glass_page_bg</item>
+        <item name="android:windowBackground">@drawable/mist_page_bg</item>
     </style>
 </resources>

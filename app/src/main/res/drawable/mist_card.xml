@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- B 版 · 晨雾浅蓝：通用玻璃卡片。极通透 + 柔蓝边 + 大留白。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 柔蓝外光 -->
+    <item android:top="-1dp" android:bottom="-1dp" android:left="-1dp" android:right="-1dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#1A7FC1EA" />
+            <corners android:radius="20dp" />
+        </shape>
+    </item>
+    <!-- 通透白玻璃 -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#F7FCFF" />
+            <corners android:radius="20dp" />
+        </shape>
+    </item>
+    <!-- 顶部高光 -->
+    <item android:top="1dp" android:bottom="0dp" android:left="1dp" android:right="1dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="270"
+                android:startColor="#8CFFFFFF"
+                android:centerColor="#33FFFFFF"
+                android:endColor="#14FFFFFF" />
+            <corners android:radius="19dp" />
+        </shape>
+    </item>
+</layer-list>

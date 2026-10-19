@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- B 版 · 晨雾浅蓝：页面底层。清晨薄雾般的浅蓝渐变 + 柔光。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 底色：晨雾浅蓝 -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="270"
+                android:startColor="#F6FBFF"
+                android:centerColor="#E9F4FE"
+                android:endColor="#DCEBFA" />
+        </shape>
+    </item>
+    <!-- 左上柔光 -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="60%p"
+                android:centerX="0.18"
+                android:centerY="0.12"
+                android:startColor="#99FFFFFF"
+                android:centerColor="#4DFFFFFF"
+                android:endColor="#00FFFFFF" />
+        </shape>
+    </item>
+    <!-- 右下淡青 -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="55%p"
+                android:centerX="0.88"
+                android:centerY="0.82"
+                android:startColor="#4D7FC1EA"
+                android:centerColor="#267FC1EA"
+                android:endColor="#007FC1EA" />
+        </shape>
+    </item>
+</layer-list>

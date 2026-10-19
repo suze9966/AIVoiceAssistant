@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- B 版 · 晨雾浅蓝：发送按钮。清透天蓝 + 柔光晕。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 柔光晕 -->
+    <item android:top="-2dp" android:bottom="-2dp" android:left="-2dp" android:right="-2dp">
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="50%p"
+                android:startColor="#4D5FA8DC"
+                android:centerColor="#265FA8DC"
+                android:endColor="#005FA8DC" />
+        </shape>
+    </item>
+    <!-- 天蓝主体 -->
+    <item>
+        <shape android:shape="oval">
+            <gradient
+                android:type="linear"
+                android:angle="315"
+                android:startColor="#8CCBF7"
+                android:centerColor="#5FAEE8"
+                android:endColor="#2E8BD6" />
+            <stroke android:width="1dp" android:color="#66FFFFFF" />
+        </shape>
+    </item>
+    <!-- 顶部高光 -->
+    <item android:top="5dp" android:bottom="0dp" android:left="7dp" android:right="7dp">
+        <shape android:shape="oval">
+            <gradient
+                android:type="linear"
+                android:angle="270"
+                android:startColor="#73FFFFFF"
+                android:endColor="#00FFFFFF" />
+        </shape>
+    </item>
+</layer-list>

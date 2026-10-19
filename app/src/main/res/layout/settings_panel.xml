@@ -37,6 +37,10 @@
         </LinearLayout>
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/label_portrait" android:textColor="@color/text_secondary" android:textSize="12sp" android:layout_marginBottom="6dp"/>
         <Spinner android:id="@+id/spinnerPortrait" android:layout_width="match_parent" android:layout_height="44dp" android:background="@drawable/s_bg_edit" android:layout_marginBottom="12dp"/>
+        <!-- 界面主题：A 深海蓝夜 / B 晨雾浅蓝 / C 蓝调液态玻璃。选完立即重建主界面生效。 -->
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/label_ui_theme" android:textColor="@color/text_secondary" android:textSize="12sp" android:layout_marginBottom="6dp"/>
+        <Spinner android:id="@+id/spinnerUiTheme" android:layout_width="match_parent" android:layout_height="44dp" android:background="@drawable/s_bg_edit" android:layout_marginBottom="6dp"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/hint_ui_theme" android:textColor="@color/text_secondary" android:textSize="11sp" android:layout_marginBottom="12dp"/>
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/label_chat_background" android:textColor="@color/text_secondary" android:textSize="12sp" android:layout_marginBottom="8dp"/>
         <ImageView android:id="@+id/ivBackgroundPreview" android:layout_width="match_parent" android:layout_height="88dp" android:scaleType="centerCrop" android:background="@drawable/glass_card" android:contentDescription="@string/label_chat_background" android:layout_marginBottom="8dp"/>
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="10dp">

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- C 版液态玻璃：页面底层。深蓝夜空 + 极光泛光，营造虹彩折射的底子。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 底色：深海蓝渐变 -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="270"
+                android:startColor="#050B1C"
+                android:centerColor="#0A1B38"
+                android:endColor="#071228" />
+        </shape>
+    </item>
+    <!-- 极光泛光：左上青蓝 -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="60%p"
+                android:centerX="0.2"
+                android:centerY="0.15"
+                android:startColor="#663FC5E0"
+                android:centerColor="#333FC5E0"
+                android:endColor="#003FC5E0" />
+        </shape>
+    </item>
+    <!-- 极光泛光：右下蓝紫 -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="55%p"
+                android:centerX="0.85"
+                android:centerY="0.75"
+                android:startColor="#553F6BE0"
+                android:centerColor="#2A3F6BE0"
+                android:endColor="#003F6BE0" />
+        </shape>
+    </item>
+    <!-- 极光泛光：中部淡青，制造虹彩层次 -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="45%p"
+                android:centerX="0.5"
+                android:centerY="0.45"
+                android:startColor="#332E8BD6"
+                android:centerColor="#1A2E8BD6"
+                android:endColor="#002E8BD6" />
+        </shape>
+    </item>
+</layer-list>

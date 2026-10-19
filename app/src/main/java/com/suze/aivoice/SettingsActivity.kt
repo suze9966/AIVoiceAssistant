@@ -34,6 +34,8 @@ class SettingsActivity : AppCompatActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         try {
             setContentView(R.layout.activity_settings)
+            // 跟随当前界面主题（A 深海蓝夜 / B 晨雾浅蓝 / C 蓝调液态玻璃）
+            UiThemeManager.applyPage(this, window.decorView.findViewById(android.R.id.content))
             prefs = Prefs(this)
             tts = TtsHelper(this, prefs)
             memory = MemoryEngine(this)

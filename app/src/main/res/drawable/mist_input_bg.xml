@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- B 版 · 晨雾浅蓝：输入框。胶囊通透玻璃。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:top="-1dp" android:bottom="0dp" android:left="-1dp" android:right="-1dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#1F7FC1EA" />
+            <corners android:radius="24dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#F4FBFF" />
+            <corners android:radius="24dp" />
+        </shape>
+    </item>
+    <item android:top="1dp" android:bottom="0dp" android:left="1dp" android:right="1dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="270"
+                android:startColor="#80FFFFFF"
+                android:centerColor="#2BFFFFFF"
+                android:endColor="#14FFFFFF" />
+            <corners android:radius="23dp" />
+        </shape>
+    </item>
+</layer-list>

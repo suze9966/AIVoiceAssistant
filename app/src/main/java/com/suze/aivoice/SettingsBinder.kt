@@ -350,7 +350,56 @@ class SettingsBinder(
         }
     }
 
+    /**
+     * 界面主题下拉：A 深海蓝夜 / B 晨雾浅蓝 / C 蓝调液态玻璃。
+     *
+     * 选中即存盘并立刻重建当前 Activity，让主人当场看到效果——
+     * 主题牵涉背景、气泡、卡片、文字色、系统栏一整套，
+     * 靠局部刷新去凑肯定会漏控件，所以直接重建最干净。
+     * 重建前先关抽屉，免得重建后抽屉自己弹出来挡住主题。
+     */
+    private fun bindUiThemeSpinner() {
+        val spinner = activity.findViewById<Spinner>(R.id.spinnerUiTheme) ?: return
+        spinner.adapter = ArrayAdapter(
+            activity,
+            android.R.layout.simple_spinner_dropdown_item,
+            UiThemeManager.labels()
+        )
+        spinner.setSelection(UiThemeManager.positionOfTheme(activity, prefs.uiTheme), false)
+
+        // onItemSelected 在 setAdapter / setSelection 时也会回调，
+        // 用 curTheme 做去重，只响应真正的主人手势选择。
+        var curTheme = prefs.uiTheme
+        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: AdapterView<*>?,
+                view: View?,
+                position: Int,
+                id: Long
+            ) {
+                val picked = UiThemeManager.themeOfPosition(activity, position)
+                if (picked == curTheme) return
+                curTheme = picked
+                prefs.uiTheme = picked
+                applyThemeImmediately()
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+    }
+
+    /** 换主题后重建主界面，并关掉设置抽屉。 */
+    private fun applyThemeImmediately() {
+        UiThemeManager.paintSystemBars(activity)
+        val drawer = activity.findViewById<androidx.drawerlayout.widget.DrawerLayout>(R.id.drawerLayout)
+        if (drawer != null && drawer.isDrawerOpen(androidx.core.view.GravityCompat.START)) {
+            drawer.closeDrawer(androidx.core.view.GravityCompat.START)
+        }
+        activity.recreate()
+    }
+
     private fun bindAppearance() {
+        bindUiThemeSpinner()
         activity.findViewById<Button>(R.id.btnChangeAvatar).setOnClickListener {
             pickImage(true)
         }

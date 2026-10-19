@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- C 版液态玻璃：我的气泡。蓝调虹彩渐变 + 发光描边。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 主体：青蓝到天蓝虹彩渐变 -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="315"
+                android:startColor="#6BD8F0FF"
+                android:centerColor="#7A2E8BD6"
+                android:endColor="#8A6B4BE8" />
+            <corners android:topLeftRadius="22dp" android:topRightRadius="8dp"
+                android:bottomLeftRadius="22dp" android:bottomRightRadius="22dp" />
+        </shape>
+    </item>
+    <!-- 顶部高光，制造玻璃厚度感 -->
+    <item android:top="0dp" android:bottom="0dp" android:left="1dp" android:right="1dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="270"
+                android:startColor="#59FFFFFF"
+                android:centerColor="#1FFFFFFF"
+                android:endColor="#0DFFFFFF" />
+            <corners android:topLeftRadius="21dp" android:topRightRadius="8dp"
+                android:bottomLeftRadius="21dp" android:bottomRightRadius="21dp" />
+        </shape>
+    </item>
+    <!-- 虹彩发光描边 -->
+    <item android:top="0dp" android:bottom="0dp" android:left="0dp" android:right="0dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="315"
+                android:startColor="#B33FC5E0"
+                android:centerColor="#A62E8BD6"
+                android:endColor="#B36B4BE8" />
+            <corners android:topLeftRadius="22dp" android:topRightRadius="8dp"
+                android:bottomLeftRadius="22dp" android:bottomRightRadius="22dp" />
+            <stroke android:width="1.5dp" android:color="#66FFFFFF" />
+        </shape>
+    </item>
+</layer-list>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- C 版液态玻璃：小沫的气泡。冷调半透明玻璃 + 虹彩边缘。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 主体：冷调半透明玻璃 -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#B3C8E4F5" />
+            <corners android:topLeftRadius="8dp" android:topRightRadius="22dp"
+                android:bottomLeftRadius="22dp" android:bottomRightRadius="22dp" />
+        </shape>
+    </item>
+    <!-- 顶部高光，玻璃厚度 -->
+    <item android:top="0dp" android:bottom="0dp" android:left="1dp" android:right="1dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="90"
+                android:startColor="#4DFFFFFF"
+                android:centerColor="#14FFFFFF"
+                android:endColor="#0AFFFFFF" />
+            <corners android:topLeftRadius="8dp" android:topRightRadius="21dp"
+                android:bottomLeftRadius="21dp" android:bottomRightRadius="21dp" />
+        </shape>
+    </item>
+    <!-- 虹彩边缘光 -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="45"
+                android:startColor="#7A3FC5E0"
+                android:centerColor="#5C2E8BD6"
+                android:endColor="#7A6B4BE8" />
+            <corners android:topLeftRadius="8dp" android:topRightRadius="22dp"
+                android:bottomLeftRadius="22dp" android:bottomRightRadius="22dp" />
+            <stroke android:width="1.2dp" android:color="#4DFFFFFF" />
+        </shape>
+    </item>
+</layer-list>

@@ -68,6 +68,8 @@ class VoiceCallActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_voice_call)
+        // 跟随当前界面主题（A 深海蓝夜 / B 晨雾浅蓝 / C 蓝调液态玻璃）
+        UiThemeManager.applyPage(this, window.decorView.findViewById(android.R.id.content))
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         prefs = Prefs(this)

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  B 版 · 晨雾浅蓝配色
+  与 C 版液态玻璃（liquid_ 前缀）并存。浅色底上文字用深蓝。
+-->
+<resources>
+    <!-- 底色：晨雾 -->
+    <color name="mist_bg_top">#F6FBFF</color>
+    <color name="mist_bg_mid">#E9F4FE</color>
+    <color name="mist_bg_end">#DCEBFA</color>
+
+    <!-- 柔光 -->
+    <color name="mist_glow_blue">#7FC1EA</color>
+    <color name="mist_glow_soft">#5FA8DC</color>
+
+    <!-- 玻璃层 -->
+    <color name="mist_glass_fill">#F7FCFF</color>
+    <color name="mist_glass_fill_soft">#F2FAFF</color>
+    <color name="mist_glass_edge">#267FC1EA</color>
+    <color name="mist_glass_highlight">#8CFFFFFF</color>
+
+    <!-- 文本：浅底上用深蓝 -->
+    <color name="mist_text_primary">#0F3557</color>
+    <color name="mist_text_secondary">#3C6E9B</color>
+    <color name="mist_text_tertiary">#6A93B8</color>
+    <color name="mist_text_on_accent">#FFFFFF</color>
+
+    <!-- 气泡 -->
+    <color name="mist_bubble_me_start">#8CCBF7</color>
+    <color name="mist_bubble_me_end">#4FA3E3</color>
+    <color name="mist_bubble_ai_fill">#F2FAFF</color>
+    <color name="mist_bubble_ai_text">#0F3557</color>
+
+    <!-- 系统栏 -->
+    <color name="mist_status_bar">#F0F8FF</color>
+    <color name="mist_nav_bar">#FFFFFF</color>
+
+    <!-- 强调 -->
+    <color name="mist_accent">#2E8BD6</color>
+    <color name="mist_accent_light">#5FAEE8</color>
+</resources>

@@ -183,6 +183,12 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // 界面主题（A 深海蓝夜 / B 晨雾浅蓝 / C 蓝调液态玻璃）。
+        // 放在 setContentView 之后、任何业务初始化之前，让整套页面和系统栏
+        // 从第一帧就是当前主题，切主题重建时也不会闪一下默认配色。
+        UiThemeManager.apply(this, findViewById(R.id.chatScene))
+        UiThemeManager.apply(this, findViewById(R.id.settingsPanelRoot))
+
         prefs = Prefs(this)
         panels = PanelStore(this)
         formats = FormatStore(this)
