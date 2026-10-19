@@ -1,5 +1,7 @@
 package com.suze.aivoice
 
+import android.app.Activity
+import android.content.Context
 import android.view.View
 import android.view.ViewTreeObserver
 import android.widget.ScrollView
@@ -59,7 +61,8 @@ object GlassKit {
         scroller.post(applyPad)
     }
 
-    fun attachPage(host: android.app.Activity, scroller: View) {
+    /** 接在 Activity 页面上的顶栏底栏。 */
+    fun attachPage(host: Activity, scroller: View) {
         val content = host.findViewById<View>(R.id.pageContent) ?: return
         val header = host.findViewById<View>(R.id.headerBar) ?: return
         val headerGlass = host.findViewById<LiquidGlassView>(R.id.headerGlass) ?: return
@@ -70,6 +73,25 @@ object GlassKit {
             host.findViewById(R.id.bottomBar),
             headerGlass,
             host.findViewById(R.id.bottomGlass)
+        )
+    }
+
+    /**
+     * 接在小手机内嵌页面上的顶栏底栏。
+     *
+     * 页面不是 Activity，没有 findViewById，所以从页面自己的容器根 View 里找。
+     */
+    fun attachPage(root: View, scroller: View) {
+        val content = root.findViewById<View>(R.id.pageContent) ?: return
+        val header = root.findViewById<View>(R.id.headerBar) ?: return
+        val headerGlass = root.findViewById<LiquidGlassView>(R.id.headerGlass) ?: return
+        attach(
+            content,
+            scroller,
+            header,
+            root.findViewById(R.id.bottomBar),
+            headerGlass,
+            root.findViewById(R.id.bottomGlass)
         )
     }
 

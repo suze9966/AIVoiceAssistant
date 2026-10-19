@@ -15,14 +15,9 @@ import androidx.appcompat.widget.SwitchCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
-class LlmConnectActivity : PocketHostActivity() {
+/** 主菜单的「接入大模型」：普通全屏页，不再是小手机浮动窗。酒馆内另有内嵌页 LlmConnectPage。 */
+class LlmConnectActivity : AppCompatActivity() {
     private fun goPhoneBack() {
-        if (isTaskRoot) {
-            startActivity(
-                Intent(this, PocketPhoneActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            )
-        }
         finish()
     }
 

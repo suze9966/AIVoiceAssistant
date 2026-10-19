@@ -5,7 +5,6 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.os.Bundle
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
@@ -13,22 +12,14 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
-class GroupChatActivity : PocketHostActivity() {
+class GroupChatPage(host: PocketHost, pageIntent: Intent?) : PocketPage(host, pageIntent) {
     private fun goPhoneBack() {
-        if (isTaskRoot) {
-            startActivity(
-                Intent(this, PocketPhoneActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            )
-        }
         finish()
     }
 
@@ -52,9 +43,8 @@ class GroupChatActivity : PocketHostActivity() {
     private var sendJob: Job? = null
     private var speechSession = 0L
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_role_chat)
+    override fun onPageCreate() {
+        inflate(R.layout.activity_role_chat)
         prefs = Prefs(this)
         llm = LlmClient(prefs)
         llm.allowLocalFallback = false
@@ -72,7 +62,7 @@ class GroupChatActivity : PocketHostActivity() {
         roles = RoleStore(this)
         store = GroupStore(this)
         plugins = TavernPluginStore(this)
-        val id = intent.getStringExtra(EXTRA_GROUP_ID).orEmpty()
+        val id = pageArgs.getStringExtra(EXTRA_GROUP_ID).orEmpty()
         room = store.get(id)
         if (room == null) {
             Toast.makeText(this, R.string.toast_group_missing, Toast.LENGTH_SHORT).show()
@@ -94,7 +84,7 @@ class GroupChatActivity : PocketHostActivity() {
         adapter.bindMessageAvatar = { view, msg -> bindBubbleAvatar(view, msg) }
         recycler.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
         recycler.adapter = adapter
-        GlassKit.attachPage(this, recycler)
+        attachGlass(recycler)
         bindHeader()
         loadChat(seedGreeting = true)
         setupLongClick()
@@ -104,8 +94,7 @@ class GroupChatActivity : PocketHostActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
+    override fun onPageResume() {
         val id = room?.id ?: return
         room = store.get(id) ?: room
         members = room?.let { store.membersOf(it) }.orEmpty()
@@ -113,19 +102,17 @@ class GroupChatActivity : PocketHostActivity() {
         adapter.notifyDataSetChanged()
     }
 
-    override fun onPause() {
-        super.onPause()
+    override fun onPagePause() {
         persistChat()
     }
 
-    override fun onDestroy() {
+    override fun onPageDestroy() {
         sendJob?.cancel()
         if (::tts.isInitialized) {
             tts.onSpeakDone = null
             tts.stop()
             tts.shutdown()
         }
-        super.onDestroy()
     }
 
     private fun persistChat() {
@@ -216,8 +203,8 @@ class GroupChatActivity : PocketHostActivity() {
             when (item.itemId) {
                 1 -> {
                     startActivity(
-                        Intent(this, GroupEditActivity::class.java)
-                            .putExtra(GroupEditActivity.EXTRA_GROUP_ID, r.id)
+                        Intent(this, GroupEditPage::class.java)
+                            .putExtra(GroupEditPage.EXTRA_GROUP_ID, r.id)
                     )
                     true
                 }
@@ -230,7 +217,7 @@ class GroupChatActivity : PocketHostActivity() {
                     true
                 }
                 3 -> {
-                    startActivity(Intent(this, LlmConnectActivity::class.java))
+                    startActivity(Intent(this, LlmConnectPage::class.java))
                     true
                 }
                 26 -> {
@@ -418,7 +405,7 @@ class GroupChatActivity : PocketHostActivity() {
                                 append(relationGraph.promptBlock(speaker.name, members.map { it.name }))
                                 if (fmtBlock.isNotBlank()) append("\n").append(fmtBlock)
                                 append("\n").append(StickerLibrary.localStickerRule())
-                                PocketPhone(this@GroupChatActivity).awareLine()
+                                PocketPhone(this@GroupChatPage).awareLine()
                                     .takeIf { it.isNotBlank() }
                                     ?.let { append("\n").append(it) }
                             }

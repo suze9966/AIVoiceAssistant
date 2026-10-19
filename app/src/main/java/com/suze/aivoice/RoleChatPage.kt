@@ -5,7 +5,6 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.os.Bundle
 import androidx.core.content.FileProvider
 import java.io.File
 import android.view.View
@@ -15,22 +14,14 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
-class RoleChatActivity : PocketHostActivity() {
+class RoleChatPage(host: PocketHost, pageIntent: Intent?) : PocketPage(host, pageIntent) {
     private fun goPhoneBack() {
-        if (isTaskRoot) {
-            startActivity(
-                Intent(this, PocketPhoneActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            )
-        }
         finish()
     }
 
@@ -54,9 +45,8 @@ class RoleChatActivity : PocketHostActivity() {
     private var sendJob: Job? = null
     private var speechSession = 0L
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_role_chat)
+    override fun onPageCreate() {
+        inflate(R.layout.activity_role_chat)
         prefs = Prefs(this)
         llm = LlmClient(prefs)
         llm.allowLocalFallback = false
@@ -73,7 +63,7 @@ class RoleChatActivity : PocketHostActivity() {
         tts = TtsHelper(this, prefs)
         store = RoleStore(this)
         plugins = TavernPluginStore(this)
-        val id = intent.getStringExtra(EXTRA_ROLE_ID).orEmpty()
+        val id = pageArgs.getStringExtra(EXTRA_ROLE_ID).orEmpty()
         if (id.isNotBlank()) prefs.lastRoleId = id
         character = store.get(id)
         if (character == null) {
@@ -81,7 +71,7 @@ class RoleChatActivity : PocketHostActivity() {
             finish()
             return
         }
-        chatId = intent.getStringExtra(EXTRA_CHAT_ID).orEmpty().ifBlank {
+        chatId = pageArgs.getStringExtra(EXTRA_CHAT_ID).orEmpty().ifBlank {
             store.activeChatId(id)
         }
         recycler = findViewById(R.id.recyclerRoleChat)
@@ -101,11 +91,11 @@ class RoleChatActivity : PocketHostActivity() {
         }
         recycler.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
         recycler.adapter = adapter
-        GlassKit.attachPage(this, recycler)
+        attachGlass(recycler)
         bindHeader()
         loadCurrentChat(seedGreeting = true)
         setupLongClick()
-        if (intent.getBooleanExtra(EXTRA_OPEN_CHATS, false)) {
+        if (pageArgs.getBooleanExtra(EXTRA_OPEN_CHATS, false)) {
             recycler.post { showChatPicker() }
         }
         findViewById<ImageButton>(R.id.btnRoleSend).setOnClickListener { submit() }
@@ -114,27 +104,24 @@ class RoleChatActivity : PocketHostActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
+    override fun onPageResume() {
         val id = character?.id ?: return
         character = store.get(id) ?: character
         bindHeader(resetStatus = !isSending)
         adapter.notifyDataSetChanged()
     }
 
-    override fun onPause() {
-        super.onPause()
+    override fun onPagePause() {
         persistChat()
     }
 
-    override fun onDestroy() {
+    override fun onPageDestroy() {
         sendJob?.cancel()
         if (::tts.isInitialized) {
             tts.onSpeakDone = null
             tts.stop()
             tts.shutdown()
         }
-        super.onDestroy()
     }
 
     private fun persistChat() {
@@ -249,8 +236,8 @@ class RoleChatActivity : PocketHostActivity() {
             when (item.itemId) {
                 1 -> {
                     startActivity(
-                        Intent(this, RoleEditActivity::class.java)
-                            .putExtra(RoleEditActivity.EXTRA_ROLE_ID, c.id)
+                        Intent(this, RoleEditPage::class.java)
+                            .putExtra(RoleEditPage.EXTRA_ROLE_ID, c.id)
                     )
                     true
                 }
@@ -279,7 +266,7 @@ class RoleChatActivity : PocketHostActivity() {
                     true
                 }
                 3 -> {
-                    startActivity(Intent(this, LlmConnectActivity::class.java))
+                    startActivity(Intent(this, LlmConnectPage::class.java))
                     true
                 }
                 10 -> {
@@ -818,7 +805,7 @@ class RoleChatActivity : PocketHostActivity() {
                 store.saveChat(meta.id, restored, c.id)
                 branchStore.fork(a, lineName, restored)
                 Toast.makeText(this, getString(R.string.toast_role_line_created, lineName), Toast.LENGTH_SHORT).show()
-                val intent = Intent(this, RoleChatActivity::class.java)
+                val intent = Intent(this, RoleChatPage::class.java)
                 intent.putExtra(EXTRA_ROLE_ID, c.id)
                 intent.putExtra(EXTRA_CHAT_ID, meta.id)
                 startActivity(intent)

@@ -1,7 +1,6 @@
 package com.suze.aivoice
 
 import android.content.Intent
-import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
@@ -10,16 +9,9 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 
-class GroupEditActivity : PocketHostActivity() {
+class GroupEditPage(host: PocketHost, pageIntent: Intent?) : PocketPage(host, pageIntent) {
     private fun goPhoneBack() {
-        if (isTaskRoot) {
-            startActivity(
-                Intent(this, PocketPhoneActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            )
-        }
         finish()
     }
 
@@ -28,13 +20,12 @@ class GroupEditActivity : PocketHostActivity() {
     private var groupId: String = ""
     private val checks = mutableListOf<Pair<String, CheckBox>>()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_group_edit)
-        GlassKit.attachPage(this, findViewById(R.id.pageScroll))
+    override fun onPageCreate() {
+        inflate(R.layout.activity_group_edit)
+        attachGlass(findViewById(R.id.pageScroll))
         store = GroupStore(this)
         roles = RoleStore(this)
-        groupId = intent.getStringExtra(EXTRA_GROUP_ID).orEmpty()
+        groupId = pageArgs.getStringExtra(EXTRA_GROUP_ID).orEmpty()
         val existing = groupId.takeIf { it.isNotBlank() }?.let { store.get(it) }
         if (groupId.isNotBlank() && existing == null) {
             Toast.makeText(this, R.string.toast_group_missing, Toast.LENGTH_SHORT).show()

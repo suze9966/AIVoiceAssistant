@@ -2,25 +2,17 @@ package com.suze.aivoice
 
 import android.app.AlertDialog
 import android.content.Intent
-import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
-class TavernPluginActivity : PocketHostActivity() {
+class TavernPluginPage(host: PocketHost, pageIntent: Intent?) : PocketPage(host, pageIntent) {
     private fun goPhoneBack() {
-        if (isTaskRoot) {
-            startActivity(
-                Intent(this, PocketPhoneActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            )
-        }
         finish()
     }
 
@@ -29,9 +21,8 @@ class TavernPluginActivity : PocketHostActivity() {
     private lateinit var emptyView: TextView
     private val items = mutableListOf<TavernPlugin>()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_tavern_plugin)
+    override fun onPageCreate() {
+        inflate(R.layout.activity_tavern_plugin)
         store = TavernPluginStore(this)
         emptyView = findViewById(R.id.tvPluginEmpty)
         findViewById<View>(R.id.btnPluginBack).setOnClickListener { goPhoneBack() }
@@ -40,7 +31,7 @@ class TavernPluginActivity : PocketHostActivity() {
                 Toast.makeText(this, R.string.toast_plugin_limit, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            startActivity(Intent(this, TavernPluginEditActivity::class.java))
+            startActivity(Intent(this, TavernPluginEditPage::class.java))
         }
         adapter = PluginAdapter(
             items,
@@ -54,11 +45,10 @@ class TavernPluginActivity : PocketHostActivity() {
         val recycler = findViewById<RecyclerView>(R.id.recyclerPlugins)
         recycler.layoutManager = LinearLayoutManager(this)
         recycler.adapter = adapter
-        GlassKit.attachPage(this, recycler)
+        attachGlass(recycler)
     }
 
-    override fun onResume() {
-        super.onResume()
+    override fun onPageResume() {
         reload()
     }
 
@@ -71,8 +61,8 @@ class TavernPluginActivity : PocketHostActivity() {
 
     private fun openEdit(id: String) {
         startActivity(
-            Intent(this, TavernPluginEditActivity::class.java)
-                .putExtra(TavernPluginEditActivity.EXTRA_PLUGIN_ID, id)
+            Intent(this, TavernPluginEditPage::class.java)
+                .putExtra(TavernPluginEditPage.EXTRA_PLUGIN_ID, id)
         )
     }
 

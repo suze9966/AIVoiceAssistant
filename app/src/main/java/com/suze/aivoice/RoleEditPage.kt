@@ -1,7 +1,6 @@
 package com.suze.aivoice
 
 import android.content.Intent
-import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.ArrayAdapter
@@ -13,19 +12,11 @@ import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import java.io.File
 
-class RoleEditActivity : PocketHostActivity() {
+class RoleEditPage(host: PocketHost, pageIntent: Intent?) : PocketPage(host, pageIntent) {
     private fun goPhoneBack() {
-        if (isTaskRoot) {
-            startActivity(
-                Intent(this, PocketPhoneActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            )
-        }
         finish()
     }
 
@@ -36,10 +27,8 @@ class RoleEditActivity : PocketHostActivity() {
     private val exampleViews = mutableListOf<View>()
     private val worldViews = mutableListOf<View>()
 
-    private val pickAvatar = registerForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri ->
-        if (uri == null) return@registerForActivityResult
+    private fun pickAvatarOnPicked(uri: android.net.Uri?) {
+        if (uri == null) return
         ensureRoleId()
         if (store.saveAvatar(roleId, uri)) {
             pendingAvatar = true
@@ -49,10 +38,8 @@ class RoleEditActivity : PocketHostActivity() {
         }
     }
 
-    private val importWorld = registerForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri == null) return@registerForActivityResult
+    private fun importWorldOnPicked(uri: android.net.Uri?) {
+        if (uri == null) return
         runCatching {
             contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
@@ -62,18 +49,17 @@ class RoleEditActivity : PocketHostActivity() {
         val entries = text?.let { TavernCardIO.worldInfoFromJson(it) }.orEmpty()
         if (entries.isEmpty()) {
             Toast.makeText(this, R.string.toast_world_import_empty, Toast.LENGTH_SHORT).show()
-            return@registerForActivityResult
+            return
         }
         entries.forEach { addWorldRow(it) }
         Toast.makeText(this, getString(R.string.toast_world_imported, entries.size), Toast.LENGTH_SHORT).show()
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_role_edit)
-        GlassKit.attachPage(this, findViewById(R.id.pageScroll))
+    override fun onPageCreate() {
+        inflate(R.layout.activity_role_edit)
+        attachGlass(findViewById(R.id.pageScroll))
         store = RoleStore(this)
-        roleId = intent.getStringExtra(EXTRA_ROLE_ID).orEmpty()
+        roleId = pageArgs.getStringExtra(EXTRA_ROLE_ID).orEmpty()
         val existing = roleId.takeIf { it.isNotBlank() }?.let { store.get(it) }
         findViewById<TextView>(R.id.tvRoleEditTitle).setText(
             if (existing == null) R.string.role_add_title else R.string.role_edit_title
@@ -128,7 +114,7 @@ class RoleEditActivity : PocketHostActivity() {
         refreshAvatarPreview()
 
         findViewById<Button>(R.id.btnRolePickAvatar).setOnClickListener {
-            pickAvatar.launch("image/*")
+            pickFile({ uri -> pickAvatarOnPicked(uri) }, false, arrayOf("image/*"))
         }
         findViewById<Button>(R.id.btnRoleClearAvatar).setOnClickListener {
             if (roleId.isNotBlank()) store.clearAvatar(roleId)
@@ -140,7 +126,7 @@ class RoleEditActivity : PocketHostActivity() {
         findViewById<Button>(R.id.btnRoleAddExample).setOnClickListener { addExampleRow() }
         findViewById<Button>(R.id.btnRoleAddWorld).setOnClickListener { addWorldRow() }
         findViewById<Button>(R.id.btnRoleImportWorld).setOnClickListener {
-            importWorld.launch(arrayOf("application/json", "text/plain", "*/*"))
+            pickFile({ uri -> importWorldOnPicked(uri) }, true, arrayOf("application/json", "text/plain", "*/*"))
         }
         findViewById<Button>(R.id.btnRoleExportWorld).setOnClickListener { exportWorld() }
 

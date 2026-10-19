@@ -2,7 +2,6 @@ package com.suze.aivoice
 
 import android.app.AlertDialog
 import android.content.Intent
-import android.os.Bundle
 import android.text.format.DateFormat
 import android.view.LayoutInflater
 import android.view.View
@@ -10,20 +9,13 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import java.util.Date
 
-class GroupLoungeActivity : PocketHostActivity() {
+class GroupLoungePage(host: PocketHost, pageIntent: Intent?) : PocketPage(host, pageIntent) {
     private fun goPhoneBack() {
-        if (isTaskRoot) {
-            startActivity(
-                Intent(this, PocketPhoneActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            )
-        }
         finish()
     }
 
@@ -32,9 +24,8 @@ class GroupLoungeActivity : PocketHostActivity() {
     private lateinit var emptyView: TextView
     private val items = mutableListOf<GroupRoom>()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_group_lounge)
+    override fun onPageCreate() {
+        inflate(R.layout.activity_group_lounge)
         store = GroupStore(this)
         emptyView = findViewById(R.id.tvGroupEmpty)
         findViewById<View>(R.id.btnGroupBack).setOnClickListener { goPhoneBack() }
@@ -47,7 +38,7 @@ class GroupLoungeActivity : PocketHostActivity() {
                 Toast.makeText(this, R.string.toast_group_limit, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            startActivity(Intent(this, GroupEditActivity::class.java))
+            startActivity(Intent(this, GroupEditPage::class.java))
         }
         adapter = GroupCardAdapter(
             items,
@@ -58,11 +49,10 @@ class GroupLoungeActivity : PocketHostActivity() {
         val recycler = findViewById<RecyclerView>(R.id.recyclerGroups)
         recycler.layoutManager = LinearLayoutManager(this)
         recycler.adapter = adapter
-        GlassKit.attachPage(this, recycler)
+        attachGlass(recycler)
     }
 
-    override fun onResume() {
-        super.onResume()
+    override fun onPageResume() {
         reload()
     }
 
@@ -75,8 +65,8 @@ class GroupLoungeActivity : PocketHostActivity() {
 
     private fun openChat(room: GroupRoom) {
         startActivity(
-            Intent(this, GroupChatActivity::class.java)
-                .putExtra(GroupChatActivity.EXTRA_GROUP_ID, room.id)
+            Intent(this, GroupChatPage::class.java)
+                .putExtra(GroupChatPage.EXTRA_GROUP_ID, room.id)
         )
     }
 
@@ -88,8 +78,8 @@ class GroupLoungeActivity : PocketHostActivity() {
             when (item.itemId) {
                 1 -> {
                     startActivity(
-                        Intent(this, GroupEditActivity::class.java)
-                            .putExtra(GroupEditActivity.EXTRA_GROUP_ID, room.id)
+                        Intent(this, GroupEditPage::class.java)
+                            .putExtra(GroupEditPage.EXTRA_GROUP_ID, room.id)
                     )
                     true
                 }

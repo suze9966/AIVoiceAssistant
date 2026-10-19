@@ -1,7 +1,6 @@
 package com.suze.aivoice
 
 import android.content.Intent
-import android.os.Bundle
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -10,29 +9,21 @@ import android.widget.EditText
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import java.util.regex.Pattern
 
-class TavernPluginEditActivity : PocketHostActivity() {
+class TavernPluginEditPage(host: PocketHost, pageIntent: Intent?) : PocketPage(host, pageIntent) {
     private fun goPhoneBack() {
-        if (isTaskRoot) {
-            startActivity(
-                Intent(this, PocketPhoneActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            )
-        }
         finish()
     }
 
     private lateinit var store: TavernPluginStore
     private var pluginId: String = ""
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_tavern_plugin_edit)
-        GlassKit.attachPage(this, findViewById(R.id.pageScroll))
+    override fun onPageCreate() {
+        inflate(R.layout.activity_tavern_plugin_edit)
+        attachGlass(findViewById(R.id.pageScroll))
         store = TavernPluginStore(this)
-        pluginId = intent.getStringExtra(EXTRA_PLUGIN_ID).orEmpty()
+        pluginId = pageArgs.getStringExtra(EXTRA_PLUGIN_ID).orEmpty()
         val existing = pluginId.takeIf { it.isNotBlank() }?.let { id -> store.load().firstOrNull { it.id == id } }
         if (pluginId.isNotBlank() && existing == null) {
             Toast.makeText(this, R.string.toast_plugin_missing, Toast.LENGTH_SHORT).show()

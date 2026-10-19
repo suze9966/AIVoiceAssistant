@@ -2,7 +2,6 @@ package com.suze.aivoice
 
 import android.app.AlertDialog
 import android.content.Intent
-import android.os.Bundle
 import android.text.format.DateFormat
 import android.view.LayoutInflater
 import android.view.View
@@ -14,8 +13,6 @@ import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.FileProvider
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -23,14 +20,8 @@ import androidx.recyclerview.widget.RecyclerView
 import java.io.File
 import java.util.Date
 
-class RoleLoungeActivity : PocketHostActivity() {
+class RoleLoungePage(host: PocketHost, pageIntent: Intent?) : PocketPage(host, pageIntent) {
     private fun goPhoneBack() {
-        if (isTaskRoot) {
-            startActivity(
-                Intent(this, PocketPhoneActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            )
-        }
         finish()
     }
 
@@ -43,10 +34,8 @@ class RoleLoungeActivity : PocketHostActivity() {
     private val items = mutableListOf<RoleCharacter>()
     private var query: String = ""
 
-    private val importCard = registerForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri == null) return@registerForActivityResult
+    private fun importCardOnPicked(uri: android.net.Uri?) {
+        if (uri == null) return
         runCatching {
             contentResolver.takePersistableUriPermission(
                 uri,
@@ -56,7 +45,7 @@ class RoleLoungeActivity : PocketHostActivity() {
         val imported = TavernCardIO.importUriFull(this, uri)
         if (imported == null) {
             Toast.makeText(this, R.string.toast_role_import_failed, Toast.LENGTH_SHORT).show()
-            return@registerForActivityResult
+            return
         }
         val character = imported.character.copy(updatedAt = System.currentTimeMillis())
         store.upsert(character)
@@ -65,28 +54,27 @@ class RoleLoungeActivity : PocketHostActivity() {
         Toast.makeText(this, R.string.toast_role_imported, Toast.LENGTH_SHORT).show()
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_role_lounge)
+    override fun onPageCreate() {
+        inflate(R.layout.activity_role_lounge)
         store = RoleStore(this)
         prefs = Prefs(this)
         llm = LlmClient(prefs)
         emptyView = findViewById(R.id.tvRoleEmpty)
         findViewById<View>(R.id.btnRoleBack).setOnClickListener { goPhoneBack() }
         findViewById<View>(R.id.btnRoleAdd).setOnClickListener {
-            startActivity(Intent(this, RoleEditActivity::class.java))
+            startActivity(Intent(this, RoleEditPage::class.java))
         }
         findViewById<View>(R.id.btnRoleImport).setOnClickListener {
-            importCard.launch(arrayOf("application/json", "image/png", "image/*", "*/*"))
+            pickFile({ uri -> importCardOnPicked(uri) }, true, arrayOf("application/json", "image/png", "image/*", "*/*"))
         }
         findViewById<Button>(R.id.btnConnectLlm).setOnClickListener {
-            startActivity(Intent(this, LlmConnectActivity::class.java))
+            startActivity(Intent(this, LlmConnectPage::class.java))
         }
         findViewById<Button>(R.id.btnOpenPlugins).setOnClickListener {
-            startActivity(Intent(this, TavernPluginActivity::class.java))
+            startActivity(Intent(this, TavernPluginPage::class.java))
         }
         findViewById<Button>(R.id.btnOpenGroups).setOnClickListener {
-            startActivity(Intent(this, GroupLoungeActivity::class.java))
+            startActivity(Intent(this, GroupLoungePage::class.java))
         }
         adapter = RoleCardAdapter(
             items,
@@ -105,11 +93,10 @@ class RoleLoungeActivity : PocketHostActivity() {
                 applyFilter()
             }
         })
-        GlassKit.attachPage(this, recycler)
+        attachGlass(recycler)
     }
 
-    override fun onResume() {
-        super.onResume()
+    override fun onPageResume() {
         reload()
         refreshLlmStatus()
     }
@@ -229,8 +216,8 @@ class RoleLoungeActivity : PocketHostActivity() {
 
     private fun openChat(character: RoleCharacter) {
         startActivity(
-            Intent(this, RoleChatActivity::class.java)
-                .putExtra(RoleChatActivity.EXTRA_ROLE_ID, character.id)
+            Intent(this, RoleChatPage::class.java)
+                .putExtra(RoleChatPage.EXTRA_ROLE_ID, character.id)
         )
     }
 
@@ -248,16 +235,16 @@ class RoleLoungeActivity : PocketHostActivity() {
             when (item.itemId) {
                 1 -> {
                     startActivity(
-                        Intent(this, RoleEditActivity::class.java)
-                            .putExtra(RoleEditActivity.EXTRA_ROLE_ID, character.id)
+                        Intent(this, RoleEditPage::class.java)
+                            .putExtra(RoleEditPage.EXTRA_ROLE_ID, character.id)
                     )
                     true
                 }
                 4 -> {
                     startActivity(
-                        Intent(this, RoleChatActivity::class.java)
-                            .putExtra(RoleChatActivity.EXTRA_ROLE_ID, character.id)
-                            .putExtra(RoleChatActivity.EXTRA_OPEN_CHATS, true)
+                        Intent(this, RoleChatPage::class.java)
+                            .putExtra(RoleChatPage.EXTRA_ROLE_ID, character.id)
+                            .putExtra(RoleChatPage.EXTRA_OPEN_CHATS, true)
                     )
                     true
                 }

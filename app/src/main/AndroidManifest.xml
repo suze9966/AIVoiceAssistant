@@ -133,56 +133,7 @@
             android:screenOrientation="unspecified"
             android:windowSoftInputMode="adjustResize" />
         <activity
-            android:name=".RoleLoungeActivity"
-            android:theme="@style/Theme.PocketFloat"
-            android:exported="false"
-            android:label="@string/role_lounge_title"
-            android:windowSoftInputMode="adjustResize" />
-        <activity
-            android:name=".RoleChatActivity"
-            android:theme="@style/Theme.PocketFloat"
-            android:exported="false"
-            android:label="@string/role_lounge_title"
-            android:windowSoftInputMode="adjustResize" />
-        <activity
-            android:name=".RoleEditActivity"
-            android:theme="@style/Theme.PocketFloat"
-            android:exported="false"
-            android:label="@string/role_edit_title"
-            android:windowSoftInputMode="adjustResize" />
-        <activity
-            android:name=".TavernPluginActivity"
-            android:theme="@style/Theme.PocketFloat"
-            android:exported="false"
-            android:label="@string/plugin_title"
-            android:windowSoftInputMode="adjustResize" />
-        <activity
-            android:name=".TavernPluginEditActivity"
-            android:theme="@style/Theme.PocketFloat"
-            android:exported="false"
-            android:label="@string/plugin_edit_title"
-            android:windowSoftInputMode="adjustResize" />
-        <activity
-            android:name=".GroupLoungeActivity"
-            android:theme="@style/Theme.PocketFloat"
-            android:exported="false"
-            android:label="@string/group_title"
-            android:windowSoftInputMode="adjustResize" />
-        <activity
-            android:name=".GroupEditActivity"
-            android:theme="@style/Theme.PocketFloat"
-            android:exported="false"
-            android:label="@string/group_edit_title"
-            android:windowSoftInputMode="adjustResize" />
-        <activity
-            android:name=".GroupChatActivity"
-            android:theme="@style/Theme.PocketFloat"
-            android:exported="false"
-            android:label="@string/group_title"
-            android:windowSoftInputMode="adjustResize" />
-        <activity
             android:name=".LlmConnectActivity"
-            android:theme="@style/Theme.PocketFloat"
             android:exported="false"
             android:label="@string/llm_connect_title"
             android:windowSoftInputMode="adjustResize" />

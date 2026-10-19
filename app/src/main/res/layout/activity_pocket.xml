@@ -102,6 +102,16 @@
             android:textSize="12sp" />
     </LinearLayout>
 
+    <!-- 酒馆内嵌页面层：盖在桌面正文之上，但要让出顶栏，小窗仍可拖动缩放 -->
+    <FrameLayout
+        android:id="@+id/pocketPageHost"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="58dp"
+        android:layout_marginBottom="0dp"
+        android:layout_gravity="top"
+        android:visibility="gone" />
+
     <ScrollView
         android:id="@+id/pocketScroll"
         android:layout_width="match_parent"
