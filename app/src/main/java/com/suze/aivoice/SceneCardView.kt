@@ -124,7 +124,7 @@ class SceneCardView @JvmOverloads constructor(
                 val minH = (96 * baseDensity).toInt()
                 val maxW = (resources.displayMetrics.widthPixels * 0.92f).toInt()
                 val maxH = if (m.kind == "beauty") {
-                    (resources.displayMetrics.heightPixels * 4f).toInt()
+                    (resources.displayMetrics.heightPixels * 200f).toInt()
                 } else {
                     (resources.displayMetrics.heightPixels * 0.72f).toInt()
                 }
@@ -183,7 +183,8 @@ class SceneCardView @JvmOverloads constructor(
             }
         }
         val cap = if (m?.kind == "beauty") {
-            (resources.displayMetrics.heightPixels * 4f).toInt()
+            // 美化卡不再用「屏高 4 倍」封顶；换机后像素不同也不该被压矮。
+            (resources.displayMetrics.heightPixels * 200f).toInt()
         } else {
             (resources.displayMetrics.heightPixels * 0.72f).toInt()
         }
@@ -1464,34 +1465,35 @@ class SceneCardView @JvmOverloads constructor(
     }
 
     /** 没拖过高度时，美化卡按实际版式长高，装饰圈、便签和整页不再被旧公式裁掉。 */
+    /**
+     * 按每种页真实占的行高预测高度，宁可高一点，绝不比实际画出来的矮。
+     * 旧算法只按 13dp 字号估，遇到 14~12dp 混排、通话块、语音条时算矮，
+     * 绘制就会在底部提前停笔，看起来像吞字。
+     */
     private fun beautyHeight(m: Model, widthPx: Int): Int {
         val frame = m.frame.ifBlank { "card" }
         val rows = if (frame.startsWith("wx") && m.lines.isEmpty()) pageRows(m) else beautyRows(m)
+        val rowCount = rows.size.coerceAtLeast(1)
         ink.textSize = 13f * density
         ink.typeface = Typeface.DEFAULT
-        val textW = when (frame) {
-            "ornament" -> widthPx - 92f * density
-            "note" -> widthPx - 58f * density
-            "terminal" -> widthPx - 40f * density
-            else -> widthPx - 56f * density
-        }.coerceAtLeast(40f * density)
-        val wrapped = rows.sumOf { wrapText(it, ink, textW).size.coerceAtLeast(1) }
-        val callExtra = if (frame == "oval") rows.count { it.contains("通话") || it.contains("待接听") || it.contains("挂断") } * 78f else 0f
+        val textW = (widthPx - 40f * density).coerceAtLeast(48f * density)
+        val wide = bubbleLines(rows.joinToString(" "), textW).size
         val body = when (frame) {
-            "ornament" -> 42f + rows.size * 28f + wrapped * 18f
-            "note" -> 18f + rows.size * 70f + wrapped * 16f
-            "terminal" -> 86f + wrapped * 16f
-            "bilingual", "wing", "bunny" -> 70f + wrapped * 22f + rows.size * 20f
-            "face" -> 126f + wrapped * 18f + rows.size * 12f
-            "role" -> 24f + wrapped * 20f + rows.size * 28f
-            "oval" -> 20f + wrapped * 20f + rows.size * 28f + callExtra
-            "basic", "wechat" -> 24f + wrapped * 18f + rows.size * 14f
-            "wxchat" -> 78f + wrapped * 18f + rows.size * 16f
-            "wxedit" -> 150f + (rows.size - 1).coerceAtLeast(0) * 28f
-            "wxhome", "wxbook", "wxmoments" -> 108f + rows.size * 34f
-            "wxadd" -> 100f + rows.size * 28f
-            "wxfind", "wxme", "wxdetail", "wxfriend" -> 86f + rows.size * 28f
-            else -> 56f + wrapped * 18f + rows.size * 18f
+            "ornament" -> 56f + rowCount * 16f + wide * 24f
+            "note" -> 24f + rowCount * 104f
+            "terminal" -> 96f + rowCount * 22f + wide * 16f
+            "bilingual", "wing", "bunny" -> 72f + rowCount * 64f + wide * 22f
+            "face" -> 140f + rowCount * 46f + wide * 18f
+            "role" -> 40f + rowCount * 68f + wide * 22f
+            "oval" -> 36f + rowCount * 90f + wide * 24f
+            "basic", "wechat" -> 40f + rowCount * 46f + wide * 20f
+            "wxchat" -> 96f + rowCount * 42f + wide * 20f
+            "wxedit" -> 170f + rowCount * 34f
+            "wxhome", "wxbook", "wxmoments" -> 120f + rowCount * 40f
+            "wxadd" -> 116f + rowCount * 34f
+            "wxfind", "wxme" -> 100f + rowCount * 34f
+            "wxdetail", "wxfriend" -> 110f + rowCount * 36f
+            else -> 64f + rowCount * 46f + wide * 20f
         }
         val h = (body * density).toInt()
         val min = (160 * baseDensity).toInt()
