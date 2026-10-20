@@ -151,9 +151,11 @@ object UiThemeManager {
     fun apply(ctx: Context, root: View?) {
         val r = root ?: return
         val s = spec(ctx)
-
         // 页面底层
         r.setBackgroundResource(s.pageBg)
+        // chatContent 是 chatScene 里的实际内容容器，布局里写死了 mist_page_bg。
+        // 不刷这一层，深色主题下聊天区会一直露出 B 版的浅蓝底。
+        r.findViewById<View>(R.id.chatContent)?.setBackgroundResource(s.pageBg)
 
         // 文字：按 id 语义刷，不动内容
         tintPrimary(ctx, r.findViewById(R.id.tvStatus))
@@ -169,6 +171,9 @@ object UiThemeManager {
         r.findViewById<View>(R.id.bottomBar)?.setBackgroundResource(s.bottomBar)
         r.findViewById<View>(R.id.editInput)?.setBackgroundResource(s.inputBg)
         r.findViewById<View>(R.id.btnSend)?.setBackgroundResource(s.sendBtn)
+        // 状态条卡片布局里写死了 mist_card，跟着主题走
+        r.findViewById<View>(R.id.tvStatus)?.setBackgroundResource(s.card)
+
 
         // 状态栏跟随主题
         (ctx as? Activity)?.let { paintSystemBars(it, s) }

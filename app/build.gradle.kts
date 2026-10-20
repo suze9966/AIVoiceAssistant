@@ -17,19 +17,44 @@ android {
         versionName = "1.1"
     }
 
-    val keystorePropsFile = rootProject.file("keystore.properties")
-    val keystoreProps = Properties()
-    if (keystorePropsFile.exists()) {
-        keystorePropsFile.inputStream().use { keystoreProps.load(it) }
+    // ---- 固定签名材料 ----
+    // 优先读环境变量里的 keystore(base64)，CI 用 GitHub Secrets 注入；
+    // 其次读本地 keystore.properties；都没有则回退 Gradle 默认 debug keystore。
+    // 这样保证每次 CI 产出的 APK 签名一致，可以直接覆盖安装旧版本。
+    val propsFile = rootProject.file("keystore.properties")
+    val fileProps = Properties()
+    if (propsFile.exists()) {
+        propsFile.inputStream().use { fileProps.load(it) }
     }
 
+    val b64 = System.getenv("XIAOMO_KEYSTORE_B64")
+    val storePass = System.getenv("XIAOMO_STORE_PASS") ?: fileProps.getProperty("storePassword")
+    val keyAlias = System.getenv("XIAOMO_KEY_ALIAS") ?: fileProps.getProperty("keyAlias")
+    val keyPass = System.getenv("XIAOMO_KEY_PASS") ?: fileProps.getProperty("keyPassword")
+
+    var signingStorePath: String? = fileProps.getProperty("storeFile")
+    if (!b64.isNullOrBlank()) {
+        val out = java.io.File(rootProject.buildDir, "ci-signing")
+        out.mkdirs()
+        val jks = java.io.File(out, "xiaomo-debug.jks")
+        if (!jks.exists() || jks.length() == 0L) {
+            jks.writeBytes(java.util.Base64.getDecoder().decode(b64))
+        }
+        signingStorePath = jks.absolutePath
+    }
+
+    val signingReady = !signingStorePath.isNullOrBlank() &&
+        !storePass.isNullOrBlank() &&
+        !keyAlias.isNullOrBlank() &&
+        !keyPass.isNullOrBlank()
+
     signingConfigs {
-        if (keystorePropsFile.exists()) {
+        if (signingReady) {
             create("xiaomo") {
-                storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))
-                storePassword = keystoreProps.getProperty("storePassword")
-                keyAlias = keystoreProps.getProperty("keyAlias")
-                keyPassword = keystoreProps.getProperty("keyPassword")
+                storeFile = file(signingStorePath!!)
+                storePassword = storePass
+                keyAlias = keyAlias
+                keyPassword = keyPass
             }
         }
     }
