@@ -1,6 +1,7 @@
 package com.suze.aivoice
 
 import android.content.Intent
+import android.view.View
 import androidx.core.content.FileProvider
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
@@ -373,7 +374,7 @@ class SettingsBinder(
         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(
                 parent: AdapterView<*>?,
-                view: View?,
+                view: android.view.View?,
                 position: Int,
                 id: Long
             ) {
