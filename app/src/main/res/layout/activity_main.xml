@@ -5,7 +5,8 @@
     android:fitsSystemWindows="true">
     <FrameLayout
         android:id="@+id/chatScene"
-        android:layout_width="match_parent" android:layout_height="match_parent">
+        android:layout_width="match_parent" android:layout_height="match_parent"
+        android:background="@drawable/abyss_page_bg">
         <FrameLayout
             android:id="@+id/chatContent"
             android:layout_width="match_parent" android:layout_height="match_parent"

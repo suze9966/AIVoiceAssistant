@@ -151,11 +151,18 @@ object UiThemeManager {
     fun apply(ctx: Context, root: View?) {
         val r = root ?: return
         val s = spec(ctx)
-        // 页面底层
+        // 页面底层。聊天页的液态玻璃拍的是 chatScene，这一层必须有当前主题底色，
+        // 否则玻璃采样到的是窗口默认浅底，深色主题看起来还是晨雾浅蓝。
         r.setBackgroundResource(s.pageBg)
-        // chatContent 是 chatScene 里的实际内容容器，布局里写死了 mist_page_bg。
-        // 不刷这一层，深色主题下聊天区会一直露出 B 版的浅蓝底。
-        r.findViewById<View>(R.id.chatContent)?.setBackgroundResource(s.pageBg)
+        (r.parent as? View)?.takeIf { it.id == R.id.chatScene }
+            ?.setBackgroundResource(s.pageBg)
+        (ctx as? Activity)?.findViewById<View>(R.id.chatScene)
+            ?.setBackgroundResource(s.pageBg)
+        // chatContent 布局里写死了 mist_page_bg。不刷这一层，深色主题的聊天区
+        // 会一直露出 B 版浅蓝底。
+        val content = if (r.id == R.id.chatContent) r
+            else r.findViewById<View>(R.id.chatContent)
+        content?.setBackgroundResource(s.pageBg)
 
         // 文字：按 id 语义刷，不动内容
         tintPrimary(ctx, r.findViewById(R.id.tvStatus))
