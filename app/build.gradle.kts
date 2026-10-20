@@ -1,4 +1,6 @@
 import java.util.Properties
+import java.io.File
+import java.util.Base64
 
 plugins {
     id("com.android.application")
@@ -27,34 +29,39 @@ android {
         propsFile.inputStream().use { fileProps.load(it) }
     }
 
-    val b64 = System.getenv("XIAOMO_KEYSTORE_B64")
-    val storePass = System.getenv("XIAOMO_STORE_PASS") ?: fileProps.getProperty("storePassword")
-    val keyAlias = System.getenv("XIAOMO_KEY_ALIAS") ?: fileProps.getProperty("keyAlias")
-    val keyPass = System.getenv("XIAOMO_KEY_PASS") ?: fileProps.getProperty("keyPassword")
+    val envKeystoreB64 = System.getenv("XIAOMO_KEYSTORE_B64")
+    val resolvedStorePassword = System.getenv("XIAOMO_STORE_PASS") ?: fileProps.getProperty("storePassword")
+    val resolvedKeyAlias = System.getenv("XIAOMO_KEY_ALIAS") ?: fileProps.getProperty("keyAlias")
+    val resolvedKeyPassword = System.getenv("XIAOMO_KEY_PASS") ?: fileProps.getProperty("keyPassword")
 
-    var signingStorePath: String? = fileProps.getProperty("storeFile")
-    if (!b64.isNullOrBlank()) {
-        val out = java.io.File(rootProject.buildDir, "ci-signing")
-        out.mkdirs()
-        val jks = java.io.File(out, "xiaomo-debug.jks")
+    var resolvedStorePath: String? = fileProps.getProperty("storeFile")
+    if (!envKeystoreB64.isNullOrBlank()) {
+        val outDir = File(rootProject.projectDir, "build/ci-signing")
+        outDir.mkdirs()
+        val jks = File(outDir, "xiaomo-debug.jks")
         if (!jks.exists() || jks.length() == 0L) {
-            jks.writeBytes(java.util.Base64.getDecoder().decode(b64))
+            jks.writeBytes(Base64.getDecoder().decode(envKeystoreB64.trim()))
         }
-        signingStorePath = jks.absolutePath
+        resolvedStorePath = jks.absolutePath
+        logger.lifecycle("SIGNING_SOURCE=env")
+    } else if (!resolvedStorePath.isNullOrBlank()) {
+        logger.lifecycle("SIGNING_SOURCE=keystore.properties")
+    } else {
+        logger.lifecycle("SIGNING_SOURCE=default debug keystore")
     }
 
-    val signingReady = !signingStorePath.isNullOrBlank() &&
-        !storePass.isNullOrBlank() &&
-        !keyAlias.isNullOrBlank() &&
-        !keyPass.isNullOrBlank()
+    val signingReady = !resolvedStorePath.isNullOrBlank() &&
+        !resolvedStorePassword.isNullOrBlank() &&
+        !resolvedKeyAlias.isNullOrBlank() &&
+        !resolvedKeyPassword.isNullOrBlank()
 
     signingConfigs {
         if (signingReady) {
             create("xiaomo") {
-                storeFile = file(signingStorePath!!)
-                storePassword = storePass
-                keyAlias = keyAlias
-                keyPassword = keyPass
+                storeFile = file(resolvedStorePath!!)
+                storePassword = resolvedStorePassword
+                keyAlias = resolvedKeyAlias
+                keyPassword = resolvedKeyPassword
             }
         }
     }
