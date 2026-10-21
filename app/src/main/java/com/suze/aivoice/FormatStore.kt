@@ -73,12 +73,51 @@ class FormatStore(private val context: Context) {
             FormatEntry(
                 id = "builtin:$fileName#skin:$name",
                 title = "皮肤·$name",
-                content = "皮肤·$name\n" + text,
+                content = "皮肤·$name\n" + skinSlice(text, name),
                 enabled = false,
                 builtin = true,
                 trigger = "点选后只使用$name"
             )
         }
+    }
+
+    /**
+     * 从一份多皮肤原文里切出「只保留这一套」的版本。
+     *
+     * 原文把五套皮肤的色码和颜文字列在一起，注入提示词或扫色码时
+     * 永远会命中第一套（草莓炼乳）。这里把其他皮肤块删掉，
+     * 只留下核心规则 + 选中的那一套，模型也不会选错。
+     */
+    private fun skinSlice(text: String, skinName: String): String {
+        val lines = text.split("\n")
+        val allSkins = listOf(
+            "草莓炼乳", "薄荷小熊", "布丁狗",
+            "紫薯麻薯", "橘子果酱", "绿色气泡", "白色气泡"
+        )
+        fun skinNameOf(line: String): String {
+            val m = Regex("^\\d+[.、]\\s*(.+)$").find(line.trim()) ?: return ""
+            return m.groupValues[1].trim()
+        }
+        var start = -1
+        for (i in lines.indices) {
+            val nm = skinNameOf(lines[i])
+            if (nm.isNotEmpty() && allSkins.any { nm.contains(it) }) {
+                start = i
+                break
+            }
+        }
+        if (start < 0) return text
+        var end = lines.size
+        for (i in start + 1 until lines.size) {
+            val nm = skinNameOf(lines[i])
+            if (nm.isNotEmpty() && nm != skinName && allSkins.any { nm.contains(it) }) {
+                end = i
+                break
+            }
+        }
+        val head = lines.take(start).joinToString("\n")
+        val block = lines.subList(start, end).joinToString("\n")
+        return head + "\n\n【本次只使用这一套皮肤】\n" + block
     }
 
     /** 取原文里最适合当标题的一行（优先含中文、且不是纯 LaTeX 记号的行）。 */
@@ -546,7 +585,53 @@ class FormatStore(private val context: Context) {
             val lines = readableFields(entry.content).ifEmpty {
                 listOf("核心排版规则", "颜色与样式约束", "AI发言边界", "消息与气泡格式")
             }
+            // 皮肤条目直接给出确定的视觉映射，
+            // 不再让扫整份原文的方法决定颜色（否则五套会全部画成一样）。
+            val forced = if (entry.title.startsWith("皮肤·")) {
+                forcedSkin(entry.title.removePrefix("皮肤·").trim())
+            } else null
+            if (forced != null) {
+                return SceneCardView.Model(
+                    "beauty",
+                    title,
+                    lines,
+                    forced.ink,
+                    forced.paper,
+                    forced.accent,
+                    forced.page,
+                    forced.frame,
+                    forced.ornament,
+                    forced.corner,
+                    forced.skin
+                )
+            }
             return beautyLookModel(title, lines, entry.content)
+        }
+
+        /** 一套皮肤的固定视觉映射。 */
+        private data class ForcedSkin(
+            val frame: String,
+            val ornament: String,
+            val corner: String,
+            val skin: String,
+            val ink: Int,
+            val paper: Int,
+            val accent: Int,
+            val page: Int
+        )
+
+        private fun forcedSkin(name: String): ForcedSkin? {
+            fun argb(hex: String): Int = (0xFF000000 or hex.toLong(16)).toInt()
+            return when (name) {
+                "草莓炼乳" -> ForcedSkin("oval", "", "", "berry", argb("#6B3A3A"), argb("#FDF3F3"), argb("#F2B5B5"), argb("#6B3A3A"))
+                "薄荷小熊" -> ForcedSkin("oval", "", "", "mint", argb("#3E5B3E"), argb("#F1F8F1"), argb("#B0D9B0"), argb("#3E5B3E"))
+                "布丁狗" -> ForcedSkin("oval", "", "", "pudding", argb("#7A5A22"), argb("#FDF6E8"), argb("#F7D48B"), argb("#7A5A22"))
+                "紫薯麻薯" -> ForcedSkin("oval", "", "", "taro", argb("#4A3560"), argb("#F6F1FC"), argb("#C7A8E0"), argb("#4A3560"))
+                "橘子果酱" -> ForcedSkin("oval", "", "", "orange", argb("#7A4A22"), argb("#FDF4EA"), argb("#F4B886"), argb("#7A4A22"))
+                "绿色气泡" -> ForcedSkin("basic", "", "", "green", 0, 0, 0, 0)
+                "白色气泡" -> ForcedSkin("basic", "", "", "white", 0, 0, 0, 0)
+                else -> null
+            }
         }
 
         private fun beautyLookModel(title: String, lines: List<String>, source: String): SceneCardView.Model {
@@ -723,6 +808,13 @@ class FormatStore(private val context: Context) {
             blob.contains("皮肤·紫薯麻薯") -> "taro"
             blob.contains("皮肤·橘子果酱") -> "orange"
             blob.contains("香芋紫") || blob.contains("聊天美化 2.0") || blob.contains("聊天美化2.0") || blob.contains("2_0") -> "taro"
+            // 五套皮肤的原文会把所有名字列在一起，并带「请回复编号」。
+            // 不能看见「草莓炼乳」就判成草莓：点哪一套，只认那一套标题后的色码。
+            blob.contains("请回复编号") && blob.contains("色码 #F2B5B5") -> "berry"
+            blob.contains("请回复编号") && blob.contains("色码 #B0D9B0") -> "mint"
+            blob.contains("请回复编号") && blob.contains("色码 #F7D48B") -> "pudding"
+            blob.contains("请回复编号") && blob.contains("色码 #C7A8E0") -> "taro"
+            blob.contains("请回复编号") && blob.contains("色码 #F4B886") -> "orange"
             blob.contains("草莓炼乳") && !blob.contains("请回复编号") -> "berry"
             blob.contains("薄荷小熊") && !blob.contains("请回复编号") -> "mint"
             blob.contains("布丁狗") && !blob.contains("请回复编号") -> "pudding"

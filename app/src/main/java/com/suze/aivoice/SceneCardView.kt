@@ -851,8 +851,13 @@ class SceneCardView @JvmOverloads constructor(
 
     private fun drawSkinCard(canvas: Canvas, m: Model) {
         val skin = skinMark(m.skin)
-        val lineInk = colorOr(m.accentColor, skin.color)
-        val textInk = colorOr(m.pageColor, "#2F4F4F")
+        // 五套椭圆皮肤各有自己的框色、字色、拍一拍色。
+        // m.accentColor / m.pageColor 是从整份原文扫出来的，而一份原文里写着全部五套皮肤的色码，
+        // 扫出来的总是同一组。这里只要认得出皮肤，就用皮肤自己的颜色，不让扫色码覆盖。
+        val known = m.skin in setOf("berry", "mint", "pudding", "taro", "orange")
+        val lineInk = if (known) Color.parseColor(skin.color) else colorOr(m.accentColor, skin.color)
+        val textInk = if (known) Color.parseColor(skin.textColor) else colorOr(m.pageColor, "#2F4F4F")
+        val patInk = if (known) Color.parseColor(skin.patColor) else lineInk
         val hollow = m.skin == "taro" || m.title.contains("2.0") || m.title.contains("2_0")
         var y = 12f * density
         beautyRows(m).forEachIndexed { i, row ->
@@ -870,7 +875,7 @@ class SceneCardView @JvmOverloads constructor(
             val kind = messageKind(bits.second)
             val shown = skinBody(kind, bits.second, skin)
             if (kind == "pat") {
-                mute.color = lineInk
+                mute.color = patInk
                 mute.textSize = 11f * density
                 bubbleLines(shown, width - 36f * density).forEach { part ->
                     val pw = mute.measureText(part)
@@ -1362,14 +1367,29 @@ class SceneCardView @JvmOverloads constructor(
     }
     private fun clockShort(): String = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
 
-    private data class SkinMark(val color: String, val left: String, val right: String)
+    /**
+     * 一套椭圆皮肤的全部视觉要素。
+     *
+     * color     框线色（原文给的色码）
+     * left/right 框内固定颜文字
+     * patColor  拍一拍文字色（原文要求与主色同系、略深）
+     * textColor 框内正文色
+     */
+    private data class SkinMark(
+        val color: String,
+        val left: String,
+        val right: String,
+        val patColor: String,
+        val textColor: String
+    )
 
     private fun skinMark(skin: String): SkinMark = when (skin) {
-        "berry" -> SkinMark("#F2B5B5", "⪩. .⪨", "⪩. .⪨")
-        "mint" -> SkinMark("#B0D9B0", "⋆｡°✩", "✩°｡⋆")
-        "pudding" -> SkinMark("#F7D48B", "૮₍ ˃ ꇴ ˂ ₎ა", "૮₍ ˃ ꇴ ˂ ₎ა")
-        "orange" -> SkinMark("#F4B886", "ʚɞ", "ʚɞ")
-        else -> SkinMark("#C7A8E0", "・✭・", "・✭・")
+        "berry" -> SkinMark("#F2B5B5", "⪩. .⪨", "⪩. .⪨", "#C97E7E", "#6B3A3A")
+        "mint" -> SkinMark("#B0D9B0", "⋆｡°✩", "✩°｡⋆", "#6B8E6B", "#3E5B3E")
+        "pudding" -> SkinMark("#F7D48B", "૮₍ ˃ ꇴ ˂ ₎ა", "૮₍ ˃ ꇴ ˂ ₎ა", "#C9A05A", "#7A5A22")
+        "taro" -> SkinMark("#C7A8E0", "・✭・", "・✭・", "#8F6FB0", "#4A3560")
+        "orange" -> SkinMark("#F4B886", "ʚɞ", "ʚɞ", "#C97E4E", "#7A4A22")
+        else -> SkinMark("#C7A8E0", "・✭・", "・✭・", "#8F6FB0", "#4A3560")
     }
 
     private fun pageTitle(m: Model): String = when (m.frame) {
