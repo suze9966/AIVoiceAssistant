@@ -89,35 +89,18 @@ class FormatStore(private val context: Context) {
      * 只留下核心规则 + 选中的那一套，模型也不会选错。
      */
     private fun skinSlice(text: String, skinName: String): String {
-        val lines = text.split("\n")
-        val allSkins = listOf(
-            "草莓炼乳", "薄荷小熊", "布丁狗",
-            "紫薯麻薯", "橘子果酱", "绿色气泡", "白色气泡"
-        )
-        fun skinNameOf(line: String): String {
-            val m = Regex("^\\d+[.、]\\s*(.+)$").find(line.trim()) ?: return ""
-            return m.groupValues[1].trim()
+        val names = listOf("草莓炼乳", "薄荷小熊", "布丁狗", "紫薯麻薯", "橘子果酱", "绿色气泡", "白色气泡")
+        val lines = text.lines()
+        val starts = lines.indices.filter { i ->
+            names.any { name -> Regex("^[0-9]+[.、]\\s*" + Regex.escape(name) + "$ ".trimEnd()).matches(lines[i].trim()) }
         }
-        var start = -1
-        for (i in lines.indices) {
-            val nm = skinNameOf(lines[i])
-            if (nm.isNotEmpty() && allSkins.any { nm.contains(it) }) {
-                start = i
-                break
-            }
+        val start = starts.firstOrNull { lines[it].contains(skinName) }
+        if (start == null) return text
+        val end = starts.firstOrNull { it > start } ?: (start + 1 until lines.size).firstOrNull { lines[it].trim() == "---" } ?: lines.size
+        val common = lines.take(starts.first()).filterNot { line ->
+            line.contains("请回复编号") || names.any { line.contains(it) } || Regex("#[0-9A-Fa-f]{6}").containsMatchIn(line)
         }
-        if (start < 0) return text
-        var end = lines.size
-        for (i in start + 1 until lines.size) {
-            val nm = skinNameOf(lines[i])
-            if (nm.isNotEmpty() && nm != skinName && allSkins.any { nm.contains(it) }) {
-                end = i
-                break
-            }
-        }
-        val head = lines.take(start).joinToString("\n")
-        val block = lines.subList(start, end).joinToString("\n")
-        return head + "\n\n【本次只使用这一套皮肤】\n" + block
+        return (common + listOf("【本次固定使用：$skinName】") + lines.subList(start, end)).joinToString("\n")
     }
 
     /** 取原文里最适合当标题的一行（优先含中文、且不是纯 LaTeX 记号的行）。 */
@@ -587,9 +570,14 @@ class FormatStore(private val context: Context) {
             }
             // 皮肤条目直接给出确定的视觉映射，
             // 不再让扫整份原文的方法决定颜色（否则五套会全部画成一样）。
-            val forced = if (entry.title.startsWith("皮肤·")) {
-                forcedSkin(entry.title.removePrefix("皮肤·").trim())
-            } else null
+            // 三路判断，任何一路命中都行：
+            //  1) 标题带「皮肤·」前缀（内置皮肤条目）
+            //  2) 标题里直接写着皮肤名
+            //  3) 内容里带着这一套独有的色码（原文被改过格式也认得出）
+            val forced = forcedSkin(entry.title.removePrefix("皮肤·").trim())
+                ?: SKIN_NAMES.firstOrNull { entry.title.contains(it) }?.let { forcedSkin(it) }
+                ?: forcedSkinByColor(entry.content)
+            android.util.Log.i("XiaomoSkin", "beautyFrom title=[${entry.title}] id=[${entry.id}] forced=${forced != null}")
             if (forced != null) {
                 return SceneCardView.Model(
                     "beauty",
@@ -608,6 +596,31 @@ class FormatStore(private val context: Context) {
             return beautyLookModel(title, lines, entry.content)
         }
 
+        /** 每套皮肤自己的色码。 */
+        private val SKIN_COLORS: Map<String, List<String>> = mapOf(
+            "草莓炼乳" to listOf("#F2B5B5"),
+            "薄荷小熊" to listOf("#B0D9B0"),
+            "布丁狗" to listOf("#F7D48B"),
+            "紫薯麻薯" to listOf("#C7A8E0"),
+            "橘子果酱" to listOf("#F4B886")
+        )
+
+        /** 按内容里独有的色码认出是哪一套皮肤。 */
+        private fun forcedSkinByColor(content: String): ForcedSkin? {
+            if (!content.contains("请回复编号")) return null
+            return when {
+                content.contains("#F2B5B5") -> forcedSkin("草莓炼乳")
+                content.contains("#B0D9B0") -> forcedSkin("薄荷小熊")
+                content.contains("#F7D48B") -> forcedSkin("布丁狗")
+                content.contains("#C7A8E0") -> forcedSkin("紫薯麻薯")
+                content.contains("#F4B886") -> forcedSkin("橘子果酱")
+                else -> null
+            }
+        }
+
+        /** 五套椭圆皮肤的名字，用于从任意标题里认出是哪一套。 */
+        private val SKIN_NAMES = listOf("草莓炼乳", "薄荷小熊", "布丁狗", "紫薯麻薯", "橘子果酱", "绿色气泡", "白色气泡")
+
         /** 一套皮肤的固定视觉映射。 */
         private data class ForcedSkin(
             val frame: String,
@@ -621,7 +634,7 @@ class FormatStore(private val context: Context) {
         )
 
         private fun forcedSkin(name: String): ForcedSkin? {
-            fun argb(hex: String): Int = (0xFF000000 or hex.toLong(16)).toInt()
+            fun argb(hex: String): Int = (0xFF000000 or hex.removePrefix("#").toLong(16)).toInt()
             return when (name) {
                 "草莓炼乳" -> ForcedSkin("oval", "", "", "berry", argb("#6B3A3A"), argb("#FDF3F3"), argb("#F2B5B5"), argb("#6B3A3A"))
                 "薄荷小熊" -> ForcedSkin("oval", "", "", "mint", argb("#3E5B3E"), argb("#F1F8F1"), argb("#B0D9B0"), argb("#3E5B3E"))
@@ -719,7 +732,7 @@ class FormatStore(private val context: Context) {
         private fun beautyLook(raw: String): BeautyLook {
             val hexes = Regex("#([0-9A-Fa-f]{6})").findAll(raw).map { it.groupValues[1].uppercase() }.distinct().toList()
             if (hexes.isEmpty()) return BeautyLook()
-            fun argb(hex: String): Int = (0xFF000000 or hex.toLong(16)).toInt()
+            fun argb(hex: String): Int = (0xFF000000 or hex.removePrefix("#").toLong(16)).toInt()
             fun luma(hex: String): Int {
                 val n = hex.toInt(16)
                 val r = (n shr 16) and 0xFF
