@@ -35,9 +35,12 @@ import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 /** 小沫的虚拟小手机。默认就是可拖、可缩放的小窗，也能钉到其他应用上层。 */
-class PocketPhoneActivity : AppCompatActivity() {
+class PocketPhoneActivity : AppCompatActivity(), PocketHost {
 
+    private val pageStack = mutableListOf<PocketPage>()
     private var pendingFile: ((Uri?) -> Unit)? = null
+
+    override val hostActivity: Activity get() = this
 
     private val pickDocument = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         pendingFile?.invoke(uri)
@@ -49,7 +52,7 @@ class PocketPhoneActivity : AppCompatActivity() {
         pendingFile = null
     }
 
-    fun requestFile(mimeTypes: Array<String>, open: Boolean, onResult: (Uri?) -> Unit) {
+    override fun requestFile(mimeTypes: Array<String>, open: Boolean, onResult: (Uri?) -> Unit) {
         pendingFile = onResult
         runCatching {
             if (open) pickDocument.launch(mimeTypes) else pickContent.launch(mimeTypes.first())
@@ -59,7 +62,79 @@ class PocketPhoneActivity : AppCompatActivity() {
         }
     }
 
+    /** 页面压栈：视图直接进小手机容器，不再另开浮动窗。 */
+    override fun openPage(intent: Intent) {
+        val name = intent.component?.className ?: return
+        val page = PocketPageMap.create(name, this, intent) ?: run {
+            startActivity(intent)
+            return
+        }
+        pageStack.lastOrNull()?.onPagePause()
+        page.onPageCreate()
+        pageStack.add(page)
+        val host = findViewById<ViewGroup>(R.id.pocketPageHost) ?: return
+        host.removeAllViews()
+        host.addView(page.root, ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        ))
+        host.visibility = View.VISIBLE
+        hidePhoneBody()
+        page.onPageResume()
+        page.root.alpha = 0.85f
+        page.root.animate().alpha(1f).setDuration(140).start()
+    }
+
+    /** 页面出栈：栈空才回小手机桌面。 */
+    override fun closePage() {
+        if (pageStack.isEmpty()) return
+        val page = pageStack.removeAt(pageStack.lastIndex)
+        page.markClosed()
+        page.onPagePause()
+        page.cancelPageJobs()
+        page.onPageDestroy()
+        val prev = pageStack.lastOrNull()
+        val host = findViewById<ViewGroup>(R.id.pocketPageHost)
+        if (prev != null) {
+            host?.removeAllViews()
+            host?.addView(prev.root, ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            ))
+            host?.visibility = View.VISIBLE
+            prev.onPageResume()
+        } else {
+            host?.removeAllViews()
+            host?.visibility = View.GONE
+            showPhoneBody()
+            showHome()
+        }
+    }
+
+    /**
+     * 页面盖住小手机桌面时，把桌面正文、应用栏和输入区收起来，
+     * 只留顶栏和缩放把手，小窗仍可拖动和放大缩小。
+     */
+    private fun hidePhoneBody() {
+        findViewById<View>(R.id.pocketScroll)?.visibility = View.GONE
+        findViewById<View>(R.id.appDock)?.visibility = View.GONE
+        findViewById<View>(R.id.bottomBar)?.visibility = View.GONE
+        ops.visibility = View.GONE
+    }
+
+    /** 退出页面后把小手机桌面放回来，播放条按当前应用恢复。 */
+    private fun showPhoneBody() {
+        findViewById<View>(R.id.pocketScroll)?.visibility = View.VISIBLE
+        findViewById<View>(R.id.appDock)?.visibility = View.VISIBLE
+        findViewById<View>(R.id.bottomBar)?.visibility = View.VISIBLE
+        playerBar.visibility = if (current?.id == "player") View.VISIBLE else View.GONE
+    }
+
     override fun onBackPressed() {
+        if (pageStack.isNotEmpty()) {
+            closePage()
+            return
+        }
         super.onBackPressed()
     }
 
@@ -184,6 +259,14 @@ class PocketPhoneActivity : AppCompatActivity() {
         statusJob?.cancel()
         stopMusic()
         removeOverlay()
+        // 内嵌页面栈一起收掉
+        while (pageStack.isNotEmpty()) {
+            val page = pageStack.removeAt(pageStack.lastIndex)
+            page.markClosed()
+            page.onPagePause()
+            page.cancelPageJobs()
+            page.onPageDestroy()
+        }
         pendingFile = null
         super.onDestroy()
     }
@@ -586,6 +669,7 @@ class PocketPhoneActivity : AppCompatActivity() {
     }
 
     private fun showHome() {
+        if (pageStack.isNotEmpty()) return
         current = null
         title.text = getString(R.string.pocket_title)
         status.text = phone.clock() + "  ·  " + phone.battery() + "%"
