@@ -184,6 +184,8 @@ class ToolboxActivity : AppCompatActivity() {
             val cm = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
             cm.setPrimaryClip(android.content.ClipData.newPlainText("密码", value)); toast("已复制到剪贴板")
         }.setNegativeButton("关闭", null).show()
+    }
+
     private fun water() {
         val key = "water_" + SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
         val count = prefs.getInt(key, 0)
@@ -335,5 +337,4 @@ class ToolboxActivity : AppCompatActivity() {
     private fun showSaved(key: String, title: String) { val v = prefs.getString(key, "") ?: ""; if (v.isNotBlank()) AlertDialog.Builder(this).setTitle(title).setMessage(v.trim()).setPositiveButton("关闭", null).show() }
     private fun now() = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date())
     private fun toast(s: String) = Toast.makeText(this, s, Toast.LENGTH_SHORT).show()
-}
 }

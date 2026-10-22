@@ -37,7 +37,7 @@ class PocketPhone(private val context: Context) {
 
     fun apps(): List<App> = listOf(
         App("wechat", "💬", "微信", "聊天列表", "仿微信主页"),
-        App("me", "👤", "我", "个人页", "仿微信"我""),
+        App("me", "👤", "我", "个人页", "仿微信我页"),
         App("contacts", "📇", "通讯录", "好友", "仿微信通讯录"),
         App("discover", "🔎", "发现", "入口", "仿微信发现"),
         App("moments", "🌅", "朋友圈", "刷一条、发一条", "仿朋友圈"),
