@@ -227,6 +227,15 @@ class SceneCardView @JvmOverloads constructor(
             "danmaku" -> drawDanmaku(canvas, m)
             "forum" -> drawForum(canvas, m)
             "beauty" -> drawBeauty(canvas, m)
+            "douyin" -> drawDouyinApp(canvas, m)
+            "taobao" -> drawTaobaoApp(canvas, m)
+            "alipay" -> drawAlipayApp(canvas, m)
+            "maps" -> drawMapsApp(canvas, m)
+            "meituan" -> drawMeituanApp(canvas, m)
+            "jd" -> drawJdApp(canvas, m)
+            "bilibili" -> drawBilibiliApp(canvas, m)
+            "weibo" -> drawWeiboApp(canvas, m)
+            "xiaohongshu" -> drawXiaohongshuApp(canvas, m)
             else -> drawPlain(canvas, m)
         }
     }
@@ -1459,6 +1468,349 @@ class SceneCardView @JvmOverloads constructor(
         lines.take(4).forEach { line ->
             canvas.drawText(cut(line, 16), 16f * density, y, ink)
             y += 22f * density
+        }
+    }
+
+    private fun drawDouyinApp(canvas: Canvas, m: Model) {
+        // 深色背景
+        bg.color = Color.parseColor("#1A1A2E")
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bg)
+        // 顶部标题
+        ink.color = Color.WHITE
+        ink.textSize = 16f * density
+        ink.typeface = Typeface.DEFAULT_BOLD
+        canvas.drawText("抖音", width * 0.5f - ink.measureText("抖音") / 2f, 28f * density, ink)
+        // 视频区域
+        card.color = Color.parseColor("#2A2A3E")
+        val videoTop = 40f * density
+        val videoH = height * 0.45f
+        canvas.drawRoundRect(16f * density, videoTop, width - 16f * density, videoTop + videoH, 12f * density, 12f * density, card)
+        // 视频中央播放按钮
+        accent.color = Color.WHITE
+        val cx = width * 0.5f
+        val cy = videoTop + videoH * 0.5f
+        val tri = android.graphics.Path().apply {
+            moveTo(cx - 8f * density, cy - 12f * density)
+            lineTo(cx - 8f * density, cy + 12f * density)
+            lineTo(cx + 10f * density, cy)
+            close()
+        }
+        canvas.drawPath(tri, accent)
+        // 右侧操作栏
+        val rx = width - 24f * density
+        listOf("♥ 4.2w", "💬 328", "↗ 1.1w", "⋯").forEachIndexed { i, txt ->
+            accent.textSize = 11f * density
+            canvas.drawText(cut(txt, 6), rx - accent.measureText(txt), videoTop + videoH + 24f * density + i * 22f * density, accent)
+        }
+        // 底部描述和导航
+        ink.color = Color.WHITE
+        ink.textSize = 12f * density
+        canvas.drawText(cut(line(m, 0, "推荐"), 16), 16f * density, videoTop + videoH + 24f * density, ink)
+        mute.color = Color.parseColor("#AAAAAA")
+        mute.textSize = 11f * density
+        canvas.drawText(cut(line(m, 1, "分享日常"), 20), 16f * density, videoTop + videoH + 44f * density, mute)
+        // 底部导航
+        ink.color = Color.WHITE
+        ink.textSize = 13f * density
+        val navY = height - 18f * density
+        val navItems = listOf("首页", "朋友", "＋", "消息", "我")
+        navItems.forEachIndexed { i, nav ->
+            val navX = width * (i + 0.5f) / navItems.size
+            val navW = ink.measureText(nav)
+            canvas.drawText(nav, navX - navW / 2f, navY, ink)
+        }
+    }
+
+    private fun drawTaobaoApp(canvas: Canvas, m: Model) {
+        // 橙色背景
+        bg.color = Color.parseColor("#FFF5E6")
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bg)
+        // 顶部橙色搜索栏
+        card.color = Color.parseColor("#FF5000")
+        canvas.drawRect(0f, 0f, width.toFloat(), 48f * density, card)
+        ink.color = Color.WHITE
+        ink.textSize = 16f * density
+        ink.typeface = Typeface.DEFAULT_BOLD
+        canvas.drawText("淘宝", 16f * density, 30f * density, ink)
+        // 搜索框
+        card.color = Color.WHITE
+        val searchBox = RectF(width * 0.30f, 12f * density, width - 16f * density, 36f * density)
+        canvas.drawRoundRect(searchBox, 12f * density, 12f * density, card)
+        mute.color = Color.parseColor("#999999")
+        mute.textSize = 12f * density
+        canvas.drawText("搜索商品", searchBox.left + 12f * density, 28f * density, mute)
+        // 内容区
+        ink.color = Color.parseColor("#333333")
+        ink.textSize = 14f * density
+        ink.typeface = Typeface.DEFAULT_BOLD
+        canvas.drawText(cut(line(m, 0, "购物车"), 10), 16f * density, 70f * density, ink)
+        // 商品列表
+        val items = m.lines.drop(1).ifEmpty { listOf("猫粮 2袋", "新衣服", "喜欢的书") }
+        items.take(3).forEachIndexed { i, item ->
+            val itemY = 96f * density + i * 32f * density
+            card.color = Color.parseColor("#FFE0B2")
+            canvas.drawRoundRect(16f * density, itemY, 52f * density, itemY + 26f * density, 6f * density, 6f * density, card)
+            ink.color = Color.parseColor("#333333")
+            ink.textSize = 13f * density
+            ink.typeface = Typeface.DEFAULT
+            canvas.drawText(cut(item, 14), 62f * density, itemY + 18f * density, ink)
+            accent.color = Color.parseColor("#FF5000")
+            accent.textSize = 11f * density
+            canvas.drawText("加入购物车", width - 76f * density, itemY + 18f * density, accent)
+        }
+        // 底部导航
+        card.color = Color.parseColor("#FFFFFF")
+        canvas.drawRect(0f, height - 40f * density, width.toFloat(), height.toFloat(), card)
+        ink.color = Color.parseColor("#666666")
+        ink.textSize = 12f * density
+        val navItems = listOf("首页", "分类", "购物车", "我的")
+        navItems.forEachIndexed { i, nav ->
+            val navX = width * (i + 0.5f) / navItems.size
+            canvas.drawText(nav, navX - ink.measureText(nav) / 2f, height - 16f * density, ink)
+        }
+    }
+
+    private fun drawAlipayApp(canvas: Canvas, m: Model) {
+        // 支付宝蓝背景
+        bg.color = Color.parseColor("#1677FF")
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bg)
+        // 顶部标题
+        ink.color = Color.WHITE
+        ink.textSize = 18f * density
+        ink.typeface = Typeface.DEFAULT_BOLD
+        canvas.drawText("支付宝", 16f * density, 30f * density, ink)
+        // 余额卡片
+        card.color = Color.parseColor("#4A9AFF")
+        val balCard = RectF(16f * density, 48f * density, width - 16f * density, 100f * density)
+        canvas.drawRoundRect(balCard, 12f * density, 12f * density, card)
+        ink.color = Color.WHITE
+        ink.textSize = 12f * density
+        ink.typeface = Typeface.DEFAULT
+        canvas.drawText("账户余额(元)", balCard.left + 16f * density, balCard.top + 20f * density, ink)
+        ink.textSize = 24f * density
+        ink.typeface = Typeface.DEFAULT_BOLD
+        canvas.drawText(cut(line(m, 0, "128.50"), 10), balCard.left + 16f * density, balCard.top + 42f * density, ink)
+        // 功能网格
+        val features = listOf("扫一扫" to "💳", "收付款" to "💰", "花呗" to "💳", "余额宝" to "📈", "账单" to "📋", "更多" to "⋯")
+        features.forEachIndexed { i, (name, icon) ->
+            val col = i % 3
+            val row = i / 3
+            val cx = width * (col + 0.5f) / 3f
+            val cy = 136f * density + row * 52f * density
+            accent.color = Color.WHITE
+            accent.textSize = 20f * density
+            canvas.drawText(icon, cx - accent.measureText(icon) / 2f, cy, accent)
+            mute.color = Color.parseColor("#E8F0FF")
+            mute.textSize = 11f * density
+            canvas.drawText(name, cx - mute.measureText(name) / 2f, cy + 18f * density, mute)
+        }
+    }
+
+    private fun drawMapsApp(canvas: Canvas, m: Model) {
+        // 地图绿背景
+        bg.color = Color.parseColor("#E8F5E9")
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bg)
+        // 顶部搜索栏
+        card.color = Color.WHITE
+        val searchBox = RectF(16f * density, 16f * density, width - 16f * density, 44f * density)
+        canvas.drawRoundRect(searchBox, 14f * density, 14f * density, card)
+        mute.color = Color.parseColor("#666666")
+        mute.textSize = 12f * density
+        canvas.drawText("搜索地点", searchBox.left + 24f * density, 34f * density, mute)
+        // 模拟地图
+        card.color = Color.parseColor("#A5D6A7")
+        canvas.drawRect(0f, 52f * density, width.toFloat(), height - 40f * density, card)
+        // 当前位置标记
+        accent.color = Color.parseColor("#4285F4")
+        val cx = width * 0.5f
+        val cy = height * 0.5f
+        canvas.drawCircle(cx, cy, 8f * density, accent)
+        card.color = Color.WHITE
+        canvas.drawCircle(cx, cy, 4f * density, card)
+        // 底部功能
+        ink.color = Color.parseColor("#333333")
+        ink.textSize = 13f * density
+        ink.typeface = Typeface.DEFAULT
+        listOf("回家", "附近", "收藏").forEachIndexed { i, txt ->
+            val fx = width * (i + 0.5f) / 3f
+            canvas.drawText(txt, fx - ink.measureText(txt) / 2f, height - 16f * density, ink)
+        }
+    }
+
+    private fun drawMeituanApp(canvas: Canvas, m: Model) {
+        // 美团黄背景
+        bg.color = Color.parseColor("#FFD700")
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bg)
+        // 顶部标题
+        ink.color = Color.parseColor("#333333")
+        ink.textSize = 18f * density
+        ink.typeface = Typeface.DEFAULT_BOLD
+        canvas.drawText("美团", 16f * density, 30f * density, ink)
+        // 搜索框
+        card.color = Color.WHITE
+        val searchBox = RectF(width * 0.28f, 12f * density, width - 16f * density, 36f * density)
+        canvas.drawRoundRect(searchBox, 12f * density, 12f * density, card)
+        mute.color = Color.parseColor("#999999")
+        mute.textSize = 12f * density
+        canvas.drawText("搜索商家", searchBox.left + 12f * density, 28f * density, mute)
+        // 分类标签
+        ink.color = Color.parseColor("#333333")
+        ink.textSize = 12f * density
+        ink.typeface = Typeface.DEFAULT
+        val categories = listOf("外卖", "美食", "酒店", "电影")
+        categories.forEachIndexed { i, cat ->
+            val cx = width * (i + 0.5f) / categories.size
+            canvas.drawText(cat, cx - ink.measureText(cat) / 2f, 58f * density, ink)
+        }
+        // 商家列表
+        val shops = m.lines.ifEmpty { listOf("川菜 月销1200+", "奶茶 起送¥0", "火锅 4.8分") }
+        shops.take(3).forEachIndexed { i, shop ->
+            val shopY = 80f * density + i * 34f * density
+            card.color = Color.WHITE
+            canvas.drawRoundRect(16f * density, shopY, width - 16f * density, shopY + 28f * density, 8f * density, 8f * density, card)
+            ink.color = Color.parseColor("#333333")
+            ink.textSize = 13f * density
+            canvas.drawText(cut(shop, 14), 28f * density, shopY + 18f * density, ink)
+            accent.color = Color.parseColor("#FF5000")
+            accent.textSize = 11f * density
+            canvas.drawText("立即点餐", width - 72f * density, shopY + 18f * density, accent)
+        }
+    }
+
+    private fun drawJdApp(canvas: Canvas, m: Model) {
+        // 京东红背景
+        bg.color = Color.parseColor("#E4393C")
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bg)
+        // 顶部标题
+        ink.color = Color.WHITE
+        ink.textSize = 18f * density
+        ink.typeface = Typeface.DEFAULT_BOLD
+        canvas.drawText("京东", 16f * density, 30f * density, ink)
+        // 搜索框
+        card.color = Color.WHITE
+        val searchBox = RectF(width * 0.28f, 12f * density, width - 16f * density, 36f * density)
+        canvas.drawRoundRect(searchBox, 12f * density, 12f * density, card)
+        mute.color = Color.parseColor("#999999")
+        mute.textSize = 12f * density
+        canvas.drawText("搜索商品", searchBox.left + 12f * density, 28f * density, mute)
+        // 分类
+        ink.color = Color.WHITE
+        ink.textSize = 12f * density
+        val categories = listOf("数码", "家电", "服饰", "食品")
+        categories.forEachIndexed { i, cat ->
+            val cx = width * (i + 0.5f) / categories.size
+            canvas.drawText(cat, cx - ink.measureText(cat) / 2f, 58f * density, ink)
+        }
+        // 商品
+        val goods = m.lines.ifEmpty { listOf("手机", "笔记本", "耳机") }
+        goods.take(3).forEachIndexed { i, item ->
+            val itemY = 80f * density + i * 32f * density
+            card.color = Color.WHITE
+            canvas.drawRoundRect(16f * density, itemY, width - 16f * density, itemY + 26f * density, 8f * density, 8f * density, card)
+            ink.color = Color.parseColor("#333333")
+            ink.textSize = 13f * density
+            canvas.drawText(cut(item, 14), 28f * density, itemY + 18f * density, ink)
+        }
+    }
+
+    private fun drawBilibiliApp(canvas: Canvas, m: Model) {
+        // 弹幕蓝粉背景
+        bg.color = Color.parseColor("#FB7299")
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bg)
+        // 顶部标题
+        ink.color = Color.WHITE
+        ink.textSize = 18f * density
+        ink.typeface = Typeface.DEFAULT_BOLD
+        canvas.drawText("哔哩哔哩", 16f * density, 30f * density, ink)
+        // 视频区域
+        card.color = Color.parseColor("#1E1E1E")
+        val videoTop = 40f * density
+        val videoH = height * 0.42f
+        canvas.drawRoundRect(16f * density, videoTop, width - 16f * density, videoTop + videoH, 12f * density, 12f * density, card)
+        // 弹幕文字
+        accent.color = Color.WHITE
+        accent.textSize = 12f * density
+        canvas.drawText("前方高能", videoTop + 20f * density, 20f * density, accent)
+        canvas.drawText("233333", videoTop + videoH * 0.4f, 20f * density, accent)
+        canvas.drawText("已三连", videoTop + videoH * 0.7f, 20f * density, accent)
+        // 底部推荐
+        ink.color = Color.WHITE
+        ink.textSize = 13f * density
+        ink.typeface = Typeface.DEFAULT
+        canvas.drawText(cut(line(m, 0, "首页"), 10), 16f * density, videoTop + videoH + 24f * density, ink)
+        // 底部导航
+        mute.color = Color.WHITE
+        mute.textSize = 12f * density
+        val navItems = listOf("首页", "动态", "消息", "我的")
+        navItems.forEachIndexed { i, nav ->
+            val navX = width * (i + 0.5f) / navItems.size
+            canvas.drawText(nav, navX - mute.measureText(nav) / 2f, height - 16f * density, mute)
+        }
+    }
+
+    private fun drawWeiboApp(canvas: Canvas, m: Model) {
+        // 微博橙背景
+        bg.color = Color.parseColor("#E6162D")
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bg)
+        // 顶部标题
+        ink.color = Color.WHITE
+        ink.textSize = 18f * density
+        ink.typeface = Typeface.DEFAULT_BOLD
+        canvas.drawText("微博", 16f * density, 30f * density, ink)
+        // 热搜列表
+        val hotSearches = m.lines.ifEmpty { listOf("今日热搜第一", "关注动态", "推荐话题") }
+        var y = 56f * density
+        hotSearches.take(4).forEachIndexed { i, item ->
+            ink.color = if (i == 0) Color.parseColor("#FFD700") else Color.WHITE
+            ink.textSize = if (i == 0) 14f * density else 13f * density
+            ink.typeface = Typeface.DEFAULT
+            canvas.drawText(cut(item, 16), 16f * density, y, ink)
+            y += 26f * density
+        }
+        // 底部导航
+        mute.color = Color.parseColor("#FFFFFF")
+        mute.textSize = 12f * density
+        val navItems = listOf("首页", "发现", "消息", "我")
+        navItems.forEachIndexed { i, nav ->
+            val navX = width * (i + 0.5f) / navItems.size
+            canvas.drawText(nav, navX - mute.measureText(nav) / 2f, height - 16f * density, mute)
+        }
+    }
+
+    private fun drawXiaohongshuApp(canvas: Canvas, m: Model) {
+        // 小红书红背景
+        bg.color = Color.parseColor("#FF2442")
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bg)
+        // 顶部标题
+        ink.color = Color.WHITE
+        ink.textSize = 18f * density
+        ink.typeface = Typeface.DEFAULT_BOLD
+        canvas.drawText("小红书", 16f * density, 30f * density, ink)
+        // 搜索框
+        card.color = Color.WHITE
+        val searchBox = RectF(width * 0.32f, 12f * density, width - 16f * density, 36f * density)
+        canvas.drawRoundRect(searchBox, 12f * density, 12f * density, card)
+        mute.color = Color.parseColor("#999999")
+        mute.textSize = 12f * density
+        canvas.drawText("搜索", searchBox.left + 12f * density, 28f * density, mute)
+        // 内容瀑布流
+        val items = m.lines.ifEmpty { listOf("好物分享", "穿搭灵感", "美食探店") }
+        items.take(3).forEachIndexed { i, item ->
+            val col = i % 2
+            val row = i / 2
+            val cardX = 16f * density + col * (width * 0.48f)
+            val cardY = 52f * density + row * 56f * density
+            val cardW = width * 0.44f
+            val cardH = 48f * density
+            card.color = Color.parseColor("#FFFFFF")
+            canvas.drawRoundRect(cardX, cardY, cardX + cardW, cardY + cardH, 8f * density, 8f * density, card)
+            ink.color = Color.parseColor("#333333")
+            ink.textSize = 12f * density
+            ink.typeface = Typeface.DEFAULT
+            canvas.drawText(cut(item, 8), cardX + 8f * density, cardY + 20f * density, ink)
+            accent.color = Color.parseColor("#FF6B6B")
+            accent.textSize = 10f * density
+            canvas.drawText("♡ 点赞", cardX + 8f * density, cardY + 38f * density, accent)
         }
     }
 

@@ -59,6 +59,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var proactive: ProactiveEngine
     private lateinit var panels: PanelStore
     private lateinit var formats: FormatStore
+    private lateinit var autoPlay: AutoPlayEngine
     private lateinit var adapter: ChatAdapter
     private lateinit var recycler: RecyclerView
     private lateinit var editInput: EditText
@@ -211,6 +212,7 @@ class MainActivity : AppCompatActivity() {
         memory = MemoryEngine(this)
         weather = WeatherClient(this, prefs)
         proactive = ProactiveEngine(this, prefs, emotion, memory, mind)
+        autoPlay = AutoPlayEngine(this)
         llm.toolHost = DefaultLlmToolHost(
             this, prefs, searcher, weather, memory, utilities, todos, reminders
         )
@@ -371,6 +373,24 @@ class MainActivity : AppCompatActivity() {
         refreshMoodSubtitle()
         // 恢复用户保存的音色、区域、语速和音调。
         applySavedVoice()
+        
+        // 启动自主行为检查：每分钟检查一次是否该主动玩手机
+        lifecycleScope.launch {
+            while (!isFinishing && !isDestroyed) {
+                kotlinx.coroutines.delay(60000)  // 每分钟检查一次
+                if (::autoPlay.isInitialized && autoPlay.shouldPlay()) {
+                    autoPlay.playSession { comment ->
+                        runOnUiThread {
+                            if (::adapter.isInitialized && !isFinishing && !isDestroyed) {
+                                adapter.add(ChatMessage("assistant", comment, isMe = false))
+                                persistHistory()
+                                scrollToBottom()
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -983,6 +1003,13 @@ class MainActivity : AppCompatActivity() {
     // ---------------- 发送：流式 / 非流式 ----------------
     private fun sendToLlm(userText: String, appendUser: Boolean = true) {
         if (isSending) return
+        
+        // 用户主动说话：更新活跃时间并停止自主玩手机
+        if (::autoPlay.isInitialized) {
+            autoPlay.updateUserActivity()
+            autoPlay.stopPlaying()
+        }
+        
         // 防重复：2 秒内完全相同的文本只处理一次（语音引擎双回调 / 双击发送按钮）
         // 重新生成会复用上一句，必须跳过这段去重，否则 2 秒内会直接被丢掉。
         val now = System.currentTimeMillis()

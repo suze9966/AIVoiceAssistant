@@ -125,15 +125,15 @@ class PocketPhone(private val context: Context) {
             "browser" -> browserScene(body)
             "player" -> playerScene(body)
             "notes" -> noteScene(body)
-            "douyin" -> douyinScene(body)
-            "taobao" -> taobaoScene(body)
-            "alipay" -> alipayScene()
-            "maps" -> mapsScene(body)
-            "meituan" -> meituanScene(body)
-            "jd" -> jdScene(body)
-            "bilibili" -> biliScene(body)
-            "weibo" -> weiboScene(body)
-            "xiaohongshu" -> xiaohongshuScene(body)
+            "douyin" -> SceneCardView.Model("douyin", "抖音", listOf("推荐", "分享日常", "晚风刚好"))
+            "taobao" -> SceneCardView.Model("taobao", "淘宝", listOf("购物车", "猫粮 2袋", "新衣服", "喜欢的书"))
+            "alipay" -> SceneCardView.Model("alipay", "支付宝", listOf("128.50", "扫一扫", "收付款", "花呗", "余额宝", "账单"))
+            "maps" -> SceneCardView.Model("maps", "地图", listOf("当前位置", "回家", "附近好吃的", "最近去过的"))
+            "meituan" -> SceneCardView.Model("meituan", "美团", listOf("外卖", "川菜 月销1200+", "奶茶 起送¥0", "火锅 4.8分"))
+            "jd" -> SceneCardView.Model("jd", "京东", listOf("京东超市", "手机数码", "图书音像", "生鲜水果"))
+            "bilibili" -> SceneCardView.Model("bilibili", "哔哩哔哩", listOf("首页", "今日推荐", "正在热播", "up主更新"))
+            "weibo" -> SceneCardView.Model("weibo", "微博", listOf("热搜", "今日热搜第一", "关注动态", "推荐话题"))
+            "xiaohongshu" -> SceneCardView.Model("xiaohongshu", "小红书", listOf("发现", "好物分享", "穿搭灵感", "美食探店"))
             "photos" -> photosScene()
             "calendar" -> calendarScene()
             "weather" -> weatherScene()
@@ -151,14 +151,15 @@ class PocketPhone(private val context: Context) {
         "browser" -> "browser"
         "player" -> "player"
         "notes" -> "note"
-        "douyin" -> "danmaku"
-        "taobao", "jd" -> "browser"
-        "alipay" -> "profile"
-        "maps" -> "plain"
-        "meituan" -> "browser"
-        "bilibili" -> "danmaku"
-        "weibo" -> "moments"
-        "xiaohongshu" -> "moments"
+        "douyin" -> "douyin"
+        "taobao" -> "taobao"
+        "alipay" -> "alipay"
+        "maps" -> "maps"
+        "meituan" -> "meituan"
+        "jd" -> "jd"
+        "bilibili" -> "bilibili"
+        "weibo" -> "weibo"
+        "xiaohongshu" -> "xiaohongshu"
         "photos" -> "plain"
         "calendar" -> "plain"
         "weather" -> "plain"
@@ -214,49 +215,14 @@ class PocketPhone(private val context: Context) {
         return SceneCardView.Model("note", "便签", lines.take(4))
     }
 
-    private fun douyinScene(extra: String): SceneCardView.Model {
-        val lines = linesOf(extra, listOf("今天也要开心呀", "晚风刚好", "分享日常"))
-        return SceneCardView.Model("danmaku", "抖音", listOf("推荐") + lines.take(3))
-    }
 
-    private fun taobaoScene(extra: String): SceneCardView.Model {
-        val lines = linesOf(extra, listOf("猫粮 2袋", "小沫的新衣服", "主人喜欢的书"))
-        return SceneCardView.Model("browser", "淘宝", listOf("购物车") + lines.take(3))
-    }
 
-    private fun alipayScene(): SceneCardView.Model {
-        return SceneCardView.Model("profile", "支付宝", listOf(ownerName(), "余额 ¥128.50", "花呗", "余额宝", "账单"))
-    }
 
-    private fun mapsScene(extra: String): SceneCardView.Model {
-        val lines = linesOf(extra, listOf("回家", "附近好吃的", "最近去过的"))
-        return SceneCardView.Model("plain", "地图", listOf("当前位置") + lines.take(3))
-    }
 
-    private fun meituanScene(extra: String): SceneCardView.Model {
-        val lines = linesOf(extra, listOf("川菜 月销1200+", "奶茶 起送¥0", "火锅 4.8分"))
-        return SceneCardView.Model("browser", "美团", listOf("外卖", "美食") + lines.take(3))
-    }
 
-    private fun jdScene(extra: String): SceneCardView.Model {
-        val lines = linesOf(extra, listOf("手机数码", "图书音像", "生鲜水果"))
-        return SceneCardView.Model("browser", "京东", listOf("京东超市") + lines.take(3))
-    }
 
-    private fun biliScene(extra: String): SceneCardView.Model {
-        val lines = linesOf(extra, listOf("今日推荐", "正在热播", "up主更新"))
-        return SceneCardView.Model("danmaku", "哔哩", listOf("首页") + lines.take(3))
-    }
 
-    private fun weiboScene(extra: String): SceneCardView.Model {
-        val lines = linesOf(extra, listOf("今日热搜第一", "关注的人发了新动态", "推荐话题"))
-        return SceneCardView.Model("moments", "微博", listOf("热搜") + lines.take(3))
-    }
 
-    private fun xiaohongshuScene(extra: String): SceneCardView.Model {
-        val lines = linesOf(extra, listOf("好物分享", "穿搭灵感", "美食探店"))
-        return SceneCardView.Model("moments", "小红书", listOf("发现") + lines.take(3))
-    }
 
     private fun photosScene(): SceneCardView.Model {
         return SceneCardView.Model("plain", "相册", listOf("最近", "收藏", "视频", "截图"))
