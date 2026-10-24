@@ -128,10 +128,6 @@
                 android:resource="@xml/file_paths" />
         </provider>
         <activity
-            android:name=".ToolboxActivity"
-            android:exported="false"
-            android:windowSoftInputMode="adjustResize" />
-        <activity
             android:name=".WeatherActivity"
             android:exported="false"
             android:screenOrientation="unspecified"

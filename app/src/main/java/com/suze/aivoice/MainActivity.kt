@@ -249,8 +249,7 @@ class MainActivity : AppCompatActivity() {
             pop.menu.add(0, 25, 15, getString(R.string.menu_mind))
             pop.menu.add(0, 26, 16, getString(R.string.menu_scene))
             pop.menu.add(0, 27, 17, getString(R.string.menu_pocket))
-            pop.menu.add(0, 28, 18, "生活工具箱")
-            pop.menu.add(0, 2, 19, getString(R.string.menu_clear))
+            pop.menu.add(0, 2, 18, getString(R.string.menu_clear))
             pop.menu.add(0, 4, 19, getString(R.string.menu_stop_speak))
             pop.menu.add(0, 3, 20, getString(R.string.menu_wake))
             pop.setOnMenuItemClickListener { item ->
@@ -272,7 +271,6 @@ class MainActivity : AppCompatActivity() {
                     25 -> { startActivity(Intent(this, MindActivity::class.java)); true }
                     26 -> { showSceneMenu(); true }
                     27 -> { startActivity(Intent(this, PocketPhoneActivity::class.java)); true }
-                    28 -> { startActivity(Intent(this, ToolboxActivity::class.java)); true }
                     2 -> {
                         history.clear()
                         adapter.notifyDataSetChanged()
