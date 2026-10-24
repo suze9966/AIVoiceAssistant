@@ -42,6 +42,7 @@
     <string name="btn_test_voice">试听音色</string>
     <string name="btn_stop_speak">停止朗读</string>
     <string name="menu_wake">语音唤醒</string>
+    <string name="menu_qq_bridge">QQ 桥接</string>
     <string name="menu_clear">清空对话</string>
     <string name="label_emotion">情感化人格（会开心会难过，语调随情绪变化）</string>
     <string name="label_mind">独立思考（有自己的想法与判断）</string>

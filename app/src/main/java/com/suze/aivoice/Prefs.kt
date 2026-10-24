@@ -10,6 +10,40 @@ import android.content.Context
 class Prefs(context: Context) {
     private val sp = context.getSharedPreferences("ai_voice_prefs", Context.MODE_PRIVATE)
 
+    /**
+     * QQ 接入（NexBot / AstrBot 路线 B）端口开关。
+     *
+     * 小沫 App 在本机起一个 HTTP 服务，AstrBot 的插件收到 QQ 消息后
+     * POST 过来，App 用自己的记忆/情感/角色卡生成回复，再原路返回 QQ。
+     * 这样 QQ 里的小沫和 App 里的是同一个人。
+     */
+    var qqBridgeEnabled: Boolean
+        get() = sp.getBoolean("qqBridgeEnabled", false)
+        set(v) = sp.edit().putBoolean("qqBridgeEnabled", v).apply()
+
+    /** 本机 HTTP 服务监听端口，默认 8790。 */
+    var qqBridgePort: Int
+        get() = sp.getInt("qqBridgePort", 8790)
+        set(v) = sp.edit().putInt("qqBridgePort", v.coerceIn(1024, 65535)).apply()
+
+    /**
+     * 访问令牌。AstrBot 侧必须带同样的 token 才能调，
+     * 防止局域网里别人直接往小沫这边塞消息。留空则不校验（不推荐）。
+     */
+    var qqBridgeToken: String
+        get() = sp.getString("qqBridgeToken", "") ?: ""
+        set(v) = sp.edit().putString("qqBridgeToken", v.trim()).apply()
+
+    /** 桥接时用哪个角色卡回话，默认内置小沫。 */
+    var qqBridgeRoleId: String
+        get() = sp.getString("qqBridgeRoleId", "xiaomo") ?: "xiaomo"
+        set(v) = sp.edit().putString("qqBridgeRoleId", v.ifBlank { "xiaomo" }).apply()
+
+    /** 是否把 QQ 对话也写进 App 的聊天记录（默认写，方便回头看）。 */
+    var qqBridgeSaveHistory: Boolean
+        get() = sp.getBoolean("qqBridgeSaveHistory", true)
+        set(v) = sp.edit().putBoolean("qqBridgeSaveHistory", v).apply()
+
     var baseUrl: String
         get() = sp.getString("baseUrl", "https://api.openai.com/v1") ?: "https://api.openai.com/v1"
         set(v) = sp.edit().putString("baseUrl", v).apply()

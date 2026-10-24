@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -77,6 +78,11 @@
             android:name=".ListenKeepAliveService"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+        <!-- QQ 桥接：让 AstrBot 把 QQ 消息转发到本机，用 App 的记忆/情感/角色回话 -->
+        <service
+            android:name=".QqBridgeService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
         <receiver
             android:name=".ReminderReceiver"
             android:exported="false">

@@ -17,6 +17,7 @@ import android.speech.SpeechRecognizer
 import android.view.View
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
+import android.text.InputType
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
@@ -252,6 +253,7 @@ class MainActivity : AppCompatActivity() {
             pop.menu.add(0, 2, 18, getString(R.string.menu_clear))
             pop.menu.add(0, 4, 19, getString(R.string.menu_stop_speak))
             pop.menu.add(0, 3, 20, getString(R.string.menu_wake))
+            pop.menu.add(0, 29, 21, getString(R.string.menu_qq_bridge))
             pop.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     1 -> { openSettingsDrawer(); true }
@@ -280,6 +282,7 @@ class MainActivity : AppCompatActivity() {
                     }
                     4 -> { abortSpeech(); Toast.makeText(this, R.string.toast_stopped, Toast.LENGTH_SHORT).show(); true }
                     3 -> { toggleWake(true); true }
+                    29 -> { showQqBridgeMenu(); true }
                     else -> false
                 }
             }
@@ -621,6 +624,150 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ---------------- 语音唤醒 ----------------
+    /**
+     * QQ 桥接开关面板。
+     *
+     * 打开后本机起一个 HTTP 服务，AstrBot 插件把 QQ 消息 POST 过来，
+     * App 用自己的记忆/情感/角色卡回话，所以 QQ 里的小沫和这里的是同一个人。
+     */
+    private fun showQqBridgeMenu() {
+        val running = QqBridge.isRunning
+        val items = arrayOf(
+            if (running) "关闭桥接（现在开着）" else "开启桥接",
+            "设置端口（现在 ${prefs.qqBridgePort}）",
+            "设置访问令牌",
+            "查看连接地址",
+            "测试一下"
+        )
+        AlertDialog.Builder(this)
+            .setTitle("QQ 桥接")
+            .setItems(items) { _, which ->
+                when (which) {
+                    0 -> toggleQqBridge(!running)
+                    1 -> askQqBridgePort()
+                    2 -> askQqBridgeToken()
+                    3 -> showQqBridgeAddress()
+                    4 -> testQqBridge()
+                }
+            }
+            .setNegativeButton("关闭", null)
+            .show()
+    }
+
+    private fun toggleQqBridge(enable: Boolean) {
+        if (enable) {
+            if (prefs.qqBridgeToken.isBlank()) {
+                // 没令牌等于局域网里谁都能往小沫这边塞消息，先提醒一句
+                Toast.makeText(this, "建议先设置访问令牌，再开启", Toast.LENGTH_LONG).show()
+            }
+            prefs.qqBridgeEnabled = true
+            QqBridgeService.start(this)
+            Toast.makeText(this, "正在开启，稍等看通知栏", Toast.LENGTH_SHORT).show()
+        } else {
+            prefs.qqBridgeEnabled = false
+            QqBridgeService.stop(this)
+            Toast.makeText(this, "已关闭 QQ 桥接", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun askQqBridgePort() {
+        val et = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setText(prefs.qqBridgePort.toString())
+            setSelection(text.length)
+        }
+        AlertDialog.Builder(this)
+            .setTitle("监听端口")
+            .setMessage("建议 1024~65535，默认 8790")
+            .setView(et)
+            .setPositiveButton("保存") { _, _ ->
+                val p = et.text.toString().trim().toIntOrNull()
+                if (p == null || p !in 1024..65535) {
+                    Toast.makeText(this, "端口不合法", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                prefs.qqBridgePort = p
+                if (QqBridge.isRunning) QqBridge.restart(this)
+                Toast.makeText(this, "端口已改成 $p", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun askQqBridgeToken() {
+        val et = EditText(this).apply {
+            setText(prefs.qqBridgeToken)
+            setSelection(text.length)
+            hint = "随便一串够长的字符，两边填一样"
+        }
+        AlertDialog.Builder(this)
+            .setTitle("访问令牌")
+            .setMessage("AstrBot 插件里要填同样的值；留空表示不校验（不推荐）")
+            .setView(et)
+            .setPositiveButton("保存") { _, _ ->
+                prefs.qqBridgeToken = et.text.toString().trim()
+                val t = if (prefs.qqBridgeToken.isBlank()) "已清空（不校验）" else "已保存"
+                Toast.makeText(this, t, Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun showQqBridgeAddress() {
+        val ip = QqBridge.localIpv4()
+        val port = prefs.qqBridgePort
+        val running = if (QqBridge.isRunning) "运行中" else "未启动"
+        val token = if (prefs.qqBridgeToken.isBlank()) "（未设置，不校验）" else "已设置"
+        val msg = """
+            状态：$running
+            地址：http://$ip:$port
+            令牌：$token
+
+            在 AstrBot 插件里填这个地址。
+            手机和服务器不在同一个局域网时，
+            需要内网穿透或公网映射才能连上。
+        """.trimIndent()
+        AlertDialog.Builder(this)
+            .setTitle("连接地址")
+            .setMessage(msg)
+            .setPositiveButton("知道了", null)
+            .show()
+    }
+
+    private fun testQqBridge() {
+        if (!QqBridge.isRunning) {
+            Toast.makeText(this, "桥接还没开，先点「开启桥接」", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val ip = QqBridge.localIpv4()
+        val port = prefs.qqBridgePort
+        val token = prefs.qqBridgeToken
+        Toast.makeText(this, "正在自测…", Toast.LENGTH_SHORT).show()
+        Thread {
+            val result = try {
+                val url = java.net.URL("http://127.0.0.1:$port/health")
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.connectTimeout = 4000
+                conn.readTimeout = 8000
+                if (token.isNotBlank()) conn.setRequestProperty("Authorization", "Bearer $token")
+                val code = conn.responseCode
+                val body = (if (code in 200..299) conn.inputStream else conn.errorStream)
+                    ?.bufferedReader()?.use { it.readText() }.orEmpty()
+                "HTTP $code
+$body"
+            } catch (e: Exception) {
+                "连接失败：${e.message ?: e.javaClass.simpleName}"
+            }
+            runOnUiThread {
+                AlertDialog.Builder(this)
+                    .setTitle("自测结果（$ip:$port）")
+                    .setMessage(result.take(2000))
+                    .setPositiveButton("好", null)
+                    .show()
+            }
+        }.start()
+    }
+
     private fun toggleWake(enable: Boolean) {
         if (enable) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
@@ -686,8 +833,25 @@ class MainActivity : AppCompatActivity() {
         if (::adapter.isInitialized) adapter.chatFont = ChatFontStore.load(this)
         if (::memory.isInitialized) memory.reload()
         reloadHistoryIfIdle()
+        restoreQqBridgeIfNeeded()
         maybeGreetOnResume()
         maybeReachOutProactively()
+    }
+
+    /**
+     * QQ 桥接是常驻能力：用户上次开着，重启 App 后应该自己活过来。
+     *
+     * 这里只补「开关是开的、但服务没在跑」的情况（比如被系统清掉）。
+     * 不去主动关服务，避免和用户手点的状态打架。
+     */
+    private fun restoreQqBridgeIfNeeded() {
+        if (!prefs.qqBridgeEnabled) return
+        if (QqBridge.isRunning) return
+        try {
+            QqBridgeService.start(this)
+        } catch (e: Exception) {
+            android.util.Log.w("MainActivity", "qq bridge restore failed: ${e.message}")
+        }
     }
 
     /**
