@@ -177,14 +177,14 @@ object QqBridge {
             out = BufferedOutputStream(socket.getOutputStream())
 
             val head = readHead(input) ?: run {
-                respond(out, 400, err("empty request"))
+                respond(out, 400, err("empty request").toString())
                 return
             }
 
             val lines = head.split("\r\n")
             val parts = lines.firstOrNull()?.split(" ") ?: emptyList()
             if (parts.size < 2) {
-                respond(out, 400, err("bad request line"))
+                respond(out, 400, err("bad request line").toString())
                 return
             }
             val method = parts[0].uppercase()
@@ -219,7 +219,7 @@ object QqBridge {
 
             // ---- 其余接口校验 token
             if (!tokenOk(prefs, headers)) {
-                respond(out, 401, err("bad or missing token"))
+                respond(out, 401, err("bad or missing token").toString())
                 return
             }
 
@@ -239,11 +239,11 @@ object QqBridge {
 
                 "/emotion" -> respond(out, 200, emotionJson(app).toString())
 
-                else -> respond(out, 404, err("no such path: $path"))
+                else -> respond(out, 404, err("no such path: $path").toString())
             }
         } catch (e: Exception) {
             Log.w(TAG, "handle error", e)
-            try { if (out != null) respond(out, 500, err(e.message ?: "server error")) } catch (_: Exception) {}
+            try { if (out != null) respond(out, 500, err(e.message ?: "server error").toString()) } catch (_: Exception) {}
         } finally {
             try { out?.flush() } catch (_: Exception) {}
             try { socket.close() } catch (_: Exception) {}

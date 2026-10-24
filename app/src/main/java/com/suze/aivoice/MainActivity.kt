@@ -753,8 +753,7 @@ class MainActivity : AppCompatActivity() {
                 val code = conn.responseCode
                 val body = (if (code in 200..299) conn.inputStream else conn.errorStream)
                     ?.bufferedReader()?.use { it.readText() }.orEmpty()
-                "HTTP $code
-$body"
+                "HTTP " + code + System.lineSeparator() + body
             } catch (e: Exception) {
                 "连接失败：${e.message ?: e.javaClass.simpleName}"
             }
