@@ -15,8 +15,10 @@ android {
         applicationId = "com.suze.aivoice"
         minSdk = 24
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.1"
+        // CI 里用 run number 自动抬高版本号，避免覆盖安装被 versionCode 拦住；
+        // 本地构建没有 GITHUB_RUN_NUMBER 时保持固定值。
+        versionCode = (System.getenv("XIAOMO_VERSION_CODE") ?: "2").toIntOrNull() ?: 2
+        versionName = System.getenv("XIAOMO_VERSION_NAME") ?: "1.1"
     }
 
     // ---- 固定签名材料 ----
@@ -30,11 +32,38 @@ android {
     }
 
     val envKeystoreB64 = System.getenv("XIAOMO_KEYSTORE_B64")
-    val resolvedStorePassword = System.getenv("XIAOMO_STORE_PASS") ?: fileProps.getProperty("storePassword")
-    val resolvedKeyAlias = System.getenv("XIAOMO_KEY_ALIAS") ?: fileProps.getProperty("keyAlias")
-    val resolvedKeyPassword = System.getenv("XIAOMO_KEY_PASS") ?: fileProps.getProperty("keyPassword")
+
+    // 仓库内固定签名材料对应的口令（与 app/signing/xiaomo-fixed.jks.b64 配套）。
+    val repoStorePassword = "xiaomo2026"
+    val repoKeyAlias = "xiaomo"
+    val repoKeyPassword = "xiaomo2026"
+
+    val resolvedStorePassword = System.getenv("XIAOMO_STORE_PASS")
+        ?: fileProps.getProperty("storePassword")
+        ?: repoStorePassword
+    val resolvedKeyAlias = System.getenv("XIAOMO_KEY_ALIAS")
+        ?: fileProps.getProperty("keyAlias")
+        ?: repoKeyAlias
+    val resolvedKeyPassword = System.getenv("XIAOMO_KEY_PASS")
+        ?: fileProps.getProperty("keyPassword")
+        ?: repoKeyPassword
 
     var resolvedStorePath: String? = fileProps.getProperty("storeFile")
+
+    // 仓库内固定签名材料（app/signing/xiaomo-fixed.jks.b64）。
+    // CI 环境没有本地 keystore.properties，也没有注入 Secret 时用它，
+    // 保证每次构建签名一致，可直接覆盖安装。
+    val repoB64File = File(project.projectDir, "signing/xiaomo-fixed.jks.b64")
+    if (envKeystoreB64.isNullOrBlank() && resolvedStorePath.isNullOrBlank() && repoB64File.exists()) {
+        val outDir = File(rootProject.projectDir, "build/ci-signing")
+        outDir.mkdirs()
+        val jks = File(outDir, "xiaomo-fixed.jks")
+        val b64 = repoB64File.readText().filter { !it.isWhitespace() }
+        jks.writeBytes(Base64.getDecoder().decode(b64))
+        resolvedStorePath = jks.absolutePath
+        logger.lifecycle("SIGNING_SOURCE=repo-b64")
+    }
+
     if (!envKeystoreB64.isNullOrBlank()) {
         val outDir = File(rootProject.projectDir, "build/ci-signing")
         outDir.mkdirs()
@@ -44,9 +73,7 @@ android {
         }
         resolvedStorePath = jks.absolutePath
         logger.lifecycle("SIGNING_SOURCE=env")
-    } else if (!resolvedStorePath.isNullOrBlank()) {
-        logger.lifecycle("SIGNING_SOURCE=keystore.properties")
-    } else {
+    } else if (resolvedStorePath == null) {
         logger.lifecycle("SIGNING_SOURCE=default debug keystore")
     }
 
