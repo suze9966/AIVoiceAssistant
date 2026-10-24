@@ -15,10 +15,32 @@ android {
         applicationId = "com.suze.aivoice"
         minSdk = 24
         targetSdk = 34
-        // CI 里用 run number 自动抬高版本号，避免覆盖安装被 versionCode 拦住；
-        // 本地构建没有 GITHUB_RUN_NUMBER 时保持固定值。
-        versionCode = (System.getenv("XIAOMO_VERSION_CODE") ?: "2").toIntOrNull() ?: 2
-        versionName = System.getenv("XIAOMO_VERSION_NAME") ?: "1.1"
+        // ---- 版本号自动递增 ----
+        // GitHub Actions 会给每个 step 自动注入 GITHUB_RUN_NUMBER，每次构建 +1，
+        // 所以直接读它就能让 versionCode 单调递增，覆盖安装永远不会被版本号拦住。
+        // 这样不必改 .github/workflows/build.yml，也就不需要 workflow 权限。
+        //
+        // 取值优先级：
+        //   1. XIAOMO_VERSION_CODE / XIAOMO_VERSION_NAME（显式覆盖，本地或特殊构建用）
+        //   2. GITHUB_RUN_NUMBER + 1000（CI 自动递增）
+        //   3. 本地固定值 2 / "1.1"
+        //
+        // 为什么加 1000 偏移：run_number 从个位数起步，
+        // 而设备上历史版本已经是 versionCode=2，直接用 run_number 可能反而变小，
+        // 加上偏移后永远大于历史版本。
+        val versionCodeBase = 1000
+        val ciRunNumber = System.getenv("GITHUB_RUN_NUMBER")?.trim()?.toIntOrNull()
+        val autoVersionCode = ciRunNumber?.let { versionCodeBase + it }
+        val autoVersionName = ciRunNumber?.let { "1.1.$it" }
+        val explicitVersionCode = System.getenv("XIAOMO_VERSION_CODE")?.trim()?.toIntOrNull()
+        val explicitVersionName = System.getenv("XIAOMO_VERSION_NAME")?.trim()?.takeIf { it.isNotEmpty() }
+
+        versionCode = explicitVersionCode ?: autoVersionCode ?: 2
+        versionName = explicitVersionName ?: autoVersionName ?: "1.1"
+        project.logger.lifecycle(
+            "VERSION_CODE=$versionCode VERSION_NAME=$versionName " +
+                "(run=${ciRunNumber ?: "local"}, base=$versionCodeBase)"
+        )
     }
 
     // ---- 固定签名材料 ----
